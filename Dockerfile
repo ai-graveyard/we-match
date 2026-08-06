@@ -6,8 +6,9 @@ RUN corepack enable
 
 FROM base AS build
 WORKDIR /app
-# better-sqlite3 是原生模块，装依赖时要从源码编译，需要 Python + 编译工具链。
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+# better-sqlite3 是原生模块，装依赖时要从源码编译，需要 Python + 编译工具链；
+# zip 是 scripts/build-skill.mjs 打包 Agent Skill 用的。
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ zip \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
