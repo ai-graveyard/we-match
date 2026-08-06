@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { count, desc, eq, gt } from "drizzle-orm";
+import { count, desc, eq, gt, like } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   analyticsEvents,
@@ -13,12 +13,14 @@ import {
   reports,
   sessions,
   users,
+  verificationCodes,
 } from "@/lib/db/schema";
-import { getSessionUser } from "@/lib/auth";
+import { CODE_MAX_FAILS, getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { isExpired, STATUS_LABELS, TYPE_LABELS } from "@/lib/needs";
 import { VISIBILITY_LABELS, REQUEST_VIA_LABELS } from "@/lib/orgs";
-import { shortDateTime } from "@/lib/format";
+import { relativeTime, shortDateTime } from "@/lib/format";
+import { CodeAutoRefresh } from "@/components/admin-code-refresh";
 import {
   handleReportAction,
   moderateContentAction,
@@ -33,6 +35,7 @@ const ADMIN_VIEWS = [
   "needs",
   "orgs",
   "requests",
+  "codes",
   "audit",
 ] as const;
 
@@ -45,8 +48,29 @@ const VIEW_LABELS: Record<AdminView, string> = {
   needs: "需求",
   orgs: "组织",
   requests: "申请",
+  codes: "验证码",
   audit: "日志",
 };
+
+// 未配置真实短信通道时验证码只落在 verification_codes 表和服务端日志里，
+// 这里把表内的最近记录直接摆出来，免去登服务器翻日志
+const CODE_LIST_LIMIT = 100;
+
+type CodeState = "active" | "expired" | "locked";
+
+const CODE_STATE_LABELS: Record<CodeState, string> = {
+  active: "有效",
+  expired: "已过期",
+  locked: "已作废",
+};
+
+function codeState(record: {
+  expiresAt: Date;
+  failCount: number;
+}): CodeState {
+  if (record.failCount >= CODE_MAX_FAILS) return "locked";
+  return record.expiresAt.getTime() > Date.now() ? "active" : "expired";
+}
 
 const REQUEST_STATUS_LABELS = {
   pending: "待审批",
@@ -77,10 +101,11 @@ const thCls =
 const tdCls = "px-3 py-1 align-middle text-xs";
 const PAGE_SIZE = 10;
 
-function adminHref(view: AdminView, page = 1) {
+function adminHref(view: AdminView, page = 1, phone = "") {
   const params = new URLSearchParams();
   if (view !== "overview") params.set("view", view);
   if (page > 1) params.set("page", String(page));
+  if (phone) params.set("phone", phone);
   const query = params.toString();
   return query ? `/admin?${query}` : "/admin";
 }
@@ -138,10 +163,12 @@ function Pagination({
   view,
   page,
   pageCount,
+  phone = "",
 }: {
   view: AdminView;
   page: number;
   pageCount: number;
+  phone?: string;
 }) {
   if (pageCount <= 1) return null;
 
@@ -156,7 +183,7 @@ function Pagination({
       className="mt-4 flex items-center justify-between gap-3"
     >
       {page > 1 ? (
-        <Link href={adminHref(view, page - 1)} className={linkCls}>
+        <Link href={adminHref(view, page - 1, phone)} className={linkCls}>
           上一页
         </Link>
       ) : (
@@ -166,7 +193,7 @@ function Pagination({
         {page} / {pageCount}
       </span>
       {page < pageCount ? (
-        <Link href={adminHref(view, page + 1)} className={linkCls}>
+        <Link href={adminHref(view, page + 1, phone)} className={linkCls}>
           下一页
         </Link>
       ) : (
@@ -231,6 +258,11 @@ export default async function AdminPage({
   const activeView: AdminView = ADMIN_VIEWS.includes(rawView as AdminView)
     ? (rawView as AdminView)
     : "overview";
+  const rawPhone = Array.isArray(rawParams.phone)
+    ? rawParams.phone[0]
+    : rawParams.phone;
+  // 只留数字，既是手机号的实际形态，也顺手挡掉 like 通配符
+  const phoneQuery = (rawPhone ?? "").replace(/\D/g, "").slice(0, 11);
 
   const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
   const allNeeds = await db
@@ -255,15 +287,26 @@ export default async function AdminPage({
     .select({ n: count() })
     .from(sessions)
     .where(gt(sessions.expiresAt, new Date()));
-  const [allConnections, allReports, recentAudit, funnelEvents] =
+  const [allConnections, allReports, recentAudit, funnelEvents, recentCodes] =
     await Promise.all([
       db.select().from(connections).orderBy(desc(connections.updatedAt)),
       db.select().from(reports).orderBy(desc(reports.createdAt)),
       db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(50),
       db.select({ name: analyticsEvents.name }).from(analyticsEvents),
+      db
+        .select()
+        .from(verificationCodes)
+        .where(
+          phoneQuery
+            ? like(verificationCodes.phone, `%${phoneQuery}%`)
+            : undefined,
+        )
+        .orderBy(desc(verificationCodes.createdAt))
+        .limit(CODE_LIST_LIMIT),
     ]);
 
   const userById = new Map(allUsers.map((user) => [user.id, user]));
+  const userByPhone = new Map(allUsers.map((user) => [user.phone, user]));
   const needCountByUser = new Map<number, number>();
   for (const { need } of allNeeds) {
     needCountByUser.set(
@@ -311,12 +354,16 @@ export default async function AdminPage({
     label,
     value: funnelEvents.filter((event) => event.name === name).length,
   }));
+  const activeCodeCount = recentCodes.filter(
+    (record) => codeState(record) === "active",
+  ).length;
   const viewCounts: Partial<Record<AdminView, number>> = {
     reports: pendingReportCount,
     users: allUsers.length,
     needs: allNeeds.length,
     orgs: allOrgs.length,
     requests: pendingRequestCount,
+    codes: activeCodeCount,
     audit: recentAudit.length,
   };
   const itemCountByView: Record<AdminView, number> = {
@@ -326,6 +373,7 @@ export default async function AdminPage({
     needs: allNeeds.length,
     orgs: allOrgs.length,
     requests: allRequests.length,
+    codes: recentCodes.length,
     audit: recentAudit.length,
   };
   const rawPage = Array.isArray(rawParams.page)
@@ -345,6 +393,7 @@ export default async function AdminPage({
   const visibleNeeds = allNeeds.slice(pageStart, pageStart + PAGE_SIZE);
   const visibleOrgs = allOrgs.slice(pageStart, pageStart + PAGE_SIZE);
   const visibleRequests = allRequests.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleCodes = recentCodes.slice(pageStart, pageStart + PAGE_SIZE);
   const visibleAudit = recentAudit.slice(pageStart, pageStart + PAGE_SIZE);
 
   return (
@@ -1131,6 +1180,167 @@ export default async function AdminPage({
                 view="requests"
                 page={currentPage}
                 pageCount={pageCount}
+              />
+            </>
+          )}
+        </Section>
+      )}
+
+      {activeView === "codes" && (
+        <Section
+          title={`验证码 · ${recentCodes.length}`}
+          description={`${
+            phoneQuery ? `手机号含「${phoneQuery}」的` : `最近 ${CODE_LIST_LIMIT} 条`
+          }登录验证码，其中 ${activeCodeCount} 条仍然有效。登录成功后该手机号的验证码会被立即删除，所以这里主要是还没用掉的。`}
+        >
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <form action="/admin" className="flex flex-1 items-center gap-2">
+              <input type="hidden" name="view" value="codes" />
+              <input
+                type="search"
+                name="phone"
+                inputMode="numeric"
+                defaultValue={phoneQuery}
+                placeholder="按手机号筛选"
+                aria-label="按手机号筛选验证码"
+                className="h-8 min-w-0 flex-1 rounded-sm border border-line bg-panel px-3 font-mono text-xs placeholder:font-sans placeholder:text-gray focus:border-ink focus:outline-none md:max-w-64"
+              />
+              <button
+                type="submit"
+                className="inline-flex h-8 shrink-0 items-center rounded-sm border border-line bg-panel px-3 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px"
+              >
+                筛选
+              </button>
+              {phoneQuery && (
+                <Link
+                  href={adminHref("codes")}
+                  className="shrink-0 text-xs text-gray hover:text-ink"
+                >
+                  清除
+                </Link>
+              )}
+            </form>
+            <CodeAutoRefresh />
+          </div>
+
+          {recentCodes.length === 0 ? (
+            <EmptyList>
+              {phoneQuery ? `没有 ${phoneQuery} 的验证码记录` : "暂无验证码记录"}
+            </EmptyList>
+          ) : (
+            <>
+              <DesktopTable
+                headers={[
+                  "手机号",
+                  "用户",
+                  "验证码",
+                  "状态",
+                  "有效期至",
+                  "失败",
+                  "IP",
+                  "请求时间",
+                ]}
+              >
+                {visibleCodes.map((record) => {
+                  const state = codeState(record);
+                  const owner = userByPhone.get(record.phone);
+                  return (
+                    <tr
+                      key={record.id}
+                      className="border-b border-line last:border-b-0"
+                    >
+                      <td className={`${tdCls} whitespace-nowrap font-mono`}>
+                        {record.phone}
+                      </td>
+                      <td className={`${tdCls} whitespace-nowrap`}>
+                        {owner ? (
+                          <Link
+                            href={`/u/${owner.id}`}
+                            className="font-semibold hover:underline"
+                          >
+                            {owner.nickname}
+                          </Link>
+                        ) : (
+                          <span className="text-gray">未注册</span>
+                        )}
+                      </td>
+                      <td className={tdCls}>
+                        <span
+                          className={`font-mono text-sm font-semibold tracking-[0.12em] ${
+                            state === "active" ? "" : "text-gray line-through"
+                          }`}
+                        >
+                          {record.code}
+                        </span>
+                      </td>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                        {CODE_STATE_LABELS[state]}
+                      </td>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                        {shortDateTime(record.expiresAt)}
+                      </td>
+                      <td className={`${tdCls} font-mono`}>
+                        {record.failCount}
+                      </td>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                        {record.ip}
+                      </td>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                        {relativeTime(record.createdAt)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </DesktopTable>
+
+              <ItemGrid>
+                {visibleCodes.map((record) => {
+                  const state = codeState(record);
+                  const owner = userByPhone.get(record.phone);
+                  return (
+                    <article
+                      key={record.id}
+                      className="rounded-md border border-line bg-panel p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-mono text-sm font-semibold">
+                            {record.phone}
+                          </div>
+                          <div className="mt-1 text-xs text-gray">
+                            {owner ? owner.nickname : "未注册"} ·{" "}
+                            {relativeTime(record.createdAt)}
+                          </div>
+                        </div>
+                        <Status>{CODE_STATE_LABELS[state]}</Status>
+                      </div>
+                      <div
+                        className={`mt-3 font-mono text-2xl font-semibold tracking-[0.2em] ${
+                          state === "active" ? "" : "text-gray line-through"
+                        }`}
+                      >
+                        {record.code}
+                      </div>
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                        <Field label="有效期至" mono>
+                          {shortDateTime(record.expiresAt)}
+                        </Field>
+                        <Field label="失败次数" mono>
+                          {record.failCount}
+                        </Field>
+                        <Field label="IP" mono full>
+                          {record.ip}
+                        </Field>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </ItemGrid>
+              <Pagination
+                view="codes"
+                page={currentPage}
+                pageCount={pageCount}
+                phone={phoneQuery}
               />
             </>
           )}

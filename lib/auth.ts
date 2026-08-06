@@ -10,7 +10,7 @@ const SESSION_COOKIE = "wm_session";
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60; // 30 天
 const CODE_TTL_MS = 5 * 60 * 1000; // 验证码 5 分钟有效
 const CODE_RESEND_INTERVAL_MS = 60 * 1000; // 同号 60 秒一次
-const CODE_MAX_FAILS = 5; // 连续失败 5 次作废
+export const CODE_MAX_FAILS = 5; // 连续失败 5 次作废
 const CODE_IP_HOURLY_LIMIT = 10; // 同 IP 每小时 10 次
 
 export const PHONE_RE = /^1[3-9]\d{9}$/;
