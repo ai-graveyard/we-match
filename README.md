@@ -44,6 +44,7 @@ pnpm db:seed
 
 | 变量 | 说明 |
 |------|------|
+| `APP_PORT` | Docker 部署时宿主机对外映射端口。服务器和别的项目共用，生产环境**必填**，不能用默认的 `3000` |
 | `SESSION_SECRET` | Session 签名密钥。生产环境**必填**，至少 32 字符 |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `./data/we-match.db` |
 | `ADMIN_PHONES` | 管理后台手机号白名单，逗号分隔。生产必配；未配时仅开发环境放行 |
@@ -87,7 +88,7 @@ curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" \
 ### Docker（推荐）
 
 ```bash
-cp .env.example .env   # 填好 SESSION_SECRET、ADMIN_PHONES、SMS_PROVIDER=aliyun 及短信密钥
+cp .env.example .env   # 填好 APP_PORT（服务器和别的项目共用，别用默认 3000）、SESSION_SECRET、ADMIN_PHONES、SMS_PROVIDER=aliyun 及短信密钥
 docker compose up -d --build
 ```
 
@@ -140,4 +141,5 @@ SESSION_SECRET=… ADMIN_PHONES=… SMS_PROVIDER=aliyun … pnpm start
 - [ ] 短信：阿里云签名 / 模板已过审，`SMS_PROVIDER=aliyun` 已配置并真机收到验证码
 - [ ] 法务：填写 [lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱（`/terms`、`/privacy` 会展示），文案经过人工确认
 - [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_PHONES` 已配置
+- [ ] `APP_PORT` 已配置为分配给 we-match 的实际端口，不是默认的 `3000`
 - [ ] 反向代理 HTTPS 就绪，备份 cron 已配置

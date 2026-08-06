@@ -5,7 +5,7 @@ services:
     container_name: we-match
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${APP_PORT:?生产必须配置实际上线端口，不能用默认 3000（服务器和别的项目共用）}:3000"
     environment:
       SESSION_SECRET: ${SESSION_SECRET:?生产必须配置至少 32 字符的 SESSION_SECRET}
       ADMIN_PHONES: ${ADMIN_PHONES:-}
