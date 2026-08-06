@@ -93,6 +93,31 @@ docker compose up -d --build
 
 数据与备份分别在命名卷 `we-match-data` / `we-match-backups`。前面挂一层反向代理（Caddy / Nginx）做 HTTPS——生产 cookie 带 `secure` 标志，**必须走 HTTPS** 才能登录。
 
+根目录的 `Makefile` 把常用操作包了一层：
+
+| 命令 | 作用 |
+| --- | --- |
+| `make build` | 构建镜像 |
+| `make start` / `make stop` / `make restart` | 起停服务 |
+| `make logs` | 跟踪日志 |
+| `make deploy` | `git pull` + 重新构建 + 重启，服务器上用这条 |
+
+### CI/CD
+
+- `.github/workflows/ci.yml`：push / PR 时跑 `pnpm lint` + `pnpm build`。
+- `.github/workflows/deploy.yml`：push 到 `main` 时 SSH 到服务器，在 `DEPLOY_PATH` 目录跑 `make deploy`（`git pull` + 本地建镜像 + 重启，不经镜像仓库，和 [fastype](../fastype) 同一套模式）。
+
+需要在本仓库的 GitHub Secrets 中配置：
+
+| Secret | 说明 |
+| --- | --- |
+| `EC2_SSH_KEY` | 部署用私钥 |
+| `EC2_KNOWN_HOSTS` | `ssh-keyscan` 得到的 known_hosts 内容 |
+| `EC2_HOST` / `EC2_PORT` / `EC2_USER` | 服务器地址 / SSH 端口 / 登录用户 |
+| `DEPLOY_PATH` | 服务器上本仓库的 git checkout 目录 |
+
+服务器是和其他项目共用的一台机器，`make deploy` 用 Dockerfile 里的 `com.ai-graveyard.project=we-match` 标签把镜像清理限定在自己的镜像上，不影响别的服务。
+
 ### 裸机
 
 ```bash

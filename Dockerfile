@@ -13,6 +13,10 @@ RUN pnpm build && pnpm prune --prod
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# 服务器和别的项目共用，不能用全局 docker image prune 清理悬空镜像；
+# 打上这个标签，Makefile 的 deploy 就能只清自己的（必须打在最终阶段）。
+LABEL com.ai-graveyard.project=we-match
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.ts ./next.config.ts
 COPY --from=build /app/node_modules ./node_modules

@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.EC2_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # DEPLOY_PATH 是服务器上这个仓库的 git checkout 目录，make deploy 会在那边
+      # git pull、本地构建镜像、重启服务，不经过任何镜像仓库。
+      - name: Deploy on server
+        run: |
+          ssh -p "${{ secrets.EC2_PORT }}" -i ~/.ssh/deploy_key "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            make deploy
+          EOF

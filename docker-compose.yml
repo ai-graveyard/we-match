@@ -1,6 +1,8 @@
 services:
   we-match:
     build: .
+    image: ai-graveyard/we-match:latest
+    container_name: we-match
     restart: unless-stopped
     ports:
       - "3000:3000"
