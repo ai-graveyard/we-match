@@ -1,10 +1,14 @@
 # 自部署镜像：pnpm build + next start，SQLite 数据放 /app/data（挂持久化卷）
 FROM node:22-bookworm-slim AS base
-ENV PNPM_HOME=/pnpm PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME=/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 FROM base AS build
 WORKDIR /app
+# better-sqlite3 是原生模块，装依赖时要从源码编译，需要 Python + 编译工具链。
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
