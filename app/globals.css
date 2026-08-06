@@ -1,26 +1,68 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Braun / Dieter Rams 设计令牌，规范见 docs/DESIGN.md —— 十六进制值不得偏移 */
+@theme {
+  --color-bg: #f7f7f7;
+  --color-bg-2: #efefef;
+  --color-bg-3: #ececec;
+  --color-panel: #ffffff;
+  --color-ink: #1a1a1a;
+  --color-gray: #808080;
+  --color-line: #c9c9c9;
+  --color-accent: #e8500a;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-sm: 8px;
+  --radius-md: 12px;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* 品牌 loading：编织图案横移一个波长（106 单位）后与自身重合，侧视投影上等效于
+     双股螺旋绕水平轴匀速旋转（螺纹转动），见 docs/DESIGN.md「品牌标识」 */
+  --animate-logo-thread: logo-thread 1.6s linear infinite;
+
+  @keyframes logo-thread {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-106px);
+    }
   }
 }
 
+html {
+  color-scheme: light;
+}
+
+/* 暗色令牌（<html data-theme="dark">），--accent 为品牌常量、明暗一致 */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #121212;
+  --color-bg-2: #1a1a1a;
+  --color-bg-3: #2a2a2a;
+  --color-panel: #1c1c1c;
+  --color-ink: #ededed;
+  --color-gray: #9a9a9a;
+  --color-line: #333333;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
