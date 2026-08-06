@@ -33,4 +33,7 @@ RUN mkdir -p /app/data /app/backups && chown -R node:node /app/data /app/backups
 USER node
 EXPOSE 3000
 VOLUME /app/data
-CMD ["pnpm", "start"]
+# 直接用 node 起 next，不走 pnpm start：pnpm 每次运行脚本前会校验
+# node_modules 和 lockfile 是否一致，prune --prod 后必然不一致，
+# 它就会尝试自动 install，而 /app 除 data/backups 外对 node 用户只读，写临时文件会 EACCES。
+CMD ["node", "node_modules/next/dist/bin/next", "start"]
