@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { and, count, desc, eq, gt, gte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sessions, users, verificationCodes, type User } from "@/lib/db/schema";
-import { smsProvider } from "@/lib/sms";
+import { getSmsProvider } from "@/lib/sms";
 
 const SESSION_COOKIE = "wm_session";
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60; // 30 天
@@ -46,6 +46,15 @@ export async function requestVerificationCode(
   if (!PHONE_RE.test(phone)) {
     return { error: "请输入大陆 11 位手机号" };
   }
+  // 已注销的手机号永久禁止登录，在发码前就拦下，不浪费短信
+  const [existing] = await db
+    .select({ status: users.status })
+    .from(users)
+    .where(eq(users.phone, phone))
+    .limit(1);
+  if (existing?.status === "deleted") {
+    return { error: "该手机号的账号已注销，无法再次登录" };
+  }
   const now = Date.now();
   const [latest] = await db
     .select({ createdAt: verificationCodes.createdAt })
@@ -74,13 +83,25 @@ export async function requestVerificationCode(
     process.env.NODE_ENV !== "production"
       ? "888888"
       : crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
-  await db.insert(verificationCodes).values({
-    phone,
-    code,
-    ip,
-    expiresAt: new Date(now + CODE_TTL_MS),
-  });
-  await smsProvider.sendVerificationCode(phone, code);
+  const [inserted] = await db
+    .insert(verificationCodes)
+    .values({
+      phone,
+      code,
+      ip,
+      expiresAt: new Date(now + CODE_TTL_MS),
+    })
+    .returning({ id: verificationCodes.id });
+  try {
+    await getSmsProvider().sendVerificationCode(phone, code);
+  } catch (error) {
+    console.error("[SMS] 发送验证码失败：", error);
+    // 发送失败就作废这条验证码，否则 60 秒重发间隔会卡住用户重试
+    await db
+      .delete(verificationCodes)
+      .where(eq(verificationCodes.id, inserted.id));
+    return { error: "短信发送失败，请稍后再试" };
+  }
   return {};
 }
 
@@ -120,6 +141,9 @@ export async function verifyCodeAndLogin(
 
   let [user] = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
   const isNew = !user;
+  if (user?.status === "deleted") {
+    return { error: "该手机号的账号已注销，无法再次登录" };
+  }
   if (user?.status === "suspended") {
     return { error: "账号已暂停使用，如有疑问请联系管理员" };
   }
@@ -174,7 +198,7 @@ export async function getSessionUser(): Promise<User | null> {
   if (
     !row ||
     row.expiresAt.getTime() < Date.now() ||
-    row.user.status === "suspended"
+    row.user.status !== "active"
   ) return null;
   if (row.sessionId === token) {
     await db

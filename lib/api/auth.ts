@@ -39,6 +39,10 @@ export async function authenticate(request: Request): Promise<ApiAuth | Response
   if (row.user.status === "suspended") {
     return apiError(403, "account_suspended", "账号已暂停使用");
   }
+  // 注销时 Key 已删除，走不到这里；防御历史数据或并发窗口
+  if (row.user.status === "deleted") {
+    return apiError(403, "account_deleted", "账号已注销");
+  }
   if (row.key.key === rawKey) {
     await db
       .update(apiKeys)

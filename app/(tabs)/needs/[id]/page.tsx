@@ -71,7 +71,7 @@ export default async function NeedDetailPage({
   const isOwner = viewer?.id === need.userId;
   if (
     (!isOwner && need.moderationStatus === "hidden") ||
-    (!isOwner && author.status === "suspended")
+    (!isOwner && author.status !== "active")
   ) notFound();
   if (viewer && !isOwner && (await isBlockedEitherWay(viewer.id, author.id))) {
     notFound();

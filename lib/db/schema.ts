@@ -32,10 +32,12 @@ export const users = sqliteTable("users", {
     .$type<FieldVisibility>()
     .notNull()
     .default({}),
-  status: text("status", { enum: ["active", "suspended"] })
+  // deleted = 用户主动注销：个人资料已清空，手机号保留用于永久禁止再次登录
+  status: text("status", { enum: ["active", "suspended", "deleted"] })
     .notNull()
     .default("active"),
   suspendedAt: integer("suspended_at", { mode: "timestamp_ms" }),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),

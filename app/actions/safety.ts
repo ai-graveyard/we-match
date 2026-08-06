@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { db } from "@/lib/db";
 import {
@@ -114,10 +114,11 @@ export async function moderateContentAction(formData: FormData) {
       .where(eq(needs.id, targetId));
   } else if (targetType === "user" && ["suspend", "restore"].includes(action)) {
     const suspended = action === "suspend";
+    // 已注销账号永久失效，管理员也不能暂停/恢复
     await db
       .update(users)
       .set({ status: suspended ? "suspended" : "active", suspendedAt: suspended ? new Date() : null })
-      .where(eq(users.id, targetId));
+      .where(and(eq(users.id, targetId), ne(users.status, "deleted")));
     if (suspended) await db.delete(sessions).where(eq(sessions.userId, targetId));
   } else {
     return;

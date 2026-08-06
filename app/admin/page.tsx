@@ -671,13 +671,15 @@ export default async function AdminPage({
                         ? "当前管理员"
                         : user.status === "active"
                           ? "正常"
-                          : "已暂停"}
+                          : user.status === "deleted"
+                            ? "已注销"
+                            : "已暂停"}
                     </td>
                     <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
                       {shortDateTime(user.createdAt)}
                     </td>
                     <td className={tdCls}>
-                      {user.id !== viewer.id ? (
+                      {user.id !== viewer.id && user.status !== "deleted" ? (
                         <form action={moderateContentAction}>
                           <input
                             type="hidden"
@@ -732,7 +734,9 @@ export default async function AdminPage({
                           ? "当前管理员"
                           : user.status === "active"
                             ? "正常"
-                            : "已暂停"}
+                            : user.status === "deleted"
+                              ? "已注销"
+                              : "已暂停"}
                       </Status>
                     </div>
                     <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
@@ -752,7 +756,7 @@ export default async function AdminPage({
                       </Field>
                     </dl>
                   </div>
-                  {user.id !== viewer.id && (
+                  {user.id !== viewer.id && user.status !== "deleted" && (
                     <form
                       action={moderateContentAction}
                       className="border-t border-line p-3"

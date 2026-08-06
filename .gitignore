@@ -34,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,6 +43,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /data
+/backups
 
 # 构建产物：官方 Skill 包（scripts/build-skill.mjs 生成）
 /public/we-match-skill.zip

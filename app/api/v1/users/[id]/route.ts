@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: Context) {
   const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (
     !target ||
-    target.status === "suspended" ||
+    target.status !== "active" ||
     (target.id !== auth.user.id && (await isBlockedEitherWay(auth.user.id, target.id)))
   ) return apiError(404, "not_found", "用户不存在");
 

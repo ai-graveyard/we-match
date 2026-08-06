@@ -40,11 +40,16 @@ pnpm db:seed
 
 ## 环境变量
 
+完整清单见 [.env.example](.env.example)。
+
 | 变量 | 说明 |
 |------|------|
 | `SESSION_SECRET` | Session 签名密钥。生产环境**必填**，至少 32 字符 |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `./data/we-match.db` |
 | `ADMIN_PHONES` | 管理后台手机号白名单，逗号分隔。生产必配；未配时仅开发环境放行 |
+| `SMS_PROVIDER` | 短信通道：`log`（默认，验证码打日志）或 `aliyun`。**生产必须配 `aliyun`**，否则用户收不到验证码 |
+| `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` | 阿里云 AccessKey（`SMS_PROVIDER=aliyun` 时必填） |
+| `ALIYUN_SMS_SIGN_NAME` / `ALIYUN_SMS_TEMPLATE_CODE` | 阿里云短信签名与模板（模板变量为 `${code}`） |
 
 示例：
 
@@ -63,6 +68,7 @@ export ADMIN_PHONES="13800000001"
 | `pnpm lint` | ESLint |
 | `pnpm db:generate` | 根据 schema 生成 Drizzle 迁移 |
 | `pnpm db:seed` | 写入演示种子数据 |
+| `pnpm db:backup` | 在线备份 SQLite 到 `./backups`（保留最近 14 份） |
 | `pnpm build:skill` | 仅构建官方 Agent Skill |
 
 ## Agent 接入
@@ -78,9 +84,36 @@ curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" \
 
 ## 部署
 
+### Docker（推荐）
+
 ```bash
-pnpm build
-SESSION_SECRET=… ADMIN_PHONES=… pnpm start
+cp .env.example .env   # 填好 SESSION_SECRET、ADMIN_PHONES、SMS_PROVIDER=aliyun 及短信密钥
+docker compose up -d --build
 ```
 
-将 `data/`（或 `DATABASE_PATH` 指向的目录）放在持久化卷上。站点 origin 会根据请求的 `Host` / `X-Forwarded-*` 自动推断，一般无需额外配置。
+数据与备份分别在命名卷 `we-match-data` / `we-match-backups`。前面挂一层反向代理（Caddy / Nginx）做 HTTPS——生产 cookie 带 `secure` 标志，**必须走 HTTPS** 才能登录。
+
+### 裸机
+
+```bash
+pnpm build
+SESSION_SECRET=… ADMIN_PHONES=… SMS_PROVIDER=aliyun … pnpm start
+```
+
+将 `data/`（或 `DATABASE_PATH` 指向的目录）放在持久化卷上，并用 systemd / pm2 守护进程。站点 origin 会根据请求的 `Host` / `X-Forwarded-*` 自动推断，一般无需额外配置。
+
+### 备份
+
+单文件 SQLite 是全部数据，务必每日备份并同步异地：
+
+```bash
+0 4 * * * cd /path/to/we-match && node scripts/backup-db.mjs
+```
+
+### 上线前检查
+
+- [ ] 短信：阿里云签名 / 模板已过审，`SMS_PROVIDER=aliyun` 已配置并真机收到验证码
+- [ ] 法务：填写 [lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱（`/terms`、`/privacy` 会展示），文案经过人工确认
+- [ ] 合规：域名 ICP 备案覆盖本站
+- [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_PHONES` 已配置
+- [ ] 反向代理 HTTPS 就绪，备份 cron 已配置

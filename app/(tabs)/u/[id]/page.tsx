@@ -57,7 +57,7 @@ export default async function UserCardPage({
 
   const viewer = await getSessionUser();
   const isSelf = viewer?.id === owner.id;
-  if (!isSelf && owner.status === "suspended") notFound();
+  if (!isSelf && owner.status !== "active") notFound();
   const blockRelations = viewer && !isSelf
     ? await db
         .select({ blockerId: blocks.blockerId, blockedId: blocks.blockedId })

@@ -10,6 +10,7 @@ import {
   orgMembers,
   orgs,
 } from "@/lib/db/schema";
+import { version } from "@/package.json";
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { logoutAction } from "@/app/actions/auth";
@@ -22,6 +23,7 @@ import { ThemeToggleRow } from "@/components/theme-toggle";
 import { MeCategorySwitcher } from "@/components/me-category-switcher";
 import { MeCardOverview } from "@/components/me-card-overview";
 import { LogoutConfirmation } from "@/components/logout-confirmation";
+import { DeleteAccountRow } from "@/components/delete-account";
 import { OrgOverviewCard } from "@/components/org-overview-card";
 import { BrandFooter } from "@/components/brand-footer";
 import { EmptyState, ListEnd } from "@/components/list-states";
@@ -37,7 +39,10 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
     ? params.section[0]
     : params.section;
   const activeCategory =
-    section === "organization" || section === "need" || section === "agent"
+    section === "organization" ||
+    section === "need" ||
+    section === "agent" ||
+    section === "settings"
       ? section
       : "user";
 
@@ -128,33 +133,6 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
               user={user}
               shareUrl={`${origin}/u/${user.id}`}
             />
-
-            <section className="mt-6">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
-                设置与管理
-              </h2>
-              <div className="mt-2 overflow-hidden rounded-md border border-line bg-panel">
-                <ThemeToggleRow />
-                {isAdmin(user) && (
-                  <Link
-                    href="/admin"
-                    className="group flex min-h-16 w-full items-center gap-4 border-t border-line px-4 py-3 transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">
-                        管理后台
-                      </span>
-                      <span className="mt-0.5 block text-xs text-gray">
-                        平台运营、内容治理与操作日志
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
-                      进入
-                    </span>
-                  </Link>
-                )}
-              </div>
-            </section>
 
             <form action={logoutAction} className="mt-6">
               <LogoutConfirmation />
@@ -262,6 +240,78 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         }
         agent={
           <AgentAccessContent apiKeys={apiKeys} origin={origin} />
+        }
+        settings={
+          <section>
+            <div className="overflow-hidden rounded-md border border-line bg-panel">
+              <ThemeToggleRow />
+              {isAdmin(user) && (
+                <Link
+                  href="/admin"
+                  className="group flex min-h-16 w-full items-center gap-4 border-t border-line px-4 py-3 transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold">
+                      管理后台
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray">
+                      平台运营、内容治理与操作日志
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                    进入
+                  </span>
+                </Link>
+              )}
+            </div>
+
+            <section className="mt-6">
+              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+                关于
+              </h2>
+              <div className="mt-2 overflow-hidden rounded-md border border-line bg-panel">
+                <Link
+                  href="/terms"
+                  className="group flex h-12 items-center gap-4 px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
+                >
+                  <span className="min-w-0 flex-1">用户协议</span>
+                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                    查看
+                  </span>
+                </Link>
+                <Link
+                  href="/privacy"
+                  className="group flex h-12 items-center gap-4 border-t border-line px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
+                >
+                  <span className="min-w-0 flex-1">隐私政策</span>
+                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                    查看
+                  </span>
+                </Link>
+                <div className="flex h-12 items-center gap-4 border-t border-line px-4">
+                  <span className="min-w-0 flex-1 text-sm font-semibold">
+                    版本
+                  </span>
+                  <span className="shrink-0 font-mono text-[11px] text-gray">
+                    v{version}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-6">
+              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+                账号
+              </h2>
+              <div className="mt-2 overflow-hidden rounded-md border border-line bg-panel">
+                <DeleteAccountRow
+                  ownedOrgNames={myOrgs
+                    .filter(({ role }) => role === "owner")
+                    .map(({ org }) => org.name)}
+                />
+              </div>
+            </section>
+          </section>
         }
       />
     </div>

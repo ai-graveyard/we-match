@@ -6,6 +6,7 @@ const CATEGORIES = [
   { id: "organization", label: "组织" },
   { id: "need", label: "需求" },
   { id: "agent", label: "Agent" },
+  { id: "settings", label: "设置" },
 ] as const;
 
 type Category = (typeof CATEGORIES)[number]["id"];
@@ -15,6 +16,7 @@ const CATEGORY_HREFS: Record<Category, string> = {
   organization: "/me?section=organization",
   need: "/me?section=need",
   agent: "/me?section=agent",
+  settings: "/me?section=settings",
 };
 
 export function MeCategorySwitcher({
@@ -22,21 +24,23 @@ export function MeCategorySwitcher({
   organization,
   need,
   agent,
+  settings,
   activeCategory,
 }: {
   user: ReactNode;
   organization: ReactNode;
   need: ReactNode;
   agent: ReactNode;
+  settings: ReactNode;
   activeCategory: Category;
 }) {
-  const panels = { user, organization, need, agent };
+  const panels = { user, organization, need, agent, settings };
 
   return (
     <>
       <nav
         aria-label="我的内容"
-        className="flex w-full max-w-72 items-center gap-2"
+        className="flex w-full max-w-96 items-center gap-2"
       >
         {CATEGORIES.map((category) => {
           const isActive = category.id === activeCategory;

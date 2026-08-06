@@ -9,7 +9,7 @@ import { getUserOrgs } from "@/lib/queries";
 import { normalizeInviteCode } from "@/lib/orgs";
 import { TYPE_LABELS } from "@/lib/needs";
 import { NeedCard } from "@/components/need-card";
-import { EmptyState } from "@/components/list-states";
+import { EmptyState, ListEnd } from "@/components/list-states";
 import { BrandFooter } from "@/components/brand-footer";
 
 export const dynamic = "force-dynamic";
@@ -296,8 +296,9 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
               <NeedCard key={need.id} need={need} first={i === 0} />
             ))}
           </div>
-          {/* 广场是访问量最大的一屏，列表终点直接由品牌页脚兼任，不再叠一个终点标记 */}
-          <BrandFooter />
+          {/* 广场范围的移动端末尾由品牌页脚兼任终点标记；组织范围和桌面端仍用普通标记 */}
+          {!activeOrg && <BrandFooter />}
+          <ListEnd desktopOnly={!activeOrg} />
         </>
       )}
 

@@ -1,0 +1,21 @@
+services:
+  we-match:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:?生产必须配置至少 32 字符的 SESSION_SECRET}
+      ADMIN_PHONES: ${ADMIN_PHONES:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-log}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
+      ALIYUN_SMS_SIGN_NAME: ${ALIYUN_SMS_SIGN_NAME:-}
+      ALIYUN_SMS_TEMPLATE_CODE: ${ALIYUN_SMS_TEMPLATE_CODE:-}
+    volumes:
+      - we-match-data:/app/data
+      - we-match-backups:/app/backups
+
+volumes:
+  we-match-data:
+  we-match-backups:
