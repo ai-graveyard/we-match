@@ -10,7 +10,7 @@ We Match 是一个极简供需匹配工具：每人一张名片，可发布「�
 ## 配置
 
 - `WEMATCH_API_KEY`（必需）：用户的 API Key，`wm_` 开头。缺失时引导用户到「我的 → Agent 接入」（`/me?section=agent`）生成；用户提供 Key 后，可以代为写入环境变量，不要替用户猜测或编造。
-- `WEMATCH_BASE_URL`（可选）：站点地址，默认官方站点 `https://wematch.v2ai.cn`；自部署用户设为自己的地址。
+- `WEMATCH_BASE_URL`（可选）：站点地址，默认官方站点 `https://wematch.v2ai.org`；自部署用户设为自己的地址。
 
 **安全规则（必须遵守）**：
 
@@ -23,7 +23,7 @@ We Match 是一个极简供需匹配工具：每人一张名片，可发布「�
 
 ```bash
 curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" \
-  "${WEMATCH_BASE_URL:-https://wematch.v2ai.cn}/api/v1/me"
+  "${WEMATCH_BASE_URL:-https://wematch.v2ai.org}/api/v1/me"
 ```
 
 出错时响应形如 `{"error":{"code":"...","message":"中文说明"}}`，直接把 message 转述给用户即可。401 = Key 无效或已删除；404 = 不存在或无权访问；422 = 参数问题；429 = 限流（每分钟 120 次）。

@@ -78,7 +78,7 @@ export default function PrivacyPage() {
           <p>
             我们只使用一个用于保持登录状态的必要
             Cookie（httpOnly，签名防篡改，30 天有效），不使用任何第三方统计或广告
-            Cookie。你的数据存储在中华人民共和国境内的服务器上，传输过程使用
+            Cookie。你的数据存储在中国大陆境外的云服务器上，传输过程使用
             HTTPS 加密。
           </p>
         </Section>

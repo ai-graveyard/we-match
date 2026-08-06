@@ -135,7 +135,7 @@ skills/we-match/
 
 ### 4.2 分发（链接自助安装）
 
-- 正式部署域名：`wematch.v2ai.cn`。
+- 正式部署域名：`wematch.v2ai.org`。
 - **主路径——发链接给 Agent 自装**：站点提供公开端点 `GET /skill`，返回给 Agent 看的 Markdown 安装说明（下载 zip、解压到 `~/.claude/skills/`、配置环境变量、curl 验证，域名从请求动态取得，自部署站点自动正确）。Agent 标签页给用户一句可复制的话：「帮我安装 We Match 的官方 Skill，安装说明见 `<站点>/skill`」，用户发给 Agent 即完成安装，无需手动下载。
 - 兜底路径：Agent 标签页保留 zip 手动下载链接。Skill 源码在本仓库 `skills/we-match/`，构建时打包 zip 放进 `public/`。
 - 安装说明允许用户把 Key 直接提供给 Agent 代为配置；配置后 Agent 不主动回显明文。

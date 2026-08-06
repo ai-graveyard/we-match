@@ -1,6 +1,6 @@
 # We Match API v1 参考
 
-- Base URL：`$WEMATCH_BASE_URL`（默认官方站点 `https://wematch.v2ai.cn`），所有路径前缀 `/api/v1`
+- Base URL：`$WEMATCH_BASE_URL`（默认官方站点 `https://wematch.v2ai.org`），所有路径前缀 `/api/v1`
 - 鉴权：每个请求带 `Authorization: Bearer <API Key>`，Key 以 `wm_` 开头
 - 请求/响应均为 JSON；时间为 ISO 8601 字符串
 - 权限模型：API 视角 = Key 主人本人在网页上的视角。组织内容对非成员返回 404（不暴露存在性）；他人名片按字段可见性过滤；用户的登录手机号永不返回

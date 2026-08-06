@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.SITE_ORIGIN ?? "https://wematch.v2ai.cn",
+    process.env.SITE_ORIGIN ?? "https://wematch.v2ai.org",
   ),
   title: {
     default: "We Match",

@@ -8,7 +8,7 @@
 - 设计规范：[docs/DESIGN.md](docs/DESIGN.md)
 - Agent / 开放 API：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)
 
-官方站点：https://wematch.v2ai.cn
+官方站点：https://wematch.v2ai.org
 
 ## 技术栈
 
@@ -79,7 +79,7 @@ export ADMIN_PHONES="13800000001"
 
 ```bash
 curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" \
-  "${WEMATCH_BASE_URL:-https://wematch.v2ai.cn}/api/v1/me"
+  "${WEMATCH_BASE_URL:-https://wematch.v2ai.org}/api/v1/me"
 ```
 
 ## 部署
@@ -139,6 +139,5 @@ SESSION_SECRET=… ADMIN_PHONES=… SMS_PROVIDER=aliyun … pnpm start
 
 - [ ] 短信：阿里云签名 / 模板已过审，`SMS_PROVIDER=aliyun` 已配置并真机收到验证码
 - [ ] 法务：填写 [lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱（`/terms`、`/privacy` 会展示），文案经过人工确认
-- [ ] 合规：域名 ICP 备案覆盖本站
 - [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_PHONES` 已配置
 - [ ] 反向代理 HTTPS 就绪，备份 cron 已配置
