@@ -1,12 +1,14 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { getDict } from "@/lib/i18n/server";
+import { LocaleLink } from "@/lib/i18n/link";
+import type { UiDict } from "@/lib/i18n/dict/types";
 
 const CATEGORIES = [
-  { id: "user", label: "用户" },
-  { id: "organization", label: "组织" },
-  { id: "need", label: "需求" },
-  { id: "agent", label: "Agent" },
-  { id: "settings", label: "设置" },
+  { id: "user", label: (t: UiDict) => t.me.catUser },
+  { id: "organization", label: (t: UiDict) => t.me.catOrganization },
+  { id: "need", label: (t: UiDict) => t.me.catNeed },
+  { id: "agent", label: (t: UiDict) => t.me.catAgent },
+  { id: "settings", label: (t: UiDict) => t.me.catSettings },
 ] as const;
 
 type Category = (typeof CATEGORIES)[number]["id"];
@@ -19,7 +21,7 @@ const CATEGORY_HREFS: Record<Category, string> = {
   settings: "/me?section=settings",
 };
 
-export function MeCategorySwitcher({
+export async function MeCategorySwitcher({
   user,
   organization,
   need,
@@ -34,19 +36,20 @@ export function MeCategorySwitcher({
   settings: ReactNode;
   activeCategory: Category;
 }) {
+  const t = await getDict();
   const panels = { user, organization, need, agent, settings };
 
   return (
     <>
       <nav
-        aria-label="我的内容"
+        aria-label={t.me.catNavLabel}
         className="flex w-full max-w-96 items-center gap-2"
       >
         {CATEGORIES.map((category) => {
           const isActive = category.id === activeCategory;
 
           return (
-            <Link
+            <LocaleLink
               key={category.id}
               href={CATEGORY_HREFS[category.id]}
               aria-current={isActive ? "page" : undefined}
@@ -57,8 +60,8 @@ export function MeCategorySwitcher({
                   : "text-sm text-gray hover:text-ink"
               }`}
             >
-              {category.label}
-            </Link>
+              {category.label(t)}
+            </LocaleLink>
           );
         })}
       </nav>

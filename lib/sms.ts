@@ -1,23 +1,33 @@
 import "server-only";
 import crypto from "node:crypto";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { SERVER_DICTS } from "@/lib/i18n/dict";
+import { fmt } from "@/lib/i18n/fmt";
+import type { Locale } from "@/lib/i18n/config";
 
 // 短信通道可插拔：SMS_PROVIDER 选择实现，默认 log（开发/演示打日志）。
 // 生产设 SMS_PROVIDER=aliyun 并配好密钥，否则验证码只会出现在服务端日志里。
 export interface SmsProvider {
-  sendVerificationCode(phone: string, code: string): Promise<void>;
+  sendVerificationCode(
+    phone: string,
+    code: string,
+    locale: Locale,
+  ): Promise<void>;
 }
 
 let warnedProductionLog = false;
 
 class LogSmsProvider implements SmsProvider {
-  async sendVerificationCode(phone: string, code: string) {
+  async sendVerificationCode(phone: string, code: string, locale: Locale) {
     if (process.env.NODE_ENV === "production" && !warnedProductionLog) {
       warnedProductionLog = true;
+      // 服务端日志固定英文，运维读的不是产品界面
       console.warn(
-        "[SMS] 警告：生产环境未配置真实短信通道（SMS_PROVIDER=aliyun），验证码只打印在日志，用户收不到短信",
+        "[SMS] SMS_PROVIDER is not set to a real provider in production; codes are only printed here and never delivered",
       );
     }
-    console.log(`[SMS] 验证码 ${code} → ${phone}（5 分钟内有效）`);
+    const text = fmt(SERVER_DICTS[locale].sms.verificationCode, { code });
+    console.log(`[SMS] ${phone} → ${text}`);
   }
 }
 
@@ -46,7 +56,10 @@ interface AliyunConfig {
 class AliyunSmsProvider implements SmsProvider {
   constructor(private readonly config: AliyunConfig) {}
 
-  async sendVerificationCode(phone: string, code: string) {
+  async sendVerificationCode(phone: string, code: string, locale: Locale) {
+    // 正文由服务商模板渲染，这里只能传参数；模板本身是在阿里云控制台配的，
+    // 想发英文短信需要另配一个模板并按 locale 选择 templateCode。
+    void locale;
     const { accessKeyId, accessKeySecret, signName, templateCode, endpoint } =
       this.config;
     const query: Record<string, string> = {
@@ -102,9 +115,9 @@ class AliyunSmsProvider implements SmsProvider {
     if (!response.ok || result.Code !== "OK") {
       // 手机号打码进日志，避免明文个人信息落盘
       console.error(
-        `[SMS] 阿里云发送失败 → ${phone.slice(0, 3)}****${phone.slice(-4)}：${result.Code ?? response.status} ${result.Message ?? ""}`,
+        `[SMS] aliyun send failed → ${phone.slice(0, 3)}****${phone.slice(-4)}: ${result.Code ?? response.status} ${result.Message ?? ""}`,
       );
-      throw new Error("短信发送失败，请稍后再试");
+      throw new Error(SERVER_DICTS[DEFAULT_LOCALE].auth.smsFailed);
     }
   }
 }
@@ -112,7 +125,7 @@ class AliyunSmsProvider implements SmsProvider {
 function requireEnv(name: string) {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`SMS_PROVIDER=aliyun 需要配置环境变量 ${name}`);
+    throw new Error(`SMS_PROVIDER=aliyun requires env var ${name}`);
   }
   return value;
 }
@@ -129,7 +142,7 @@ function createProvider(): SmsProvider {
     });
   }
   if (name === "log") return new LogSmsProvider();
-  throw new Error(`未知的 SMS_PROVIDER：${name}（可选 aliyun / log）`);
+  throw new Error(`Unknown SMS_PROVIDER: ${name} (expected aliyun or log)`);
 }
 
 // 延迟到首次发送才读环境变量，避免 next build 阶段因缺密钥而失败

@@ -1,9 +1,14 @@
 import { ImageResponse } from "next/og";
 import { ASPECT, logoMarkSvg } from "@/components/logo";
-import { BRAND_NAME, BRAND_SLOGAN } from "@/lib/brand";
+import { BRAND_NAME } from "@/lib/brand";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { uiDict } from "@/lib/i18n/dict";
 
 // 链接分享卡片。ImageResponse 只带拉丁字体，中文会渲染成豆腐块，
 // 所以卡面使用品牌口号的英文对应文案，中文原文由 alt 与 og:description 提供。
+// 站点级 OG 图同样没有语言段，用默认语言
+const BRAND_SLOGAN = uiDict(DEFAULT_LOCALE).brand.slogan;
+
 export const alt = `${BRAND_NAME} — ${BRAND_SLOGAN}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

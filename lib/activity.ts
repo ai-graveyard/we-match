@@ -8,19 +8,33 @@ import {
   blocks,
   notifications,
 } from "@/lib/db/schema";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { SERVER_DICTS } from "@/lib/i18n/dict";
+import {
+  renderNotification,
+  type NotificationPayload,
+} from "@/lib/notifications";
 
+// 存 type + params，读的时候按查看者的语言渲染（见 lib/notifications.ts）。
+// title / body 同时按默认语言写一份快照：数据库里 title 是 NOT NULL，
+// 而且万一以后 params 结构变了，列表还有东西可显示。
 export async function notify(input: {
   userId: number;
-  type: string;
-  title: string;
-  body?: string | null;
+  payload: NotificationPayload;
   href?: string | null;
 }) {
+  const { type, ...params } = input.payload;
+  const snapshot = renderNotification(
+    SERVER_DICTS[DEFAULT_LOCALE],
+    input.payload,
+  );
   await db.insert(notifications).values({
     userId: input.userId,
-    type: input.type,
-    title: input.title.slice(0, 80),
-    body: input.body?.slice(0, 240) || null,
+    type,
+    title: snapshot.title.slice(0, 80),
+    body: snapshot.body?.slice(0, 240) || null,
+    params,
+    // href 不带语言前缀，点开时再按当时的语言补
     href: input.href?.slice(0, 500) || null,
   });
 }

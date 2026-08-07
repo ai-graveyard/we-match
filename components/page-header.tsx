@@ -3,6 +3,8 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { useDict, useLocale } from "@/lib/i18n/client";
+import { localePath, stripLocale } from "@/lib/i18n/routing";
 
 type PageVisit = { pathname: string; href: string };
 
@@ -57,30 +59,34 @@ function canGoBack(pathname: string) {
   return new URL(document.referrer).pathname !== pathname;
 }
 
-// 直接落地无历史时，各板块的兜底去处
-function fallbackFor(pathname: string) {
-  if (pathname.startsWith("/me/")) return "/me";
-  if (pathname === "/orgs/new") return "/me";
-  if (/^\/orgs\/[^/]+/.test(pathname)) return "/orgs";
+// 直接落地无历史时，各板块的兜底去处（传入的是剥掉语言前缀的路径）
+function fallbackFor(path: string) {
+  if (path.startsWith("/me/")) return "/me";
+  if (path === "/orgs/new") return "/me";
+  if (/^\/orgs\/[^/]+/.test(path)) return "/orgs";
   return "/";
 }
 
 export function BackButton() {
   const router = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useDict();
   return (
     <button
       type="button"
-      aria-label="返回"
+      aria-label={t.common.back}
       onClick={() => {
         const previousPage = pageVisits.at(-2);
         if (previousPage) {
+          // 记录里的 href 来自 usePathname，已经带语言前缀
           pendingBackHref = previousPage.href;
           router.replace(previousPage.href);
         } else if (canGoBack(pathname)) {
           router.back();
         } else {
-          router.replace(fallbackFor(pathname));
+          const { path } = stripLocale(pathname);
+          router.replace(localePath(locale, fallbackFor(path)));
         }
       }}
       className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-panel text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3 md:hidden"

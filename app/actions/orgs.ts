@@ -20,10 +20,14 @@ import {
 } from "@/lib/queries";
 import { notify, track } from "@/lib/activity";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getRequestDict, getRequestLocale } from "@/lib/i18n/request";
+import { localePath } from "@/lib/i18n/routing";
+import { fmt } from "@/lib/i18n/fmt";
+import type { NotificationPayload } from "@/lib/notifications";
 
 export type OrgFormState = { error?: string; ok?: string };
 
-async function notifyOrgAdmins(orgId: number, input: { title: string; body: string }) {
+async function notifyOrgAdmins(orgId: number, payload: NotificationPayload) {
   const admins = await db
     .select({ userId: orgMembers.userId })
     .from(orgMembers)
@@ -35,13 +39,7 @@ async function notifyOrgAdmins(orgId: number, input: { title: string; body: stri
     );
   await Promise.all(
     admins.map(({ userId }) =>
-      notify({
-        userId,
-        type: "org_join_requested",
-        title: input.title,
-        body: input.body,
-        href: `/orgs/${orgId}`,
-      }),
+      notify({ userId, payload, href: `/orgs/${orgId}` }),
     ),
   );
 }
@@ -50,12 +48,14 @@ export async function createOrgAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const user = await getSessionUser();
-  if (!user) return { error: "登录已失效，请重新登录" };
+  if (!user) return { error: t.auth.sessionExpired };
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "组织名称不能为空" };
+  if (!name) return { error: t.org.emptyName };
   if (name.length > ORG_LIMITS.name)
-    return { error: `组织名称最多 ${ORG_LIMITS.name} 字` };
+    return { error: fmt(t.org.nameTooLong, { max: ORG_LIMITS.name }) };
   const description =
     String(formData.get("description") ?? "")
       .trim()
@@ -64,7 +64,9 @@ export async function createOrgAction(
   const visibility = visRaw === "public" ? "public" : "private";
 
   if ((await countUserOrgs(user.id)) >= ORG_LIMITS.maxJoined) {
-    return { error: `最多同时加入 ${ORG_LIMITS.maxJoined} 个组织（创建也计入）` };
+    return {
+      error: fmt(t.org.joinLimitWithCreate, { max: ORG_LIMITS.maxJoined }),
+    };
   }
 
   const inviteCode = await generateUniqueInviteCode();
@@ -75,17 +77,18 @@ export async function createOrgAction(
   await db
     .insert(orgMembers)
     .values({ orgId: org.id, userId: user.id, role: "owner" });
-  redirect(`/orgs/${org.id}`);
+  redirect(localePath(locale, `/orgs/${org.id}`));
 }
 
 // 两条申请路径共用的检查，返回 error 或 null
 async function checkCanApply(
   userId: number,
   orgId: number,
+  t: Awaited<ReturnType<typeof getRequestDict>>,
 ): Promise<string | null> {
-  if (await getMembership(orgId, userId)) return "你已经是该组织成员";
+  if (await getMembership(orgId, userId)) return t.org.alreadyMember;
   if ((await countUserOrgs(userId)) >= ORG_LIMITS.maxJoined)
-    return `最多同时加入 ${ORG_LIMITS.maxJoined} 个组织`;
+    return fmt(t.org.joinLimit, { max: ORG_LIMITS.maxJoined });
   const [pending] = await db
     .select({ id: joinRequests.id })
     .from(joinRequests)
@@ -97,7 +100,7 @@ async function checkCanApply(
       ),
     )
     .limit(1);
-  if (pending) return "已提交过申请，等待管理员审批";
+  if (pending) return t.org.alreadyApplied;
   return null;
 }
 
@@ -105,10 +108,11 @@ export async function applyByCodeAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "请先登录" };
+  if (!user) return { error: t.auth.loginRequired };
   const code = normalizeInviteCode(String(formData.get("code") ?? ""));
-  if (!code) return { error: "请输入邀请码" };
+  if (!code) return { error: t.org.emptyCode };
   if (
     !(await consumeRateLimit(
       `org-code:${user.id}`,
@@ -116,55 +120,60 @@ export async function applyByCodeAction(
       60 * 60 * 1000,
     ))
   )
-    return { error: "尝试次数过多，请一小时后再试" };
+    return { error: t.org.codeTooManyAttempts };
   const [org] = await db
     .select({ id: orgs.id, name: orgs.name })
     .from(orgs)
     .where(eq(orgs.inviteCode, code))
     .limit(1);
   if (!org) {
-    return { error: "邀请码无效" };
+    return { error: t.org.badCode };
   }
-  const err = await checkCanApply(user.id, org.id);
+  const err = await checkCanApply(user.id, org.id, t);
   if (err) return { error: err };
   await db
     .insert(joinRequests)
     .values({ orgId: org.id, userId: user.id, via: "code" });
   await notifyOrgAdmins(org.id, {
-    title: `${user.nickname} 申请加入组织`,
-    body: "通过邀请码提交，等待审批",
+    type: "org_join_requested",
+    name: user.nickname,
+    via: "code",
+    orgId: org.id,
   });
   await track({ name: "org_join_requested", userId: user.id, entityType: "org", entityId: org.id });
-  return { ok: `已向「${org.name}」提交申请，等待管理员审批` };
+  return { ok: fmt(t.org.appliedTo, { name: org.name }) };
 }
 
 export async function applyPlazaAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "请先登录" };
+  if (!user) return { error: t.auth.loginRequired };
   const orgId = Number(formData.get("orgId"));
-  if (!Number.isInteger(orgId) || orgId <= 0) return { error: "参数不正确" };
+  if (!Number.isInteger(orgId) || orgId <= 0) return { error: t.common.badParams };
   const [org] = await db
     .select({ id: orgs.id, visibility: orgs.visibility })
     .from(orgs)
     .where(eq(orgs.id, orgId))
     .limit(1);
   // 私有组织不接受广场申请（也不暴露存在性）
-  if (!org || org.visibility !== "public") return { error: "组织不存在" };
-  const err = await checkCanApply(user.id, orgId);
+  if (!org || org.visibility !== "public") return { error: t.org.notFound };
+  const err = await checkCanApply(user.id, orgId, t);
   if (err) return { error: err };
   await db
     .insert(joinRequests)
     .values({ orgId, userId: user.id, via: "plaza" });
   await notifyOrgAdmins(orgId, {
-    title: `${user.nickname} 申请加入组织`,
-    body: "通过组织广场提交，等待审批",
+    type: "org_join_requested",
+    name: user.nickname,
+    via: "plaza",
+    orgId,
   });
   await track({ name: "org_join_requested", userId: user.id, entityType: "org", entityId: orgId });
   refresh();
-  return { ok: "已提交申请，等待管理员审批" };
+  return { ok: t.org.applied };
 }
 
 async function requireOwner(orgId: number) {
@@ -189,18 +198,19 @@ export async function handleRequestAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
   const requestId = Number(formData.get("requestId"));
   const decision = String(formData.get("decision"));
   if (!Number.isInteger(requestId) || !["approve", "reject"].includes(decision))
-    return { error: "参数不正确" };
+    return { error: t.common.badParams };
   const [request] = await db
     .select()
     .from(joinRequests)
     .where(eq(joinRequests.id, requestId))
     .limit(1);
-  if (!request || request.status !== "pending") return { error: "申请不存在或已处理" };
+  if (!request || request.status !== "pending") return { error: t.org.requestGone };
   const ctx = await requireOrgAdmin(request.orgId);
-  if (!ctx) return { error: "只有管理员可以审批" };
+  if (!ctx) return { error: t.org.adminOnly };
 
   if (decision === "approve") {
     if (await getMembership(request.orgId, request.userId)) {
@@ -209,11 +219,11 @@ export async function handleRequestAction(
         .set({ status: "approved", handledAt: new Date() })
         .where(eq(joinRequests.id, requestId));
       refresh();
-      return { ok: "对方已是成员" };
+      return { ok: t.org.targetAlreadyMember };
     }
     if ((await countUserOrgs(request.userId)) >= ORG_LIMITS.maxJoined) {
       return {
-        error: `对方已加入 ${ORG_LIMITS.maxJoined} 个组织，名额已满，无法通过`,
+        error: fmt(t.org.targetJoinLimit, { max: ORG_LIMITS.maxJoined }),
       };
     }
     await db
@@ -232,8 +242,14 @@ export async function handleRequestAction(
   await Promise.all([
     notify({
       userId: request.userId,
-      type: decision === "approve" ? "org_join_approved" : "org_join_rejected",
-      title: decision === "approve" ? `你已加入「${ctx.org.name}」` : `「${ctx.org.name}」暂未通过你的申请`,
+      payload:
+        decision === "approve"
+          ? {
+              type: "org_join_approved",
+              org: ctx.org.name,
+              orgId: request.orgId,
+            }
+          : { type: "org_join_rejected", org: ctx.org.name },
       href: decision === "approve" ? `/orgs/${request.orgId}` : "/me?section=organization",
     }),
     track({
@@ -259,16 +275,17 @@ export async function promoteOrgAdminAction(
     !Number.isInteger(userId) ||
     userId <= 0
   ) {
-    return { error: "参数不正确" };
+    return { error: (await getRequestDict()).common.badParams };
   }
+  const t = await getRequestDict();
 
   const ctx = await requireOrgAdmin(orgId);
-  if (!ctx) return { error: "只有管理员可以任命管理员" };
-  if (userId === ctx.user.id) return { error: "你已经是管理员" };
+  if (!ctx) return { error: t.org.promoteAdminOnly };
+  if (userId === ctx.user.id) return { error: t.org.selfAlreadyAdmin };
 
   const target = await getMembership(orgId, userId);
-  if (!target) return { error: "该用户不是组织成员" };
-  if (isOrgAdminRole(target.role)) return { ok: "对方已经是管理员" };
+  if (!target) return { error: t.org.targetNotMember };
+  if (isOrgAdminRole(target.role)) return { ok: t.org.targetAlreadyAdmin };
 
   // 把上限判断放进同一条 UPDATE，避免两位管理员同时操作时突破 3 人上限。
   const [promoted] = await db
@@ -292,28 +309,29 @@ export async function promoteOrgAdminAction(
   if (!promoted) {
     if ((await countOrgAdmins(orgId)) >= ORG_LIMITS.maxAdmins) {
       return {
-        error: `每个组织最多任命 ${ORG_LIMITS.maxAdmins} 名管理员（拥有者另计）`,
+        error: fmt(t.org.adminLimit, { max: ORG_LIMITS.maxAdmins }),
       };
     }
-    return { error: "任命失败，请刷新后重试" };
+    return { error: t.org.promoteFailed };
   }
 
   refresh();
-  return { ok: "已设为管理员" };
+  return { ok: t.org.promoted };
 }
 
 export async function updateOrgAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
   const orgId = Number(formData.get("orgId"));
-  if (!Number.isInteger(orgId)) return { error: "参数不正确" };
+  if (!Number.isInteger(orgId)) return { error: t.common.badParams };
   const ctx = await requireOwner(orgId);
-  if (!ctx) return { error: "只有组织拥有者可以编辑" };
+  if (!ctx) return { error: t.org.ownerOnly };
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "组织名称不能为空" };
+  if (!name) return { error: t.org.emptyName };
   if (name.length > ORG_LIMITS.name)
-    return { error: `组织名称最多 ${ORG_LIMITS.name} 字` };
+    return { error: fmt(t.org.nameTooLong, { max: ORG_LIMITS.name }) };
   const description =
     String(formData.get("description") ?? "")
       .trim()
@@ -328,7 +346,7 @@ export async function updateOrgAction(
     })
     .where(eq(orgs.id, orgId));
   refresh();
-  return { ok: "已保存" };
+  return { ok: t.common.saved };
 }
 
 export async function resetInviteCodeAction(formData: FormData) {
@@ -367,7 +385,7 @@ export async function leaveOrgAction(formData: FormData) {
     .delete(orgMembers)
     .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, user.id)));
   await closeUserOrgNeeds(user.id, orgId);
-  redirect("/me?section=organization");
+  redirect(localePath(await getRequestLocale(), "/me?section=organization"));
 }
 
 export async function dissolveOrgAction(formData: FormData) {
@@ -380,5 +398,5 @@ export async function dissolveOrgAction(formData: FormData) {
   await db.delete(orgMembers).where(eq(orgMembers.orgId, orgId));
   await db.delete(joinRequests).where(eq(joinRequests.orgId, orgId));
   await db.delete(orgs).where(eq(orgs.id, orgId));
-  redirect("/me?section=organization");
+  redirect(localePath(await getRequestLocale(), "/me?section=organization"));
 }

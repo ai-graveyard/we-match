@@ -2,8 +2,10 @@ import "server-only";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { apiKeys, users, type User } from "@/lib/db/schema";
-import { hashApiKey } from "@/lib/api-keys";
+import { hashApiKey } from "@/lib/api-keys-service";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getRequestDict } from "@/lib/i18n/request";
+import { fmt } from "@/lib/i18n/fmt";
 
 // 开放 API 鉴权与限流（docs/AGENT-SKILL.md 3.1）
 
@@ -17,13 +19,15 @@ export function apiError(status: number, code: string, message: string) {
 export type ApiAuth = { user: User };
 
 export async function authenticate(request: Request): Promise<ApiAuth | Response> {
+  // 调用方多半是 Agent，没有 cookie，语言按 Accept-Language 判定
+  const t = await getRequestDict();
   const header = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(wm_[A-Za-z0-9_-]+)$/.exec(header);
   if (!match) {
     return apiError(
       401,
       "unauthorized",
-      "缺少 API Key，请求头需带 Authorization: Bearer <Key>",
+      t.api.missingKey,
     );
   }
   const rawKey = match[1];
@@ -35,13 +39,13 @@ export async function authenticate(request: Request): Promise<ApiAuth | Response
     // 兼容升级前的明文记录；成功鉴权后立即替换为哈希。
     .where(or(eq(apiKeys.key, keyHash), eq(apiKeys.key, rawKey)))
     .limit(1);
-  if (!row) return apiError(401, "unauthorized", "API Key 无效或已被删除");
+  if (!row) return apiError(401, "unauthorized", t.api.invalidKey);
   if (row.user.status === "suspended") {
-    return apiError(403, "account_suspended", "账号已暂停使用");
+    return apiError(403, "account_suspended", t.api.accountSuspended);
   }
   // 注销时 Key 已删除，走不到这里；防御历史数据或并发窗口
   if (row.user.status === "deleted") {
-    return apiError(403, "account_deleted", "账号已注销");
+    return apiError(403, "account_deleted", t.api.accountDeleted);
   }
   if (row.key.key === rawKey) {
     await db
@@ -56,7 +60,7 @@ export async function authenticate(request: Request): Promise<ApiAuth | Response
     return apiError(
       429,
       "rate_limited",
-      `请求过于频繁（每 Key 每分钟 ${RATE_LIMIT_PER_MINUTE} 次），请稍后再试`,
+      fmt(t.api.rateLimited, { max: RATE_LIMIT_PER_MINUTE }),
     );
   }
 

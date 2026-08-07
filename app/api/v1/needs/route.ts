@@ -5,6 +5,7 @@ import { apiError, authenticate, readJson } from "@/lib/api/auth";
 import { serializeNeed } from "@/lib/api/serialize";
 import { getMembership } from "@/lib/queries";
 import { createNeed, validateNeedPatch } from "@/lib/needs-service";
+import { getRequestDict } from "@/lib/i18n/request";
 
 // GET /api/v1/needs：需求流。参数：
 //   org=<id> 指定组织（需成员身份，缺省为广场）；type=need|offer；tag；q；
@@ -20,10 +21,10 @@ export async function GET(request: Request) {
   if (orgParam != null) {
     orgId = Number(orgParam);
     if (!Number.isInteger(orgId) || orgId <= 0)
-      return apiError(422, "invalid_input", "org 参数需为组织 id");
+      return apiError(422, "invalid_input", (await getRequestDict()).api.orgParamNotId);
     // 组织内容对非成员一律 404，不暴露存在性
     if (!(await getMembership(orgId, auth.user.id)))
-      return apiError(404, "not_found", "组织不存在或你不是成员");
+      return apiError(404, "not_found", (await getRequestDict()).api.orgNotFoundOrNotMember);
   }
 
   const conds: SQL[] = [
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
   const status = params.get("status");
   if (status != null) {
     if (status !== "open" && status !== "done" && status !== "closed")
-      return apiError(422, "invalid_input", "status 只能是 open / done / closed");
+      return apiError(422, "invalid_input", (await getRequestDict()).api.badStatusFilter);
     conds.push(eq(needs.status, status));
   } else if (params.get("all") !== "1") {
     conds.push(eq(needs.status, "open"));
@@ -83,14 +84,15 @@ export async function POST(request: Request) {
   if (auth instanceof Response) return auth;
 
   const body = await readJson(request);
-  if (!body) return apiError(422, "invalid_body", "请求体需为 JSON 对象");
-  const parsed = validateNeedPatch(body, { requireCore: true });
+  const t = await getRequestDict();
+  if (!body) return apiError(422, "invalid_body", t.api.bodyNotObject);
+  const parsed = validateNeedPatch(body, { requireCore: true }, t);
   if ("error" in parsed) return apiError(422, "invalid_input", parsed.error);
   if (parsed.patch.status !== undefined)
-    return apiError(422, "invalid_input", "发布时不能指定 status，新需求即为 open");
+    return apiError(422, "invalid_input", t.api.statusOnCreate);
 
   const orgId = body.orgId == null ? null : Number(body.orgId);
-  const result = await createNeed(auth.user, parsed.patch, orgId);
+  const result = await createNeed(auth.user, parsed.patch, orgId, t);
   if ("error" in result) return apiError(422, "invalid_input", result.error);
   return Response.json({ need: serializeNeed(result.need) }, { status: 201 });
 }

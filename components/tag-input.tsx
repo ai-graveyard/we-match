@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
+import { useDict } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
 
 // 标签输入：Enter/逗号添加，联想已有标签优先复用（与需求标签共用词库）
 export function TagInput({
@@ -17,6 +19,7 @@ export function TagInput({
   maxCount: number;
   maxLength: number;
 }) {
+  const t = useDict();
   const [draft, setDraft] = useState("");
   const [focused, setFocused] = useState(false);
 
@@ -42,7 +45,7 @@ export function TagInput({
               {tag}
               <button
                 type="button"
-                aria-label={`删除标签 ${tag}`}
+                aria-label={fmt(t.card.tagRemoveLabel, { tag })}
                 className="flex items-center justify-center text-gray hover:text-ink"
                 onClick={() => onChange(value.filter((t) => t !== tag))}
               >
@@ -57,7 +60,9 @@ export function TagInput({
           className="h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
           value={draft}
           placeholder={
-            value.length >= maxCount ? `最多 ${maxCount} 个` : "输入后回车添加"
+            value.length >= maxCount
+              ? fmt(t.card.tagInputFull, { max: maxCount })
+              : t.card.tagInputPlaceholder
           }
           disabled={value.length >= maxCount}
           onChange={(e) => setDraft(e.target.value)}

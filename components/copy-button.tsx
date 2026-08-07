@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { useDict } from "@/lib/i18n/client";
 
 // http 环境（如局域网 IP 访问）没有 navigator.clipboard，退化到 execCommand
 function legacyCopy(text: string): boolean {
@@ -36,13 +37,15 @@ export async function copyText(text: string): Promise<boolean> {
 // text 可传函数（点击时求值），用于依赖 location 等仅客户端可用的值
 export function CopyButton({
   text,
-  label = "复制",
+  label,
   accent = false,
 }: {
   text: string | (() => string);
+  /** 不传就是通用的「复制」 */
   label?: string;
   accent?: boolean;
 }) {
+  const t = useDict();
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -74,7 +77,11 @@ export function CopyButton({
       ) : (
         <Copy size={12} aria-hidden />
       )}
-      {state === "idle" ? label : state === "copied" ? "已复制" : "复制失败"}
+      {state === "idle"
+        ? (label ?? t.common.copy)
+        : state === "copied"
+          ? t.common.copied
+          : t.common.copyFailed}
     </button>
   );
 }

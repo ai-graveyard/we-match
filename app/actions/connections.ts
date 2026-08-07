@@ -7,6 +7,7 @@ import { connections, needs, orgMembers, users } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { isExpired } from "@/lib/needs";
 import { isBlockedEitherWay, notify, track } from "@/lib/activity";
+import { getRequestDict } from "@/lib/i18n/request";
 
 export type ConnectionFormState = { error?: string; ok?: string };
 
@@ -25,12 +26,13 @@ export async function expressInterestAction(
   _prev: ConnectionFormState,
   formData: FormData,
 ): Promise<ConnectionFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "请先登录" };
+  if (!user) return { error: t.auth.loginRequired };
   const needId = Number(formData.get("needId"));
-  if (!Number.isInteger(needId) || needId <= 0) return { error: "参数不正确" };
+  if (!Number.isInteger(needId) || needId <= 0) return { error: t.common.badParams };
   const message = String(formData.get("message") ?? "").trim();
-  if (message.length > 200) return { error: "说明最多 200 字" };
+  if (message.length > 200) return { error: t.connection.messageTooLong };
 
   const [need] = await db.select().from(needs).where(eq(needs.id, needId)).limit(1);
   if (
@@ -40,10 +42,10 @@ export async function expressInterestAction(
     need.moderationStatus !== "visible" ||
     isExpired(need)
   ) {
-    return { error: "这条需求当前不能举手" };
+    return { error: t.connection.notOpen };
   }
   if (await isBlockedEitherWay(user.id, need.userId)) {
-    return { error: "当前无法向该用户举手" };
+    return { error: t.connection.blocked };
   }
   if (need.orgId != null) {
     const [membership] = await db
@@ -51,7 +53,7 @@ export async function expressInterestAction(
       .from(orgMembers)
       .where(and(eq(orgMembers.orgId, need.orgId), eq(orgMembers.userId, user.id)))
       .limit(1);
-    if (!membership) return { error: "这条需求不存在" };
+    if (!membership) return { error: t.connection.needNotFound };
   }
 
   const [existing] = await db
@@ -65,7 +67,7 @@ export async function expressInterestAction(
     )
     .limit(1);
   if (existing && existing.status !== "rejected" && existing.status !== "cancelled") {
-    return { error: "你已经举过手了" };
+    return { error: t.connection.already };
   }
 
   const now = new Date();
@@ -92,9 +94,13 @@ export async function expressInterestAction(
   await Promise.all([
     notify({
       userId: need.userId,
-      type: "connection_requested",
-      title: `${user.nickname} 对你的需求举手了`,
-      body: message || `关于「${need.title}」`,
+      payload: {
+        type: "connection_requested",
+        name: user.nickname,
+        need: need.title,
+        needId: need.id,
+        message: message || null,
+      },
       href: `/needs/${need.id}`,
     }),
     track({
@@ -105,7 +111,7 @@ export async function expressInterestAction(
     }),
   ]);
   refresh();
-  return { ok: "已经举手，等待发布者回应" };
+  return { ok: t.connection.submitted };
 }
 
 export async function handleConnectionAction(formData: FormData) {
@@ -129,9 +135,12 @@ export async function handleConnectionAction(formData: FormData) {
   await Promise.all([
     notify({
       userId: row.connection.initiatorId,
-      type: accepted ? "connection_accepted" : "connection_rejected",
-      title: accepted ? `${user.nickname} 接受了你的举手` : `${user.nickname} 暂未接受你的举手`,
-      body: `关于「${row.need.title}」`,
+      payload: {
+        type: accepted ? "connection_accepted" : "connection_rejected",
+        name: user.nickname,
+        need: row.need.title,
+        needId: row.need.id,
+      },
       href: `/needs/${row.need.id}`,
     }),
     track({
@@ -161,9 +170,12 @@ export async function cancelConnectionAction(formData: FormData) {
     .where(eq(connections.id, connectionId));
   await notify({
     userId: row.need.userId,
-    type: "connection_cancelled",
-    title: `${user.nickname} 撤回了举手`,
-    body: `关于「${row.need.title}」`,
+    payload: {
+      type: "connection_cancelled",
+      name: user.nickname,
+      need: row.need.title,
+      needId: row.need.id,
+    },
     href: `/needs/${row.need.id}`,
   });
   refresh();
@@ -201,9 +213,17 @@ export async function confirmConnectionCompletedAction(formData: FormData) {
   await Promise.all([
     notify({
       userId: otherUserId,
-      type: completed ? "connection_completed" : "completion_confirmation_requested",
-      title: completed ? "双方已确认这次匹配完成" : `${user.nickname} 已确认匹配完成`,
-      body: completed ? `「${row.need.title}」已形成一次有效连接` : "请确认这次匹配是否已经完成",
+      payload: completed
+        ? {
+            type: "connection_completed",
+            need: row.need.title,
+            needId: row.need.id,
+          }
+        : {
+            type: "completion_confirmation_requested",
+            name: user.nickname,
+            needId: row.need.id,
+          },
       href: `/needs/${row.need.id}`,
     }),
     completed

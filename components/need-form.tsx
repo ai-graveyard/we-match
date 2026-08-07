@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import {
   createNeedAction,
   updateNeedAction,
@@ -15,6 +14,15 @@ import {
 } from "@/lib/needs";
 import { TagInput } from "@/components/tag-input";
 import type { ContactFieldKey } from "@/lib/card";
+import { useDict } from "@/lib/i18n/client";
+import { LocaleLink } from "@/lib/i18n/link";
+import { fmt } from "@/lib/i18n/fmt";
+import {
+  cardFieldLabel,
+  cardVisibilityLabel,
+  expiryLabel,
+  intentLabel,
+} from "@/lib/i18n/labels";
 
 export type NeedFormInitial = {
   id?: number;
@@ -50,10 +58,10 @@ export function NeedForm({
   suggestions: string[];
   contactOptions: {
     key: ContactFieldKey;
-    label: string;
     visibility: "authenticated" | "orgs";
   }[];
 }) {
+  const t = useDict();
   const editing = initial.id != null;
   const [state, formAction, pending] = useActionState<NeedFormState, FormData>(
     editing ? updateNeedAction : createNeedAction,
@@ -101,23 +109,18 @@ export function NeedForm({
       {editing && <input type="hidden" name="id" value={initial.id} />}
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>类型</span>
+        <span className={`${labelCls} mb-1 block`}>{t.need.formType}</span>
         <div className="inline-flex overflow-hidden rounded-sm border border-line">
-          {(
-            [
-              { value: "need", label: "我需要" },
-              { value: "offer", label: "我提供" },
-            ] as const
-          ).map((opt, i) => (
+          {(["need", "offer"] as const).map((opt, i) => (
             <button
-              key={opt.value}
+              key={opt}
               type="button"
-              onClick={() => setType(opt.value)}
+              onClick={() => setType(opt)}
               className={`px-3 py-1.5 text-xs transition-colors duration-100 ${
                 i > 0 ? "border-l border-line" : ""
-              } ${type === opt.value ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
+              } ${type === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
             >
-              {opt.label}
+              {intentLabel(t, opt)}
             </button>
           ))}
         </div>
@@ -126,7 +129,7 @@ export function NeedForm({
 
       <div>
         <label htmlFor="title" className={`${labelCls} mb-1 block`}>
-          标题（必填，≤ {NEED_LIMITS.title} 字）
+          {fmt(t.need.formTitle, { max: NEED_LIMITS.title })}
         </label>
         <input
           id="title"
@@ -141,7 +144,7 @@ export function NeedForm({
 
       <div>
         <label htmlFor="description" className={`${labelCls} mb-1 block`}>
-          详细描述
+          {t.need.formDescription}
         </label>
         <textarea
           id="description"
@@ -155,7 +158,7 @@ export function NeedForm({
       </div>
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>标签</span>
+        <span className={`${labelCls} mb-1 block`}>{t.need.formTags}</span>
         <TagInput
           value={tags}
           onChange={setTags}
@@ -166,7 +169,7 @@ export function NeedForm({
       </div>
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>截止时间</span>
+        <span className={`${labelCls} mb-1 block`}>{t.need.formDeadline}</span>
         <div className="flex flex-wrap gap-1.5">
           {EXPIRY_PRESETS.map((option) => (
             <button
@@ -179,18 +182,16 @@ export function NeedForm({
                   : "border-line text-gray hover:text-ink"
               }`}
             >
-              {option.label}
+              {expiryLabel(t, option.value)}
             </button>
           ))}
         </div>
         {expiryPreset === "permanent" ? (
-          <p className="mt-2 text-2xs text-gray">
-            长期有效，直到你手动关闭或标记完成
-          </p>
+          <p className="mt-2 text-2xs text-gray">{t.need.formPermanentHint}</p>
         ) : (
           <input
             type="datetime-local"
-            aria-label="自定义截止时间"
+            aria-label={t.need.formDeadlineCustom}
             className={`${inputCls} mt-2 h-11 font-mono text-xs`}
             required
             value={deadline}
@@ -213,19 +214,21 @@ export function NeedForm({
       </div>
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>可见范围</span>
+        <span className={`${labelCls} mb-1 block`}>{t.need.formScope}</span>
         {editing ? (
           <p className="text-xs text-gray">
-            {initial.scope === "plaza"
-              ? "广场公开"
-              : (orgs.find((o) => String(o.id) === initial.scope)?.name ??
-                "组织内")}
-            （发布后不可修改）
+            {fmt(t.need.formScopeLocked, {
+              scope:
+                initial.scope === "plaza"
+                  ? t.need.formScopePlaza
+                  : (orgs.find((o) => String(o.id) === initial.scope)?.name ??
+                    t.need.formScopeOrg),
+            })}
           </p>
         ) : (
           <>
             <div className="flex flex-wrap gap-1.5">
-              {[{ id: "plaza", name: "广场公开" }, ...orgs.map((o) => ({ id: String(o.id), name: o.name }))].map(
+              {[{ id: "plaza", name: t.need.formScopePlaza }, ...orgs.map((o) => ({ id: String(o.id), name: o.name }))].map(
                 (opt) => (
                   <button
                     key={opt.id}
@@ -244,7 +247,7 @@ export function NeedForm({
             </div>
             {orgs.length === 0 && (
               <p className="mt-1 text-2xs text-gray">
-                加入组织后可选择只发到组织内
+                {t.need.formScopeEmptyHint}
               </p>
             )}
           </>
@@ -253,7 +256,9 @@ export function NeedForm({
       </div>
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>优先联系方式</span>
+        <span className={`${labelCls} mb-1 block`}>
+          {t.need.formPreferredContact}
+        </span>
         {eligibleContacts.length > 0 ? (
           <>
             <div className="flex flex-wrap gap-1.5">
@@ -268,25 +273,25 @@ export function NeedForm({
                       : "border-line text-gray hover:text-ink"
                   }`}
                 >
-                  {option.label}
+                  {cardFieldLabel(t, option.key)}
                   {option.visibility === "orgs" && (
                     <span className="ml-1 font-mono text-3xs opacity-70">
-                      共同组织可见
+                      {cardVisibilityLabel(t, "orgs")}
                     </span>
                   )}
                 </button>
               ))}
             </div>
             <p className="mt-2 text-2xs leading-5 text-gray">
-              对方联系你时，会优先看到这个渠道
+              {t.need.formPreferredContactHint}
             </p>
           </>
         ) : (
           <p className="text-2xs leading-5 text-gray">
-            当前范围没有可用的联系方式，请先
-            <Link href="/me/card" className="ml-1 text-ink underline">
-              编辑名片
-            </Link>
+            {t.need.formNoContactPrefix}
+            <LocaleLink href="/me/card" className="ml-1 text-ink underline">
+              {t.need.formNoContactLink}
+            </LocaleLink>
           </p>
         )}
         <input
@@ -302,7 +307,11 @@ export function NeedForm({
         disabled={pending}
         className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
-        {pending ? "提交中" : editing ? "保存修改" : "发布"}
+        {pending
+          ? t.common.submitting
+          : editing
+            ? t.need.formSubmitEdit
+            : t.need.formSubmitCreate}
       </button>
     </form>
   );

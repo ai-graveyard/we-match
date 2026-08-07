@@ -11,6 +11,8 @@ import {
 import { NEED_LIMITS } from "@/lib/needs";
 import { normalizeTags } from "@/lib/tags";
 import { notify, track } from "@/lib/activity";
+import type { ServerDict } from "@/lib/i18n/dict/types";
+import { fmt } from "@/lib/i18n/fmt";
 
 // 需求字段补丁：网页表单（全量）与开放 API（部分）共用的校验与落库层
 
@@ -28,19 +30,20 @@ export type NeedPatch = {
 export function validateNeedPatch(
   input: Record<string, unknown>,
   { requireCore }: { requireCore: boolean },
+  t: ServerDict,
 ): { error: string } | { patch: NeedPatch } {
   const patch: NeedPatch = {};
 
   if (input.type !== undefined || requireCore) {
     if (input.type !== "need" && input.type !== "offer")
-      return { error: "请选择需求类型（need / offer）" };
+      return { error: t.need.badType };
     patch.type = input.type;
   }
   if (input.title !== undefined || requireCore) {
     const title = String(input.title ?? "").trim();
-    if (!title) return { error: "标题不能为空" };
+    if (!title) return { error: t.need.emptyTitle };
     if (title.length > NEED_LIMITS.title)
-      return { error: `标题最多 ${NEED_LIMITS.title} 字` };
+      return { error: fmt(t.need.titleTooLong, { max: NEED_LIMITS.title }) };
     patch.title = title;
   }
   if (input.description !== undefined) {
@@ -54,7 +57,7 @@ export function validateNeedPatch(
       count: NEED_LIMITS.tagCount,
       length: NEED_LIMITS.tagLength,
     });
-    if (!tags) return { error: "标签格式不正确" };
+    if (!tags) return { error: t.common.badTags };
     patch.tags = tags;
   }
   if (input.preferredContact !== undefined) {
@@ -67,7 +70,7 @@ export function validateNeedPatch(
     ) {
       patch.preferredContact = input.preferredContact;
     } else {
-      return { error: "优先联系方式只能是 wechat / email / contactPhone" };
+      return { error: t.need.badPreferredContact };
     }
   }
   if (input.status !== undefined) {
@@ -76,7 +79,7 @@ export function validateNeedPatch(
       input.status !== "done" &&
       input.status !== "closed"
     )
-      return { error: "状态只能是 open / done / closed" };
+      return { error: t.need.badStatus };
     patch.status = input.status;
   }
   if (input.expiresAt !== undefined || requireCore) {
@@ -85,9 +88,9 @@ export function validateNeedPatch(
     } else {
       const expiresAt = new Date(String(input.expiresAt ?? ""));
       if (Number.isNaN(expiresAt.getTime()))
-        return { error: "请选择截止时间，或选择永久" };
+        return { error: t.need.missingExpiry };
       if (expiresAt.getTime() <= Date.now())
-        return { error: "截止时间必须晚于当前时间" };
+        return { error: t.need.expiryInPast };
       patch.expiresAt = expiresAt;
     }
   }
@@ -126,19 +129,18 @@ export async function createNeed(
   user: User,
   patch: NeedPatch,
   orgId: number | null,
+  t: ServerDict,
 ): Promise<{ error: string } | { need: Need }> {
   if (orgId != null) {
     if (!Number.isInteger(orgId) || orgId <= 0)
-      return { error: "可见范围不正确" };
+      return { error: t.need.badScope };
     if (!(await getMembership(orgId, user.id)))
-      return { error: "只能发到自己已加入的组织" };
+      return { error: t.need.notOrgMember };
   }
 
   if (!canBeContacted(user, orgId ? "org" : "plaza")) {
     return {
-      error: orgId
-        ? "名片上还没有组织成员可见的联系方式，发布后别人联系不到你。请先到「我的 → 编辑名片」开启"
-        : "名片上还没有登录用户可见的联系方式，发布后别人联系不到你。请先到「我的 → 编辑名片」开启",
+      error: orgId ? t.need.noOrgContact : t.need.noPlazaContact,
     };
   }
 
@@ -148,7 +150,7 @@ export async function createNeed(
     patch.preferredContact,
   );
   if (patch.preferredContact && preferredContact !== patch.preferredContact) {
-    return { error: "选择的优先联系方式在当前可见范围下不可用" };
+    return { error: t.need.preferredContactUnavailable };
   }
 
   const dayStart = new Date();
@@ -158,7 +160,9 @@ export async function createNeed(
     .from(needs)
     .where(and(eq(needs.userId, user.id), gte(needs.createdAt, dayStart)));
   if ((todayCount?.n ?? 0) >= NEED_LIMITS.dailyPublish) {
-    return { error: `每天最多发布 ${NEED_LIMITS.dailyPublish} 条需求` };
+    return {
+      error: fmt(t.need.dailyLimit, { max: NEED_LIMITS.dailyPublish }),
+    };
   }
 
   const [need] = await db
@@ -201,9 +205,11 @@ export async function createNeed(
     if ((matchCount?.n ?? 0) > 0) {
       await notify({
         userId: user.id,
-        type: "matches_available",
-        title: `发现 ${matchCount.n} 条可能匹配的需求`,
-        body: `与你刚发布的「${need.title}」标签相关`,
+        payload: {
+          type: "matches_available",
+          n: matchCount.n,
+          need: need.title,
+        },
         href: `/?type=${need.type === "need" ? "offer" : "need"}&tag=${encodeURIComponent(need.tags[0])}`,
       });
     }

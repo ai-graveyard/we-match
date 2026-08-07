@@ -59,9 +59,16 @@ export const THREAD_M =
 export const THREAD_W_OVER =
   "M-13 168C6 168 21 72 40 72M93 168C112 168 127 72 146 72M199 168C218 168 233 72 252 72M305 168C324 168 339 72 358 72";
 
-export function LogoSpinner({ height = 22 }: { height?: number }) {
+export function LogoSpinner({
+  height = 22,
+  label,
+}: {
+  height?: number;
+  /* 文案由调用方给，本文件不含任何语言相关内容 */
+  label?: string;
+}) {
   return (
-    <span role="status" aria-label="加载中" className="inline-flex">
+    <span role="status" aria-label={label} className="inline-flex">
       <svg
         width={height * ASPECT}
         height={height}

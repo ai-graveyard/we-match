@@ -8,6 +8,9 @@ import {
   type ApiKeyFormState,
 } from "@/app/actions/api-keys";
 import { CopyButton } from "@/components/copy-button";
+import { useDict } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
+import { API_KEY_LIMITS } from "@/lib/api-keys";
 
 const inputCls =
   "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
@@ -29,6 +32,7 @@ export function ApiKeyRow({
   meta: string;
   first: boolean;
 }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -46,14 +50,14 @@ export function ApiKeyRow({
               className="inline-flex items-center gap-1 rounded-sm border border-ink px-2 py-2 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
             >
               <Trash2 size={11} aria-hidden />
-              确认删除
+              {t.common.confirmDelete}
             </button>
             <button
               type="button"
               className="text-2xs text-gray hover:text-ink"
               onClick={() => setConfirming(false)}
             >
-              取消
+              {t.common.cancel}
             </button>
           </form>
         ) : (
@@ -63,7 +67,7 @@ export function ApiKeyRow({
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={11} aria-hidden />
-            删除
+            {t.common.delete}
           </button>
         )}
       </div>
@@ -74,9 +78,7 @@ export function ApiKeyRow({
       </div>
       <p className="mt-1.5 font-mono text-2xs text-gray">{meta}</p>
       {confirming && (
-        <p className="mt-1.5 text-2xs text-gray">
-          删除后此 Key 立即失效，正在使用它的 Agent 将无法访问
-        </p>
+        <p className="mt-1.5 text-2xs text-gray">{t.agent.keyDeleteHint}</p>
       )}
     </div>
   );
@@ -84,6 +86,7 @@ export function ApiKeyRow({
 
 // 折叠的生成表单；满额时由父组件传 atLimit 禁用
 export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ApiKeyFormState, FormData>(
     createApiKeyAction,
@@ -93,7 +96,7 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
   if (atLimit) {
     return (
       <p className="p-4 text-xs text-gray">
-        已达 3 个 Key 上限，删除不用的 Key 后可再生成
+        {fmt(t.agent.keyAtLimit, { max: API_KEY_LIMITS.perUser })}
       </p>
     );
   }
@@ -105,7 +108,7 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
         onClick={() => setOpen(!open)}
         className="flex h-12 w-full items-center justify-between px-4 text-sm transition-colors duration-100 hover:bg-bg-3"
       >
-        生成新 API Key
+        {t.agent.keyCreateToggle}
         {open ? (
           <ChevronUp size={15} className="text-gray" aria-hidden />
         ) : (
@@ -119,25 +122,23 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
         >
           <div>
             <label htmlFor="key-name" className={`${labelCls} mb-1 block`}>
-              名称（必填，≤ 20 字）
+              {fmt(t.agent.keyNameLabel, { max: API_KEY_LIMITS.name })}
             </label>
             <input
               id="key-name"
               name="name"
               className={inputCls}
-              placeholder="如「我的 Claude」"
-              maxLength={20}
+              placeholder={t.agent.keyNamePlaceholder}
+              maxLength={API_KEY_LIMITS.name}
               required
             />
           </div>
-          <p className="text-2xs text-gray">
-            Key 默认拥有完整读写权限。出于安全考虑，明文只显示一次
-          </p>
+          <p className="text-2xs text-gray">{t.agent.keyScopeHint}</p>
           {state.error && <p className="text-xs text-ink">{state.error}</p>}
           {state.createdKey && (
             <div className="rounded-sm border border-accent bg-bg p-3">
               <p className="text-2xs font-semibold text-accent">
-                请立即复制，此 Key 只显示一次
+                {t.agent.keyCreatedWarning}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <code className="min-w-0 flex-1 break-all font-mono text-2xs">
@@ -148,7 +149,11 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
             </div>
           )}
           <button type="submit" disabled={pending} className={primaryBtnCls}>
-            {pending ? "生成中" : state.createdKey ? "再生成一个" : "生成"}
+            {pending
+              ? t.agent.keyGenerating
+              : state.createdKey
+                ? t.agent.keyGenerateAnother
+                : t.agent.keyGenerate}
           </button>
         </form>
       )}

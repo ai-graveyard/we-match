@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { Org } from "@/lib/db/schema";
-import { VISIBILITY_LABELS } from "@/lib/orgs";
 import { ShareCard } from "@/components/share-card";
+import { getDict } from "@/lib/i18n/server";
+import { LocaleLink } from "@/lib/i18n/link";
+import { fmt } from "@/lib/i18n/fmt";
+import { orgRoleEntryLabel, orgVisibilityLabel } from "@/lib/i18n/labels";
+import type { OrgRole } from "@/lib/orgs";
 
-type OrgRole = "owner" | "admin" | "member";
-
-export function OrgOverviewCard({
+export async function OrgOverviewCard({
   org,
   role,
   memberCount,
@@ -21,6 +22,7 @@ export function OrgOverviewCard({
   pendingRequestCount: number;
   origin: string;
 }) {
+  const t = await getDict();
   const isAdmin = role === "owner" || role === "admin";
   const canShare = role === "owner" || org.visibility === "public";
   const shareUrl =
@@ -28,21 +30,21 @@ export function OrgOverviewCard({
       ? `${origin}/orgs?code=${encodeURIComponent(org.inviteCode)}`
       : `${origin}/orgs/${org.id}`;
   const actions = [
-    { label: "需求", href: `/?org=${org.id}` },
-    { label: "成员", href: `/orgs/${org.id}#members` },
+    { label: t.org.overviewNeeds, href: `/?org=${org.id}` },
+    { label: t.org.overviewMembers, href: `/orgs/${org.id}#members` },
     ...(isAdmin
       ? [
           {
             label:
               pendingRequestCount > 0
-                ? `审批 ${pendingRequestCount}`
-                : "审批",
+                ? fmt(t.org.overviewReviewCount, { n: pendingRequestCount })
+                : t.org.overviewReview,
             href: `/orgs/${org.id}#requests`,
           },
         ]
-      : [{ label: "详情", href: `/orgs/${org.id}` }]),
+      : [{ label: t.org.overviewDetail, href: `/orgs/${org.id}` }]),
     ...(role === "owner"
-      ? [{ label: "邀请", href: `/orgs/${org.id}#invite` }]
+      ? [{ label: t.org.overviewInvite, href: `/orgs/${org.id}#invite` }]
       : []),
   ];
 
@@ -50,16 +52,16 @@ export function OrgOverviewCard({
     <article className="overflow-hidden rounded-md border border-line bg-panel">
       <div className="p-4">
         <div className="flex items-center gap-2">
-          <Link
+          <LocaleLink
             href={`/orgs/${org.id}`}
             className="min-w-0 truncate text-base font-semibold hover:underline"
           >
             {org.name}
-          </Link>
+          </LocaleLink>
           <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
-            {VISIBILITY_LABELS[org.visibility]}
+            {orgVisibilityLabel(t, org.visibility)}
           </span>
-          <Link
+          <LocaleLink
             href={
               role === "owner"
                 ? `/orgs/${org.id}#settings`
@@ -67,9 +69,9 @@ export function OrgOverviewCard({
             }
             className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-2xs text-gray transition-colors duration-100 hover:text-ink"
           >
-            {role === "owner" ? "设置" : role === "admin" ? "管理" : "主页"}
+            {orgRoleEntryLabel(t, role)}
             <ChevronRight size={12} aria-hidden />
-          </Link>
+          </LocaleLink>
         </div>
 
         {org.description ? (
@@ -77,18 +79,18 @@ export function OrgOverviewCard({
             {org.description}
           </p>
         ) : (
-          <p className="mt-1 text-xs text-gray">暂无组织简介</p>
+          <p className="mt-1 text-xs text-gray">{t.org.overviewNoDescription}</p>
         )}
 
         <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-2xs text-gray">
-          <span>{memberCount} 名成员</span>
+          <span>{fmt(t.org.overviewMemberCount, { n: memberCount })}</span>
           <span aria-hidden>·</span>
-          <span>{openNeedCount} 条开放需求</span>
+          <span>{fmt(t.org.overviewOpenNeedCount, { n: openNeedCount })}</span>
           {isAdmin && (
             <>
               <span aria-hidden>·</span>
               <span className={pendingRequestCount > 0 ? "font-semibold text-ink" : ""}>
-                {pendingRequestCount} 条待审批
+                {fmt(t.org.overviewPendingCount, { n: pendingRequestCount })}
               </span>
             </>
           )}
@@ -96,14 +98,14 @@ export function OrgOverviewCard({
       </div>
 
       <nav
-        aria-label={`${org.name}快捷操作`}
+        aria-label={fmt(t.org.overviewQuickActions, { name: org.name })}
         className="grid border-t border-line"
         style={{
           gridTemplateColumns: `repeat(${actions.length + (canShare ? 1 : 0)}, minmax(0, 1fr))`,
         }}
       >
         {actions.map((action, index) => (
-          <Link
+          <LocaleLink
             key={action.label}
             href={action.href}
             className={`flex h-11 items-center justify-center text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-bg-3 ${
@@ -111,7 +113,7 @@ export function OrgOverviewCard({
             }`}
           >
             {action.label}
-          </Link>
+          </LocaleLink>
         ))}
         {canShare && (
           <div className="border-l border-line [&>button]:h-11 [&>button]:min-h-11 [&>button]:w-full [&>button]:justify-center [&>button]:rounded-none [&>button]:border-0 [&>button]:px-2 [&>button]:text-2xs">
@@ -120,7 +122,7 @@ export function OrgOverviewCard({
                 kind: "org",
                 name: org.name,
                 description: org.description,
-                visibilityLabel: VISIBILITY_LABELS[org.visibility],
+                visibility: org.visibility,
                 memberCount,
                 openNeedCount,
                 url: shareUrl,

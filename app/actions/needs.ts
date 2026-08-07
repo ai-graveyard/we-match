@@ -12,6 +12,8 @@ import {
   validateNeedPatch,
 } from "@/lib/needs-service";
 import { expiryFromPreset, hasDeadlinePassed } from "@/lib/needs";
+import { getRequestDict, getRequestLocale } from "@/lib/i18n/request";
+import { localePath } from "@/lib/i18n/routing";
 
 export type NeedFormState = { error?: string };
 
@@ -38,34 +40,38 @@ export async function createNeedAction(
   _prev: NeedFormState,
   formData: FormData,
 ): Promise<NeedFormState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const user = await getSessionUser();
-  if (!user) return { error: "登录已失效，请重新登录" };
+  if (!user) return { error: t.auth.sessionExpired };
 
   const input = formInput(formData);
-  if (!input) return { error: "标签格式不正确" };
-  const parsed = validateNeedPatch(input, { requireCore: true });
+  if (!input) return { error: t.common.badTags };
+  const parsed = validateNeedPatch(input, { requireCore: true }, t);
   if ("error" in parsed) return { error: parsed.error };
 
   // 可见范围：plaza 或组织 id；发布后不可改
   const scopeRaw = String(formData.get("scope") ?? "plaza");
   const orgId = scopeRaw === "plaza" ? null : Number(scopeRaw);
-  const result = await createNeed(user, parsed.patch, orgId);
+  const result = await createNeed(user, parsed.patch, orgId, t);
   if ("error" in result) return { error: result.error };
-  redirect(`/needs/${result.need.id}`);
+  redirect(localePath(locale, `/needs/${result.need.id}`));
 }
 
 export async function updateNeedAction(
   _prev: NeedFormState,
   formData: FormData,
 ): Promise<NeedFormState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const user = await getSessionUser();
-  if (!user) return { error: "登录已失效，请重新登录" };
+  if (!user) return { error: t.auth.sessionExpired };
   const need = await getOwnNeed(user.id, Number(formData.get("id")));
-  if (!need) return { error: "只能编辑自己的需求" };
+  if (!need) return { error: t.need.notOwner };
 
   const input = formInput(formData);
-  if (!input) return { error: "标签格式不正确" };
-  const parsed = validateNeedPatch(input, { requireCore: true });
+  if (!input) return { error: t.common.badTags };
+  const parsed = validateNeedPatch(input, { requireCore: true }, t);
   if ("error" in parsed) return { error: parsed.error };
 
   const preferredContact = resolvePreferredContact(
@@ -74,12 +80,12 @@ export async function updateNeedAction(
     parsed.patch.preferredContact,
   );
   if (!preferredContact) {
-    return { error: "当前可见范围下没有可用的联系方式，请先编辑名片" };
+    return { error: t.need.noContactForScope };
   }
 
   // 可见范围不可改；内容和截止时间可编辑
   await applyNeedPatch(need, { ...parsed.patch, preferredContact });
-  redirect(`/needs/${need.id}`);
+  redirect(localePath(locale, `/needs/${need.id}`));
 }
 
 export async function setNeedStatusAction(formData: FormData) {
@@ -114,5 +120,5 @@ export async function deleteNeedAction(formData: FormData) {
   const need = await getOwnNeed(user.id, Number(formData.get("id")));
   if (!need) return;
   await deleteNeed(need);
-  redirect("/");
+  redirect(localePath(await getRequestLocale(), "/"));
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useDict } from "@/lib/i18n/client";
+
 export const PHONE_LENGTH = 11;
 
 // 粘贴/自动填充可能带 +86、空格、连字符：先去非数字，再去国家码前缀
@@ -19,7 +21,7 @@ export function PhoneInput({
   id,
   required = false,
   autoComplete = "tel-national",
-  placeholder = "手机号",
+  placeholder,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -29,6 +31,7 @@ export function PhoneInput({
   autoComplete?: string;
   placeholder?: string;
 }) {
+  const t = useDict();
   return (
     <div className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
       <span className="flex h-full shrink-0 select-none items-center border-r border-line bg-bg-3 px-2.5 font-mono text-sm text-gray">
@@ -41,7 +44,7 @@ export function PhoneInput({
         name={name}
         inputMode="numeric"
         maxLength={PHONE_LENGTH}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t.login.phonePlaceholder}
         required={required}
         autoComplete={autoComplete}
         value={value}

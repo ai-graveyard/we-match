@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { useDict } from "@/lib/i18n/client";
 
 const AUTO_REFRESH_MS = 10_000;
 
 // 验证码 5 分钟就过期，盯着这一页等码时手动刷新太累，这里定时拉最新的
 export function CodeAutoRefresh() {
+  const t = useDict();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const refresh = useCallback(
@@ -31,7 +33,7 @@ export function CodeAutoRefresh() {
         aria-hidden
         className={pending ? "animate-spin" : undefined}
       />
-      {pending ? "刷新中" : "刷新"}
+      {pending ? t.common.refreshing : t.common.refresh}
     </button>
   );
 }

@@ -12,6 +12,7 @@ import {
   validateNeedPatch,
 } from "@/lib/needs-service";
 import { expiryFromPreset } from "@/lib/needs";
+import { getRequestDict } from "@/lib/i18n/request";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -21,7 +22,7 @@ export async function GET(request: Request, { params }: Context) {
   if (auth instanceof Response) return auth;
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id <= 0)
-    return apiError(404, "not_found", "需求不存在");
+    return apiError(404, "not_found", (await getRequestDict()).api.needNotFound);
 
   const [row] = await db
     .select({ need: needs, author: { id: users.id, nickname: users.nickname } })
@@ -29,13 +30,13 @@ export async function GET(request: Request, { params }: Context) {
     .innerJoin(users, eq(needs.userId, users.id))
     .where(eq(needs.id, id))
     .limit(1);
-  if (!row) return apiError(404, "not_found", "需求不存在");
+  if (!row) return apiError(404, "not_found", (await getRequestDict()).api.needNotFound);
 
   let orgName: string | null = null;
   if (row.need.orgId != null) {
     const isOwner = row.need.userId === auth.user.id;
     if (!isOwner && !(await getMembership(row.need.orgId, auth.user.id)))
-      return apiError(404, "not_found", "需求不存在");
+      return apiError(404, "not_found", (await getRequestDict()).api.needNotFound);
     const [org] = await db
       .select({ name: orgs.name })
       .from(orgs)
@@ -55,13 +56,14 @@ export async function PATCH(request: Request, { params }: Context) {
   const auth = await authenticate(request);
   if (auth instanceof Response) return auth;
   const need = await getOwnNeed(auth.user.id, Number((await params).id));
-  if (!need) return apiError(404, "not_found", "需求不存在或不属于你");
+  const t = await getRequestDict();
+  if (!need) return apiError(404, "not_found", t.api.needNotYours);
 
   const body = await readJson(request);
-  if (!body) return apiError(422, "invalid_body", "请求体需为 JSON 对象");
+  if (!body) return apiError(422, "invalid_body", t.api.bodyNotObject);
   if (body.orgId !== undefined)
-    return apiError(422, "invalid_input", "可见范围发布后不可修改，请关闭后重新发布");
-  const parsed = validateNeedPatch(body, { requireCore: false });
+    return apiError(422, "invalid_input", t.api.scopeImmutable);
+  const parsed = validateNeedPatch(body, { requireCore: false }, t);
   if ("error" in parsed) return apiError(422, "invalid_input", parsed.error);
 
   if (body.preferredContact !== undefined) {
@@ -74,11 +76,7 @@ export async function PATCH(request: Request, { params }: Context) {
       parsed.patch.preferredContact &&
       preferredContact !== parsed.patch.preferredContact
     ) {
-      return apiError(
-        422,
-        "invalid_input",
-        "选择的优先联系方式在当前可见范围下不可用",
-      );
+      return apiError(422, "invalid_input", t.need.preferredContactUnavailable);
     }
     parsed.patch.preferredContact = preferredContact;
   }
@@ -97,7 +95,8 @@ export async function DELETE(request: Request, { params }: Context) {
   const auth = await authenticate(request);
   if (auth instanceof Response) return auth;
   const need = await getOwnNeed(auth.user.id, Number((await params).id));
-  if (!need) return apiError(404, "not_found", "需求不存在或不属于你");
+  if (!need)
+    return apiError(404, "not_found", (await getRequestDict()).api.needNotYours);
   await deleteNeed(need);
   return Response.json({ deleted: true });
 }

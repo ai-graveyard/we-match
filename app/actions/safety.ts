@@ -13,6 +13,7 @@ import {
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { audit, track } from "@/lib/activity";
+import { getRequestDict } from "@/lib/i18n/request";
 
 export type ReportFormState = { error?: string; ok?: string };
 
@@ -20,19 +21,20 @@ export async function reportContentAction(
   _prev: ReportFormState,
   formData: FormData,
 ): Promise<ReportFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "请先登录" };
+  if (!user) return { error: t.auth.loginRequired };
   const targetType = String(formData.get("targetType"));
   const targetId = Number(formData.get("targetId"));
   const reason = String(formData.get("reason"));
   const details = String(formData.get("details") ?? "").trim();
-  if (targetType !== "user" && targetType !== "need") return { error: "参数不正确" };
-  if (!Number.isInteger(targetId) || targetId <= 0) return { error: "参数不正确" };
+  if (targetType !== "user" && targetType !== "need") return { error: t.common.badParams };
+  if (!Number.isInteger(targetId) || targetId <= 0) return { error: t.common.badParams };
   if (!["spam", "fraud", "harassment", "illegal", "other"].includes(reason)) {
-    return { error: "请选择举报原因" };
+    return { error: t.report.badReason };
   }
-  if (details.length > 500) return { error: "补充说明最多 500 字" };
-  if (targetType === "user" && targetId === user.id) return { error: "不能举报自己" };
+  if (details.length > 500) return { error: t.report.detailsTooLong };
+  if (targetType === "user" && targetId === user.id) return { error: t.report.selfReport };
 
   const [existing] = await db
     .select({ id: reports.id })
@@ -46,7 +48,7 @@ export async function reportContentAction(
       ),
     )
     .limit(1);
-  if (existing) return { ok: "这条内容已经提交过举报，正在处理中" };
+  if (existing) return { ok: t.report.duplicate };
 
   await db.insert(reports).values({
     reporterId: user.id,
@@ -61,7 +63,7 @@ export async function reportContentAction(
     entityType: targetType,
     entityId: targetId,
   });
-  return { ok: "举报已提交，我们会尽快处理" };
+  return { ok: t.report.submitted };
 }
 
 export async function blockUserAction(formData: FormData) {

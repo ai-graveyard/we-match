@@ -12,16 +12,6 @@ export function isOrgAdminRole(role: OrgRole): boolean {
   return role === "owner" || role === "admin";
 }
 
-export const VISIBILITY_LABELS = {
-  public: "公开",
-  private: "私有",
-} as const;
-
-export const REQUEST_VIA_LABELS = {
-  code: "邀请码",
-  plaza: "广场申请",
-} as const;
-
 // 邀请码字符集：大写字母 + 数字，剔除易混淆的 0/O/1/I
 export const INVITE_CODE_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const INVITE_CODE_LENGTH = 8;

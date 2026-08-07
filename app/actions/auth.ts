@@ -25,6 +25,9 @@ import {
 import { audit } from "@/lib/activity";
 import { isSmsDeliveryEnabled } from "@/lib/sms";
 import { SMS_FALLBACK_CONTACT } from "@/lib/brand";
+import { getRequestDict, getRequestLocale } from "@/lib/i18n/request";
+import { localePath } from "@/lib/i18n/routing";
+import { fmt } from "@/lib/i18n/fmt";
 
 export type AuthFormState = {
   error?: string;
@@ -44,8 +47,10 @@ export async function requestCodeAction(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const phone = String(formData.get("phone") ?? "").trim();
-  const { error } = await requestVerificationCode(phone);
+  const { error } = await requestVerificationCode(phone, t, locale);
   if (error) return { error };
   // 生产还没接真实短信通道，验证码只有管理后台看得到，得告诉用户去哪儿要。
   // 开发环境固定 888888，登录页已另有说明，不重复提示。
@@ -55,8 +60,10 @@ export async function requestCodeAction(
     sentAt: Date.now(),
     notice: needsFallback
       ? {
-          title: "短信通道还没开通，你收不到短信",
-          body: `请联系${SMS_FALLBACK_CONTACT}获取本次登录的 6 位验证码`,
+          title: t.auth.smsUnavailableTitle,
+          body: fmt(t.auth.smsUnavailableBody, {
+            contact: SMS_FALLBACK_CONTACT,
+          }),
         }
       : undefined,
   };
@@ -66,18 +73,23 @@ export async function loginAction(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const phone = String(formData.get("phone") ?? "").trim();
   const code = String(formData.get("code") ?? "").trim();
-  const { error, isNew } = await verifyCodeAndLogin(phone, code);
+  const { error, isNew } = await verifyCodeAndLogin(phone, code, t);
   if (error) return { error };
   const next = safeNext(formData.get("next"));
   // 从具体任务触发的首次登录优先回到原页面；首页登录才进入可跳过的新用户引导。
-  redirect(isNew && next === "/" ? "/me/card?welcome=1" : next);
+  redirect(
+    localePath(locale, isNew && next === "/" ? "/me/card?welcome=1" : next),
+  );
 }
 
 export async function logoutAction() {
+  const locale = await getRequestLocale();
   await destroySession();
-  redirect("/");
+  redirect(localePath(locale, "/"));
 }
 
 export type DeleteAccountState = { error?: string };
@@ -85,8 +97,10 @@ export type DeleteAccountState = { error?: string };
 // 永久注销：清空个人资料并使会话、API Key 全部失效。
 // 手机号保留在 users 表（status = deleted），从此无法再次登录。
 export async function deleteAccountAction(): Promise<DeleteAccountState> {
+  const t = await getRequestDict();
+  const locale = await getRequestLocale();
   const user = await getSessionUser();
-  if (!user) return { error: "请先登录" };
+  if (!user) return { error: t.auth.loginRequired };
 
   // owner 不能退出组织，同理不能带着组织注销——先解散
   const owned = await db
@@ -95,7 +109,9 @@ export async function deleteAccountAction(): Promise<DeleteAccountState> {
     .where(eq(orgs.ownerId, user.id));
   if (owned.length > 0) {
     return {
-      error: `你还是「${owned.map((o) => o.name).join("、")}」的所有者，请先解散组织再注销`,
+      error: fmt(t.auth.deleteOwnedOrgs, {
+        orgs: owned.map((o) => o.name).join("、"),
+      }),
     };
   }
 
@@ -135,7 +151,7 @@ export async function deleteAccountAction(): Promise<DeleteAccountState> {
   await db
     .update(users)
     .set({
-      nickname: "已注销用户",
+      nickname: t.auth.deletedNickname,
       bio: null,
       tags: [],
       city: null,
@@ -158,5 +174,5 @@ export async function deleteAccountAction(): Promise<DeleteAccountState> {
     targetId: user.id,
   });
   await destroySession();
-  redirect("/");
+  redirect(localePath(locale, "/"));
 }

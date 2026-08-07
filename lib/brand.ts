@@ -1,5 +1,6 @@
 export const BRAND_NAME = "We Match";
-export const BRAND_SLOGAN = "让合适的人先碰面";
+
+// 标语和站点描述随语言变，见 lib/i18n/dict/*.ts 的 brand.slogan / brand.metaDescription
 
 // 上线前必填：/terms 与 /privacy 中展示的运营者主体与联系渠道
 export const OPERATOR_NAME = "【运营者名称，上线前填写】";

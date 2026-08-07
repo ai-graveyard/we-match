@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Check,
   CircleX,
@@ -15,6 +14,8 @@ import {
   refreshNeedAction,
   setNeedStatusAction,
 } from "@/app/actions/needs";
+import { useDict } from "@/lib/i18n/client";
+import { LocaleLink } from "@/lib/i18n/link";
 
 const btnCls =
   "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
@@ -28,6 +29,7 @@ export function NeedActions({
   status: "open" | "done" | "closed";
   expired: boolean;
 }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -37,14 +39,14 @@ export function NeedActions({
           <input type="hidden" name="id" value={id} />
           <button type="submit" className={btnCls}>
             <RefreshCw size={12} aria-hidden />
-            续期一个月
+            {t.need.actionRenew}
           </button>
         </form>
       )}
-      <Link href={`/needs/new?id=${id}`} className={btnCls}>
+      <LocaleLink href={`/needs/new?id=${id}`} className={btnCls}>
         <Pencil size={12} aria-hidden />
-        编辑
-      </Link>
+        {t.common.edit}
+      </LocaleLink>
       {status === "open" ? (
         <>
           <form action={setNeedStatusAction}>
@@ -52,7 +54,7 @@ export function NeedActions({
             <input type="hidden" name="status" value="done" />
             <button type="submit" className={btnCls}>
               <Check size={12} aria-hidden />
-              标记已完成
+              {t.need.actionMarkDone}
             </button>
           </form>
           <form action={setNeedStatusAction}>
@@ -60,7 +62,7 @@ export function NeedActions({
             <input type="hidden" name="status" value="closed" />
             <button type="submit" className={btnCls}>
               <CircleX size={12} aria-hidden />
-              关闭
+              {t.need.actionClose}
             </button>
           </form>
         </>
@@ -70,7 +72,7 @@ export function NeedActions({
           <input type="hidden" name="status" value="open" />
           <button type="submit" className={btnCls}>
             <RotateCcw size={12} aria-hidden />
-            重新开放
+            {t.need.actionReopen}
           </button>
         </form>
       )}
@@ -82,14 +84,14 @@ export function NeedActions({
             className={btnCls}
           >
             <Trash2 size={12} aria-hidden />
-            确认删除
+            {t.common.confirmDelete}
           </button>
           <button
             type="button"
             className="text-2xs text-gray hover:text-ink"
             onClick={() => setConfirming(false)}
           >
-            取消
+            {t.common.cancel}
           </button>
         </form>
       ) : (
@@ -99,7 +101,7 @@ export function NeedActions({
           onClick={() => setConfirming(true)}
         >
           <Trash2 size={12} aria-hidden />
-          删除
+          {t.common.delete}
         </button>
       )}
     </div>

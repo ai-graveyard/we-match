@@ -12,6 +12,10 @@ import {
 } from "@/lib/card";
 import { TagInput } from "@/components/tag-input";
 import { PhoneInput, normalizePhoneInput } from "@/components/phone-input";
+import { useDict } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
+import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
+import type { UiDict } from "@/lib/i18n/dict/types";
 
 type Visibility = CardFieldVisibility;
 
@@ -30,19 +34,14 @@ export type CardFormUser = {
   fieldVisibility: Partial<Record<CardFieldKey, Visibility>>;
 };
 
-const VIS_LABELS: Record<Visibility, string> = {
-  public: "公开",
-  authenticated: "登录可见",
-  orgs: "共同组织可见",
-  hidden: "隐藏",
-};
-
 function VisibilitySegment({
+  t,
   name,
   value,
   onChange,
   options,
 }: {
+  t: UiDict;
   name: string;
   value: Visibility;
   onChange: (v: Visibility) => void;
@@ -59,7 +58,7 @@ function VisibilitySegment({
             i > 0 ? "border-l border-line" : ""
           } ${value === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
         >
-          {VIS_LABELS[opt]}
+          {cardVisibilityLabel(t, opt)}
         </button>
       ))}
       <input type="hidden" name={name} value={value} />
@@ -76,6 +75,7 @@ export function CardForm({
   suggestions: string[];
   welcome: boolean;
 }) {
+  const t = useDict();
   const [state, formAction, pending] = useActionState<CardFormState, FormData>(
     updateCardAction,
     {},
@@ -105,20 +105,20 @@ export function CardForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {welcome && (
-        <p className="text-xs text-gray">
-          给自己起个名字吧——其余字段都可以以后再填。
-        </p>
+        <p className="text-xs text-gray">{t.card.welcome}</p>
       )}
 
       <section className={sectionCls}>
-        <h2 className={`${labelCls} mb-3 block`}>基本信息</h2>
+        <h2 className={`${labelCls} mb-3 block`}>{t.card.groupBasic}</h2>
         <div className="flex flex-col gap-3">
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label htmlFor="nickname" className={labelCls}>
-                昵称（必填）
+                {t.card.nicknameLabel}
               </label>
-              <span className="font-mono text-2xs text-gray">始终公开</span>
+              <span className="font-mono text-2xs text-gray">
+                {t.card.nicknameAlwaysPublic}
+              </span>
             </div>
             <input
               id="nickname"
@@ -133,9 +133,10 @@ export function CardForm({
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label htmlFor="bio" className={labelCls}>
-                一句话介绍
+                {t.card.fieldBio}
               </label>
               <VisibilitySegment
+                t={t}
                 name="vis_bio"
                 value={visOf("bio")}
                 onChange={setVisOf("bio")}
@@ -153,8 +154,9 @@ export function CardForm({
           </div>
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <span className={labelCls}>技能/兴趣标签</span>
+              <span className={labelCls}>{t.card.fieldTags}</span>
               <VisibilitySegment
+                t={t}
                 name="vis_tags"
                 value={visOf("tags")}
                 onChange={setVisOf("tags")}
@@ -172,9 +174,10 @@ export function CardForm({
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label htmlFor="city" className={labelCls}>
-                所在城市
+                {t.card.fieldCity}
               </label>
               <VisibilitySegment
+                t={t}
                 name="vis_city"
                 value={visOf("city")}
                 onChange={setVisOf("city")}
@@ -195,23 +198,24 @@ export function CardForm({
 
       {(
         [
-          { title: "联系方式", fields: CONTACT_FIELDS },
-          { title: "社媒账号", fields: SOCIAL_FIELDS },
+          { title: t.card.groupContact, fields: CONTACT_FIELDS },
+          { title: t.card.groupSocial, fields: SOCIAL_FIELDS },
         ] as const
       ).map((group) => (
         <section key={group.title} className={sectionCls}>
           <h2 className={`${labelCls} mb-3 block`}>{group.title}</h2>
           <p className="mb-3 text-2xs leading-5 text-gray">
-            不向未登录访客展示；“登录可见”表示任意已登录用户可查看。
+            {t.card.sensitiveHint}
           </p>
           <div className="flex flex-col gap-3">
             {group.fields.map((f) => (
               <div key={f.key}>
                 <div className="mb-1 flex items-center justify-between">
                   <label htmlFor={f.key} className={labelCls}>
-                    {f.label}
+                    {cardFieldLabel(t, f.key)}
                   </label>
                   <VisibilitySegment
+                    t={t}
                     name={`vis_${f.key}`}
                     value={visOf(f.key)}
                     onChange={setVisOf(f.key)}
@@ -246,8 +250,9 @@ export function CardForm({
       {state.error && <p className="text-xs text-ink">{state.error}</p>}
       {state.saved && (
         <p className="text-xs text-gray">
-          已保存
-          {state.warning ? `。注意：${state.warning}` : ""}
+          {state.warning
+            ? fmt(t.card.savedWithWarning, { warning: state.warning })
+            : t.common.saved}
         </p>
       )}
       <button
@@ -255,7 +260,7 @@ export function CardForm({
         disabled={pending}
         className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
-        {pending ? "保存中" : "保存"}
+        {pending ? t.common.saving : t.common.save}
       </button>
     </form>
   );

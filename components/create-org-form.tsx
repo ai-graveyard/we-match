@@ -5,13 +5,17 @@ import {
   createOrgAction,
   type OrgFormState,
 } from "@/app/actions/orgs";
-import { ORG_LIMITS, VISIBILITY_LABELS } from "@/lib/orgs";
+import { ORG_LIMITS } from "@/lib/orgs";
+import { useDict } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
+import { orgVisibilityLabel } from "@/lib/i18n/labels";
 
 const inputCls =
   "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
 const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
 
 export function CreateOrgForm() {
+  const t = useDict();
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     createOrgAction,
     {},
@@ -25,7 +29,7 @@ export function CreateOrgForm() {
     >
       <div>
         <label htmlFor="org-name" className={`${labelCls} mb-1 block`}>
-          名称（必填，≤ {ORG_LIMITS.name} 字）
+          {fmt(t.org.formNameWithLimit, { max: ORG_LIMITS.name })}
         </label>
         <input
           id="org-name"
@@ -39,7 +43,7 @@ export function CreateOrgForm() {
 
       <div>
         <label htmlFor="org-desc" className={`${labelCls} mb-1 block`}>
-          简介
+          {t.org.formDescription}
         </label>
         <textarea
           id="org-desc"
@@ -51,7 +55,7 @@ export function CreateOrgForm() {
       </div>
 
       <div>
-        <span className={`${labelCls} mb-1 block`}>类型</span>
+        <span className={`${labelCls} mb-1 block`}>{t.org.formType}</span>
         <div className="inline-flex overflow-hidden rounded-sm border border-line">
           {(["private", "public"] as const).map((option, index) => (
             <button
@@ -66,14 +70,14 @@ export function CreateOrgForm() {
                   : "text-gray hover:text-ink"
               }`}
             >
-              {VISIBILITY_LABELS[option]}
+              {orgVisibilityLabel(t, option)}
             </button>
           ))}
         </div>
         <p className="mt-1 text-2xs text-gray">
           {visibility === "public"
-            ? "公开：出现在组织广场，任何人可申请加入（需你审批）"
-            : "私有：不出现在组织广场，只能凭邀请码申请"}
+            ? t.org.formPublicHint
+            : t.org.formPrivateHint}
         </p>
         <input type="hidden" name="visibility" value={visibility} />
       </div>
@@ -85,7 +89,7 @@ export function CreateOrgForm() {
         disabled={pending}
         className="h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
-        {pending ? "保存中" : "保存"}
+        {pending ? t.common.saving : t.common.save}
       </button>
     </form>
   );

@@ -8,6 +8,7 @@ import {
   SOCIAL_FIELDS,
   fieldVisibility,
 } from "@/lib/card";
+import { getRequestDict } from "@/lib/i18n/request";
 
 export type CardFormState = {
   error?: string;
@@ -20,15 +21,16 @@ export async function updateCardAction(
   _prev: CardFormState,
   formData: FormData,
 ): Promise<CardFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "登录已失效，请重新登录" };
+  if (!user) return { error: t.auth.sessionExpired };
 
   // 表单是全量替换：每个字段与每项可见性都提交
   let tags: unknown;
   try {
     tags = JSON.parse(String(formData.get("tags") ?? "[]"));
   } catch {
-    return { error: "标签格式不正确" };
+    return { error: t.common.badTags };
   }
   const submittedVisibility: Record<string, unknown> = {};
   for (const f of [...BASIC_FIELDS, ...CONTACT_FIELDS, ...SOCIAL_FIELDS]) {
@@ -51,8 +53,8 @@ export async function updateCardAction(
     fieldVisibility: submittedVisibility,
   };
 
-  const parsed = validateCardPatch(input);
+  const parsed = validateCardPatch(input, t);
   if ("error" in parsed) return { error: parsed.error };
-  const { warning } = await applyCardPatch(user, parsed.patch);
+  const { warning } = await applyCardPatch(user, parsed.patch, t);
   return { saved: true, warning, savedAt: Date.now() };
 }

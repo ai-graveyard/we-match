@@ -7,6 +7,7 @@ import {
   unblockUserAction,
   type ReportFormState,
 } from "@/app/actions/safety";
+import { useDict } from "@/lib/i18n/client";
 
 export function SafetyActions({
   targetType,
@@ -19,6 +20,7 @@ export function SafetyActions({
   canBlock?: boolean;
   blocked?: boolean;
 }) {
+  const t = useDict();
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<ReportFormState, FormData>(
     reportContentAction,
@@ -29,12 +31,14 @@ export function SafetyActions({
     <section className="mt-6 border-t border-line pt-4">
       <div className="flex items-center gap-4 text-2xs text-gray">
         <button type="button" onClick={() => setOpen(!open)} className="underline">
-          举报{targetType === "need" ? "这条需求" : "该用户"}
+          {targetType === "need" ? t.safety.reportNeed : t.safety.reportUser}
         </button>
         {canBlock && (
           <form action={blocked ? unblockUserAction : blockUserAction}>
             <input type="hidden" name="targetId" value={targetId} />
-            <button className="underline">{blocked ? "解除拉黑" : "拉黑该用户"}</button>
+            <button className="underline">
+              {blocked ? t.safety.unblock : t.safety.block}
+            </button>
           </form>
         )}
       </div>
@@ -48,18 +52,20 @@ export function SafetyActions({
             defaultValue=""
             className="h-11 w-full rounded-sm border border-line bg-bg px-3 text-sm"
           >
-            <option value="" disabled>选择原因</option>
-            <option value="spam">垃圾广告</option>
-            <option value="fraud">欺诈或虚假信息</option>
-            <option value="harassment">骚扰或攻击</option>
-            <option value="illegal">违法违规</option>
-            <option value="other">其他</option>
+            <option value="" disabled>
+              {t.safety.reasonPlaceholder}
+            </option>
+            <option value="spam">{t.safety.reasonSpam}</option>
+            <option value="fraud">{t.safety.reasonFraud}</option>
+            <option value="harassment">{t.safety.reasonHarassment}</option>
+            <option value="illegal">{t.safety.reasonIllegal}</option>
+            <option value="other">{t.safety.reasonOther}</option>
           </select>
           <textarea
             name="details"
             maxLength={500}
             rows={3}
-            placeholder="可补充具体情况"
+            placeholder={t.safety.detailsPlaceholder}
             className="mt-2 w-full resize-none rounded-sm border border-line bg-bg px-3 py-2 text-sm"
           />
           {state.error && <p className="mt-2 text-xs text-accent">{state.error}</p>}
@@ -69,7 +75,7 @@ export function SafetyActions({
             disabled={pending || !!state.ok}
             className="mt-2 h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:opacity-60"
           >
-            {pending ? "提交中" : "提交举报"}
+            {pending ? t.common.submitting : t.safety.submitReport}
           </button>
         </form>
       )}

@@ -11,9 +11,12 @@ import {
   resetInviteCodeAction,
   type OrgFormState,
 } from "@/app/actions/orgs";
-import { REQUEST_VIA_LABELS } from "@/lib/orgs";
+import { ORG_LIMITS } from "@/lib/orgs";
 import { CopyButton } from "@/components/copy-button";
-import { relativeTime } from "@/lib/format";
+import { useDict, useLocale } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
+import { relativeTime, requestViaLabel } from "@/lib/i18n/labels";
+import { localePath } from "@/lib/i18n/routing";
 
 const smallBtnCls =
   "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
@@ -26,6 +29,7 @@ export function InviteCodePanel({
   orgId: number;
   code: string;
 }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -39,7 +43,7 @@ export function InviteCodePanel({
           text={() =>
             `${location.origin}/orgs?code=${encodeURIComponent(code)}`
           }
-          label="复制邀请链接"
+          label={t.org.inviteCopyLink}
         />
       </div>
       <div className="mt-2 flex items-center gap-2">
@@ -48,7 +52,7 @@ export function InviteCodePanel({
             <form action={resetInviteCodeAction}>
               <input type="hidden" name="orgId" value={orgId} />
               <button type="submit" className={smallBtnCls}>
-                确认重置（旧码立即失效）
+                {t.org.inviteResetConfirm}
               </button>
             </form>
             <button
@@ -56,7 +60,7 @@ export function InviteCodePanel({
               className="text-2xs text-gray hover:text-ink"
               onClick={() => setConfirming(false)}
             >
-              取消
+              {t.common.cancel}
             </button>
           </>
         ) : (
@@ -66,7 +70,7 @@ export function InviteCodePanel({
             onClick={() => setConfirming(true)}
           >
             <RotateCw size={11} aria-hidden />
-            重置邀请码
+            {t.org.inviteReset}
           </button>
         )}
       </div>
@@ -83,13 +87,15 @@ export type PendingRequest = {
 
 // 待审批申请列表（两条路径汇入，标注来源）
 export function RequestList({ requests }: { requests: PendingRequest[] }) {
+  const t = useDict();
+  const locale = useLocale();
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     handleRequestAction,
     {},
   );
 
   if (requests.length === 0)
-    return <p className="text-xs text-gray">暂无待审批申请</p>;
+    return <p className="text-xs text-gray">{t.org.requestsEmpty}</p>;
 
   return (
     <div>
@@ -103,16 +109,16 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
             }`}
           >
             <a
-              href={`/u/${req.applicant.id}`}
+              href={localePath(locale, `/u/${req.applicant.id}`)}
               className="min-w-0 truncate text-sm font-semibold hover:underline"
             >
               {req.applicant.nickname}
             </a>
             <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
-              {REQUEST_VIA_LABELS[req.via]}
+              {requestViaLabel(t, req.via)}
             </span>
             <span className="shrink-0 font-mono text-3xs text-gray">
-              {relativeTime(new Date(req.createdAt))}
+              {relativeTime(t, new Date(req.createdAt))}
             </span>
             <div className="ml-auto flex shrink-0 gap-1.5">
               <form action={formAction}>
@@ -120,7 +126,7 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
                 <input type="hidden" name="decision" value="approve" />
                 <button type="submit" disabled={pending} className={smallBtnCls}>
                   <Check size={12} aria-hidden />
-                  通过
+                  {t.org.requestApprove}
                 </button>
               </form>
               <form action={formAction}>
@@ -132,7 +138,7 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
                   className="inline-flex h-11 items-center gap-1 rounded-sm px-2 text-sm text-gray transition-colors duration-100 hover:text-ink"
                 >
                   <X size={14} aria-hidden />
-                  拒绝
+                  {t.org.requestReject}
                 </button>
               </form>
             </div>
@@ -152,6 +158,7 @@ export function RemoveMemberButton({
   userId: number;
   nickname: string;
 }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
@@ -163,7 +170,7 @@ export function RemoveMemberButton({
             type="submit"
             className="text-2xs font-semibold text-ink"
           >
-            确认移除
+            {t.org.memberRemoveConfirm}
           </button>
         </form>
         <button
@@ -171,7 +178,7 @@ export function RemoveMemberButton({
           className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
-          取消
+          {t.common.cancel}
         </button>
       </span>
     );
@@ -179,12 +186,12 @@ export function RemoveMemberButton({
   return (
     <button
       type="button"
-      aria-label={`移除成员 ${nickname}`}
+      aria-label={fmt(t.org.memberRemoveLabel, { name: nickname })}
       className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       <UserMinus size={12} aria-hidden />
-      移除
+      {t.org.memberRemove}
     </button>
   );
 }
@@ -200,6 +207,7 @@ export function PromoteAdminButton({
   nickname: string;
   limitReached: boolean;
 }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     promoteOrgAdminAction,
@@ -208,8 +216,11 @@ export function PromoteAdminButton({
 
   if (limitReached) {
     return (
-      <span className="text-2xs text-gray" title="已任命 3 名管理员，拥有者另计">
-        管理员已满
+      <span
+        className="text-2xs text-gray"
+        title={fmt(t.org.adminFullHint, { max: ORG_LIMITS.maxAdmins })}
+      >
+        {t.org.adminFull}
       </span>
     );
   }
@@ -226,7 +237,7 @@ export function PromoteAdminButton({
               disabled={pending}
               className="text-2xs font-semibold text-ink disabled:text-gray"
             >
-              {pending ? "任命中…" : "确认任命"}
+              {pending ? t.org.memberPromoting : t.org.memberPromoteConfirm}
             </button>
           </form>
           <button
@@ -234,7 +245,7 @@ export function PromoteAdminButton({
             className="text-2xs text-gray"
             onClick={() => setConfirming(false)}
           >
-            取消
+            {t.common.cancel}
           </button>
         </span>
         {state.error && (
@@ -249,17 +260,18 @@ export function PromoteAdminButton({
   return (
     <button
       type="button"
-      aria-label={`将 ${nickname} 设为管理员`}
+      aria-label={fmt(t.org.memberPromoteLabel, { name: nickname })}
       className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       <ShieldCheck size={12} aria-hidden />
-      设为管理员
+      {t.org.memberPromote}
     </button>
   );
 }
 
 export function LeaveOrgButton({ orgId }: { orgId: number }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
@@ -267,7 +279,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
         <form action={leaveOrgAction}>
           <input type="hidden" name="orgId" value={orgId} />
           <button type="submit" className={smallBtnCls}>
-            确认退出（组织内需求将关闭）
+            {t.org.leaveConfirm}
           </button>
         </form>
         <button
@@ -275,7 +287,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
           className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
-          取消
+          {t.common.cancel}
         </button>
       </span>
     );
@@ -286,12 +298,13 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
       className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
-      退出组织
+      {t.org.leave}
     </button>
   );
 }
 
 export function DissolveOrgButton({ orgId }: { orgId: number }) {
+  const t = useDict();
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
@@ -302,7 +315,7 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
             type="submit"
             className="h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
           >
-            确认解散（需求和成员一并删除，不可恢复）
+            {t.org.dissolveConfirm}
           </button>
         </form>
         <button
@@ -310,7 +323,7 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
           className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
-          取消
+          {t.common.cancel}
         </button>
       </span>
     );
@@ -321,7 +334,7 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
       className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
-      解散组织
+      {t.org.dissolve}
     </button>
   );
 }

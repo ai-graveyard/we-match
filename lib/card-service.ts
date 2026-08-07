@@ -13,6 +13,8 @@ import {
   type CardFieldKey,
 } from "@/lib/card";
 import { normalizeTags } from "@/lib/tags";
+import type { ServerDict } from "@/lib/i18n/dict/types";
+import { fmt } from "@/lib/i18n/fmt";
 
 // 名片补丁：网页表单（全量替换）与开放 API（部分更新）共用的校验与落库层
 
@@ -48,14 +50,15 @@ export type CardPatch = Partial<Record<TextFieldKey, string | null>> & {
 // unknown 输入 → 合法补丁或错误。只校验出现的键；各类字段只存非默认档。
 export function validateCardPatch(
   input: Record<string, unknown>,
+  t: ServerDict,
 ): { error: string } | { patch: CardPatch } {
   const patch: CardPatch = {};
 
   if (input.nickname !== undefined) {
     const nickname = String(input.nickname ?? "").trim();
-    if (!nickname) return { error: "昵称不能为空" };
+    if (!nickname) return { error: t.card.emptyNickname };
     if (nickname.length > LIMITS.nickname)
-      return { error: `昵称最多 ${LIMITS.nickname} 字` };
+      return { error: fmt(t.card.nicknameTooLong, { max: LIMITS.nickname }) };
     patch.nickname = nickname;
   }
 
@@ -69,21 +72,21 @@ export function validateCardPatch(
 
   // 只支持中国大陆手机号（与登录一致），留空可以
   if (patch.contactPhone && !PHONE_RE.test(patch.contactPhone))
-    return { error: "手机号需为 11 位中国大陆手机号" };
+    return { error: t.card.badContactPhone };
 
   if (input.tags !== undefined) {
     const tags = normalizeTags(input.tags, {
       count: LIMITS.tagCount,
       length: LIMITS.tagLength,
     });
-    if (!tags) return { error: "标签格式不正确" };
+    if (!tags) return { error: t.common.badTags };
     patch.tags = tags;
   }
 
   if (input.fieldVisibility !== undefined) {
     const raw = input.fieldVisibility;
     if (typeof raw !== "object" || raw === null || Array.isArray(raw))
-      return { error: "fieldVisibility 需为对象，如 {\"email\":\"orgs\"}" };
+      return { error: t.card.badVisibilityObject };
     const visibility: FieldVisibility = {};
     const basicKeys = new Set<string>(BASIC_FIELDS.map((f) => f.key));
     const threeStateKeys = new Set<string>(
@@ -105,7 +108,9 @@ export function validateCardPatch(
           continue;
         }
       }
-      return { error: `可见性设置不正确：${key} 不能为 ${String(value)}` };
+      return {
+        error: fmt(t.card.badVisibilityValue, { key, value: String(value) }),
+      };
     }
     patch.fieldVisibility = normalizedFieldVisibility(visibility);
   }
@@ -117,6 +122,7 @@ export function validateCardPatch(
 export async function applyCardPatch(
   user: User,
   patch: CardPatch,
+  t: ServerDict,
 ): Promise<{ user: User; warning?: string }> {
   const [updated] = await db
     .update(users)
@@ -147,11 +153,7 @@ export async function applyCardPatch(
       )
       .limit(1);
     if (plazaNeed) {
-      return {
-        user: updated,
-        warning:
-          "你有开放中的广场需求，但名片上已没有登录用户可见的联系方式，别人将联系不到你",
-      };
+      return { user: updated, warning: t.card.warnNoPlazaContact };
     }
   }
   if (!hasOrgVisible) {
@@ -167,7 +169,7 @@ export async function applyCardPatch(
       )
       .limit(1);
     if (orgNeed) {
-      warning = "你有开放中的组织需求，但名片上已没有组织成员可见的联系方式";
+      warning = t.card.warnNoOrgContact;
     }
   }
   return { user: updated, warning };

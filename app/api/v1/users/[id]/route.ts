@@ -6,6 +6,7 @@ import { serializeNeed } from "@/lib/api/serialize";
 import { visibleCard } from "@/lib/card";
 import { sharesOrg } from "@/lib/queries";
 import { isBlockedEitherWay } from "@/lib/activity";
+import { getRequestDict } from "@/lib/i18n/request";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -16,14 +17,14 @@ export async function GET(request: Request, { params }: Context) {
   if (auth instanceof Response) return auth;
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id <= 0)
-    return apiError(404, "not_found", "用户不存在");
+    return apiError(404, "not_found", (await getRequestDict()).api.userNotFound);
 
   const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (
     !target ||
     target.status !== "active" ||
     (target.id !== auth.user.id && (await isBlockedEitherWay(auth.user.id, target.id)))
-  ) return apiError(404, "not_found", "用户不存在");
+  ) return apiError(404, "not_found", (await getRequestDict()).api.userNotFound);
 
   const shares = await sharesOrg(auth.user.id, target.id);
   const card = visibleCard(target, { loggedIn: true, sharesOrg: shares });

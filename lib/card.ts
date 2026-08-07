@@ -10,27 +10,29 @@ export const LIMITS = {
   value: 100, // 联系方式/社媒单值
 } as const;
 
+// 字段展示名在 lib/i18n/labels.ts 的 cardFieldLabel()，这里只留结构
+
 // 基本信息字段：两态 public | hidden
 export const BASIC_FIELDS = [
-  { key: "bio", label: "一句话介绍" },
-  { key: "tags", label: "技能/兴趣标签" },
-  { key: "city", label: "所在城市" },
+  { key: "bio" },
+  { key: "tags" },
+  { key: "city" },
 ] as const;
 
 // 联系方式与社媒：三态 authenticated | orgs | hidden
 export const CONTACT_FIELDS = [
-  { key: "wechat", label: "微信号" },
-  { key: "email", label: "邮箱" },
-  { key: "contactPhone", label: "手机号" },
+  { key: "wechat" },
+  { key: "email" },
+  { key: "contactPhone" },
 ] as const;
 
 export type ContactFieldKey = (typeof CONTACT_FIELDS)[number]["key"];
 
 export const SOCIAL_FIELDS = [
-  { key: "weixinMp", label: "微信公众号" },
-  { key: "weixinChannels", label: "视频号" },
-  { key: "xiaohongshu", label: "小红书" },
-  { key: "weibo", label: "微博" },
+  { key: "weixinMp" },
+  { key: "weixinChannels" },
+  { key: "xiaohongshu" },
+  { key: "weibo" },
 ] as const;
 
 export type CardFieldKey =
@@ -111,13 +113,11 @@ export function visibleCard(
     tags: canSee(vis, "tags", viewer) ? user.tags : [],
     contacts: CONTACT_FIELDS.map((f) => ({
       key: f.key,
-      label: f.label,
       value: pick(f.key, user[f.key]),
       visibility: fieldVisibility(vis, f.key),
     })).filter((f) => f.value),
     socials: SOCIAL_FIELDS.map((f) => ({
       key: f.key,
-      label: f.label,
       value: pick(f.key, user[f.key]),
       visibility: fieldVisibility(vis, f.key),
     })).filter((f) => f.value),

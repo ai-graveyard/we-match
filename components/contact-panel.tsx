@@ -6,10 +6,17 @@ import { Check, Copy, Mail, MessageCircle, Phone, X } from "lucide-react";
 import { copyText } from "@/components/copy-button";
 import { InterestForm, type ConnectionStatus } from "@/components/connection-panel";
 import type { ContactFieldKey } from "@/lib/card";
+import { useDict } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/fmt";
+import {
+  cardFieldLabel,
+  contactActionLabel,
+  intentLabel,
+} from "@/lib/i18n/labels";
+import type { UiDict } from "@/lib/i18n/dict/types";
 
 export type ContactChannel = {
   key: ContactFieldKey;
-  label: string;
   value: string;
 };
 
@@ -19,26 +26,22 @@ function channelIcon(key: ContactFieldKey) {
   return <MessageCircle size={14} aria-hidden />;
 }
 
-function channelActionLabel(channel: ContactChannel) {
-  if (channel.key === "email") return "写邮件";
-  if (channel.key === "contactPhone") return "拨打电话";
-  return "复制微信号";
-}
-
 function channelHref(
+  t: UiDict,
   channel: ContactChannel,
   needTitle: string,
   message: string,
 ) {
   if (channel.key === "contactPhone") return `tel:${channel.value}`;
   if (channel.key === "email") {
-    const subject = `关于「${needTitle}」`;
+    const subject = fmt(t.contact.mailSubject, { title: needTitle });
     return `mailto:${channel.value}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
   }
   return null;
 }
 
 function ChannelAction({
+  t,
   channel,
   primary,
   copied,
@@ -46,6 +49,7 @@ function ChannelAction({
   message,
   onCopy,
 }: {
+  t: UiDict;
   channel: ContactChannel;
   primary: boolean;
   copied: string | null;
@@ -53,7 +57,7 @@ function ChannelAction({
   message: string;
   onCopy: (value: string, key: string) => void;
 }) {
-  const href = channelHref(channel, needTitle, message);
+  const href = channelHref(t, channel, needTitle, message);
   const className = `flex h-11 w-full items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold tracking-[0.06em] active:translate-y-px ${
     primary
       ? "bg-accent text-panel"
@@ -66,7 +70,9 @@ function ChannelAction({
       ) : (
         channelIcon(channel.key)
       )}
-      {copied === channel.key ? "已复制" : channelActionLabel(channel)}
+      {copied === channel.key
+        ? t.common.copied
+        : contactActionLabel(t, channel.key)}
     </>
   );
 
@@ -105,16 +111,17 @@ export function ContactPanel({
   initialOpen?: boolean;
   interestStatus: ConnectionStatus | null;
 }) {
+  const t = useDict();
   const [open, setOpen] = useState(initialOpen);
   const [message, setMessage] = useState(() =>
-    need.type === "need"
-      ? `你好，我在 We Match 看到你发布的「${need.title}」。我可以提供相关帮助，想进一步了解一下具体需求。`
-      : `你好，我在 We Match 看到你发布的「${need.title}」。我对此感兴趣，想进一步了解一下具体情况。`,
+    fmt(need.type === "need" ? t.contact.openerNeed : t.contact.openerOffer, {
+      title: need.title,
+    }),
   );
   const [copied, setCopied] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const intentLabel = need.type === "need" ? "我能提供" : "我想了解";
+  const intent = intentLabel(t, need.type === "need" ? "offer" : "need");
   // 举手被接受即「已连接」；被拒或撤回后可以重新举手
   const connected =
     interestStatus === "accepted" || interestStatus === "completed";
@@ -122,7 +129,7 @@ export function ContactPanel({
     !interestStatus ||
     interestStatus === "rejected" ||
     interestStatus === "cancelled";
-  const actionLabel = canExpressInterest ? intentLabel : "查看联系方式";
+  const actionLabel = canExpressInterest ? intent : t.contact.viewContact;
   const orderedChannels = [...channels].sort((a, b) => {
     if (a.key === preferredContact) return -1;
     if (b.key === preferredContact) return 1;
@@ -164,7 +171,7 @@ export function ContactPanel({
         href={loginHref}
         className="flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
       >
-        登录后{intentLabel}
+        {fmt(t.contact.loginTo, { intent })}
       </Link>
     );
   }
@@ -197,10 +204,12 @@ export function ContactPanel({
             <header className="flex min-h-11 items-center justify-between gap-3">
               <div className="min-w-0">
                 <h2 id="contact-dialog-title" className="text-sm font-semibold">
-                  {connected ? `联系 ${author}` : actionLabel}
+                  {connected
+                    ? fmt(t.contact.contactPerson, { name: author })
+                    : actionLabel}
                 </h2>
                 <p className="mt-0.5 truncate font-mono text-3xs text-gray">
-                  关于「{need.title}」
+                  {fmt(t.contact.about, { title: need.title })}
                 </p>
               </div>
               <button
@@ -208,7 +217,7 @@ export function ContactPanel({
                 type="button"
                 onClick={() => setOpen(false)}
                 className="flex size-11 shrink-0 items-center justify-center rounded-sm border border-line bg-panel text-gray active:bg-bg-3"
-                aria-label="关闭联系面板"
+                aria-label={t.contact.dialogCloseLabel}
               >
                 <X size={16} aria-hidden />
               </button>
@@ -216,18 +225,20 @@ export function ContactPanel({
 
             {canExpressInterest && (
               <div className="mt-4">
-                <InterestForm needId={need.id} label={intentLabel} />
+                <InterestForm needId={need.id} label={intent} />
                 <p className="mt-2 text-2xs text-gray">
-                  提交后由 {author} 决定是否接受，接受与否都会通知你
+                  {fmt(t.contact.interestHint, { name: author })}
                 </p>
               </div>
             )}
 
             {!canExpressInterest && !connected && (
               <div className="mt-4 rounded-md border border-line bg-panel p-3">
-                <p className="text-sm">已举手，等待 {author} 回应</p>
+                <p className="text-sm">
+                  {fmt(t.contact.waitingTitle, { name: author })}
+                </p>
                 <p className="mt-1 text-2xs text-gray">
-                  对方回应后会通知你；页面上的「我的举手」里可以撤回
+                  {t.contact.waitingBody}
                 </p>
               </div>
             )}
@@ -236,7 +247,7 @@ export function ContactPanel({
               <>
                 {!connected && (
                   <h3 className="mt-4 text-2xs font-semibold tracking-[0.08em] text-gray">
-                    也可以直接联系
+                    {t.contact.alsoDirect}
                   </h3>
                 )}
                 <div
@@ -246,15 +257,18 @@ export function ContactPanel({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-2xs font-semibold tracking-[0.08em] text-gray">
-                      {orderedChannels[0].label}
+                      {cardFieldLabel(t, orderedChannels[0].key)}
                     </span>
-                    <span className="font-mono text-3xs text-gray">优先</span>
+                    <span className="font-mono text-3xs text-gray">
+                      {t.contact.preferred}
+                    </span>
                   </div>
                   <p className="mt-1 truncate font-mono text-sm">
                     {orderedChannels[0].value}
                   </p>
                   <div className="mt-3">
                     <ChannelAction
+                      t={t}
                       channel={orderedChannels[0]}
                       primary={connected}
                       copied={copied}
@@ -269,6 +283,7 @@ export function ContactPanel({
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {orderedChannels.slice(1).map((channel) => (
                       <ChannelAction
+                        t={t}
                         key={channel.key}
                         channel={channel}
                         primary={false}
@@ -286,7 +301,7 @@ export function ContactPanel({
                     htmlFor="contact-message"
                     className="text-2xs font-semibold tracking-[0.08em] text-gray"
                   >
-                    联系开场白
+                    {t.contact.openerLabel}
                   </label>
                   <textarea
                     id="contact-message"
@@ -305,13 +320,15 @@ export function ContactPanel({
                     ) : (
                       <Copy size={13} aria-hidden />
                     )}
-                    {copied === "message" ? "已复制开场白" : "复制开场白"}
+                    {copied === "message"
+                      ? t.contact.openerCopied
+                      : t.contact.openerCopy}
                   </button>
                   <p
                     className="mt-2 min-h-5 text-center text-2xs text-gray"
                     aria-live="polite"
                   >
-                    {copied === "failed" ? "复制失败，请手动复制" : ""}
+                    {copied === "failed" ? t.common.copyFailedManual : ""}
                   </p>
                 </div>
               </>

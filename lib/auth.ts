@@ -5,6 +5,9 @@ import { and, count, desc, eq, gt, gte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sessions, users, verificationCodes, type User } from "@/lib/db/schema";
 import { getSmsProvider } from "@/lib/sms";
+import type { Locale } from "@/lib/i18n/config";
+import type { ServerDict } from "@/lib/i18n/dict/types";
+import { fmt } from "@/lib/i18n/fmt";
 
 const SESSION_COOKIE = "wm_session";
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60; // 30 天
@@ -18,7 +21,7 @@ export const PHONE_RE = /^1[3-9]\d{9}$/;
 function sessionSecret() {
   const value = process.env.SESSION_SECRET;
   if (process.env.NODE_ENV === "production" && (!value || value.length < 32)) {
-    throw new Error("生产环境必须配置至少 32 字符的 SESSION_SECRET");
+    throw new Error("SESSION_SECRET must be at least 32 characters in production");
   }
   return value ?? "we-match-dev-secret";
 }
@@ -42,9 +45,11 @@ async function clientIp() {
 
 export async function requestVerificationCode(
   phone: string,
+  t: ServerDict,
+  locale: Locale,
 ): Promise<{ error?: string }> {
   if (!PHONE_RE.test(phone)) {
-    return { error: "请输入大陆 11 位手机号" };
+    return { error: t.auth.badPhone };
   }
   // 已注销的手机号永久禁止登录，在发码前就拦下，不浪费短信
   const [existing] = await db
@@ -53,7 +58,7 @@ export async function requestVerificationCode(
     .where(eq(users.phone, phone))
     .limit(1);
   if (existing?.status === "deleted") {
-    return { error: "该手机号的账号已注销，无法再次登录" };
+    return { error: t.auth.accountDeleted };
   }
   const now = Date.now();
   const [latest] = await db
@@ -63,7 +68,7 @@ export async function requestVerificationCode(
     .orderBy(desc(verificationCodes.createdAt))
     .limit(1);
   if (latest && now - latest.createdAt.getTime() < CODE_RESEND_INTERVAL_MS) {
-    return { error: "发送太频繁，请一分钟后再试" };
+    return { error: t.auth.resendTooSoon };
   }
   const ip = await clientIp();
   const [ipCount] = await db
@@ -76,7 +81,7 @@ export async function requestVerificationCode(
       ),
     );
   if ((ipCount?.n ?? 0) >= CODE_IP_HOURLY_LIMIT) {
-    return { error: "请求过于频繁，请稍后再试" };
+    return { error: t.auth.tooManyRequests };
   }
   // 开发/演示环境固定 888888，免去查日志；生产随机
   const code =
@@ -93,14 +98,14 @@ export async function requestVerificationCode(
     })
     .returning({ id: verificationCodes.id });
   try {
-    await getSmsProvider().sendVerificationCode(phone, code);
+    await getSmsProvider().sendVerificationCode(phone, code, locale);
   } catch (error) {
-    console.error("[SMS] 发送验证码失败：", error);
+    console.error("[SMS] failed to send verification code:", error);
     // 发送失败就作废这条验证码，否则 60 秒重发间隔会卡住用户重试
     await db
       .delete(verificationCodes)
       .where(eq(verificationCodes.id, inserted.id));
-    return { error: "短信发送失败，请稍后再试" };
+    return { error: t.auth.smsFailed };
   }
   return {};
 }
@@ -108,12 +113,13 @@ export async function requestVerificationCode(
 export async function verifyCodeAndLogin(
   phone: string,
   code: string,
+  t: ServerDict,
 ): Promise<{ error?: string; isNew?: boolean }> {
   if (!PHONE_RE.test(phone)) {
-    return { error: "请输入大陆 11 位手机号" };
+    return { error: t.auth.badPhone };
   }
   if (!/^\d{6}$/.test(code)) {
-    return { error: "请输入 6 位数字验证码" };
+    return { error: t.auth.badCode };
   }
   const [record] = await db
     .select()
@@ -127,7 +133,7 @@ export async function verifyCodeAndLogin(
     .orderBy(desc(verificationCodes.createdAt))
     .limit(1);
   if (!record || record.failCount >= CODE_MAX_FAILS) {
-    return { error: "验证码无效或已过期，请重新获取" };
+    return { error: t.auth.codeExpired };
   }
   const ok = crypto.timingSafeEqual(Buffer.from(record.code), Buffer.from(code));
   if (!ok) {
@@ -135,23 +141,26 @@ export async function verifyCodeAndLogin(
       .update(verificationCodes)
       .set({ failCount: record.failCount + 1 })
       .where(eq(verificationCodes.id, record.id));
-    return { error: "验证码错误" };
+    return { error: t.auth.codeWrong };
   }
   await db.delete(verificationCodes).where(eq(verificationCodes.phone, phone));
 
   let [user] = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
   const isNew = !user;
   if (user?.status === "deleted") {
-    return { error: "该手机号的账号已注销，无法再次登录" };
+    return { error: t.auth.accountDeleted };
   }
   if (user?.status === "suspended") {
-    return { error: "账号已暂停使用，如有疑问请联系管理员" };
+    return { error: t.auth.accountSuspended };
   }
   if (!user) {
     // 注册即生成默认昵称「用户 + 手机尾号 4 位」，保证任何场景都有可显示的名字
     [user] = await db
       .insert(users)
-      .values({ phone, nickname: `用户${phone.slice(-4)}` })
+      .values({
+        phone,
+        nickname: fmt(t.auth.defaultNickname, { suffix: phone.slice(-4) }),
+      })
       .returning();
   }
 

@@ -1,27 +1,29 @@
 import type { ApiKeyListItem } from "@/lib/api-keys";
 import { API_KEY_LIMITS, maskApiKey } from "@/lib/api-keys";
-import { relativeTime, shortDateTime } from "@/lib/format";
+import { shortDateTime } from "@/lib/format";
 import { ApiKeyRow, CreateApiKeyForm } from "@/components/api-keys";
 import { CopyButton } from "@/components/copy-button";
+import { getDict } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/fmt";
+import { relativeTime } from "@/lib/i18n/labels";
 
-export function AgentAccessContent({
+export async function AgentAccessContent({
   apiKeys,
   origin,
 }: {
   apiKeys: ApiKeyListItem[];
   origin: string;
 }) {
-  const installMessage = `帮我安装 We Match 的官方 Skill，安装说明见 ${origin}/skill`;
+  const t = await getDict();
+  const installMessage = fmt(t.agent.installMessage, { origin });
 
   return (
     <section>
-      <p className="text-sm text-gray">
-        让 Agent 帮你找匹配、发需求、管名片。
-      </p>
+      <p className="text-sm text-gray">{t.agent.intro}</p>
 
       <div className="mt-6 flex items-baseline justify-between">
         <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
-          API Key
+          {t.agent.apiKeyHeading}
         </h2>
         <span className="font-mono text-2xs text-gray">
           {apiKeys.length} / {API_KEY_LIMITS.perUser}
@@ -33,12 +35,15 @@ export function AgentAccessContent({
             key={key.id}
             id={key.id}
             name={key.name}
-            masked={maskApiKey(key.lastFour)}
-            meta={`创建于 ${shortDateTime(key.createdAt)} · ${
-              key.lastUsedAt
-                ? `最近使用 ${relativeTime(key.lastUsedAt)}`
-                : "从未使用"
-            }`}
+            masked={maskApiKey(key.lastFour) ?? t.agent.keyMaskedLegacy}
+            meta={fmt(t.agent.keyMeta, {
+              created: shortDateTime(key.createdAt),
+              used: key.lastUsedAt
+                ? fmt(t.agent.keyLastUsed, {
+                    time: relativeTime(t, key.lastUsedAt),
+                  })
+                : t.agent.keyNeverUsed,
+            })}
             first={index === 0}
           />
         ))}
@@ -51,10 +56,10 @@ export function AgentAccessContent({
 
       <section className="mt-6">
         <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
-          安装 Skill
+          {t.agent.installHeading}
         </h2>
         <div className="mt-2 rounded-md border border-line bg-panel p-4 text-sm">
-          <p>把安装指令和新建的 API Key 发给 Agent。</p>
+          <p>{t.agent.installBody}</p>
           <div className="mt-2 flex items-center gap-1 rounded-sm bg-bg-3 px-2 py-1.5">
             <code className="min-w-0 flex-1 break-all font-mono text-2xs">
               {installMessage}
@@ -64,9 +69,9 @@ export function AgentAccessContent({
         </div>
         <p className="mt-2 text-2xs text-gray">
           <a href="/we-match-skill.zip" download className="underline">
-            手动下载 Skill 包
+            {t.agent.downloadLink}
           </a>
-          。API Key 拥有完整读写权限，请妥善保管。
+          {t.agent.downloadHint}
         </p>
       </section>
     </section>

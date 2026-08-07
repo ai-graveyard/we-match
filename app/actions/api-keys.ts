@@ -2,7 +2,8 @@
 
 import { refresh } from "next/cache";
 import { getSessionUser } from "@/lib/auth";
-import { createApiKey, deleteApiKey } from "@/lib/api-keys";
+import { createApiKey, deleteApiKey } from "@/lib/api-keys-service";
+import { getRequestDict } from "@/lib/i18n/request";
 
 export type ApiKeyFormState = { error?: string; createdKey?: string };
 
@@ -11,9 +12,14 @@ export async function createApiKeyAction(
   _prev: ApiKeyFormState,
   formData: FormData,
 ): Promise<ApiKeyFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return { error: "登录已失效，请重新登录" };
-  const result = await createApiKey(user.id, String(formData.get("name") ?? ""));
+  if (!user) return { error: t.auth.sessionExpired };
+  const result = await createApiKey(
+    user.id,
+    String(formData.get("name") ?? ""),
+    t,
+  );
   if ("error" in result) return { error: result.error };
   refresh();
   return { createdKey: result.secret };

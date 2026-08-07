@@ -7,8 +7,10 @@ import {
   updateOrgAction,
   type OrgFormState,
 } from "@/app/actions/orgs";
-import { INVITE_CODE_LENGTH, ORG_LIMITS, VISIBILITY_LABELS } from "@/lib/orgs";
+import { INVITE_CODE_LENGTH, ORG_LIMITS } from "@/lib/orgs";
 import { CodeBoxes, sanitizeCode } from "@/components/code-boxes";
+import { useDict } from "@/lib/i18n/client";
+import { orgVisibilityLabel } from "@/lib/i18n/labels";
 
 const inputCls =
   "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
@@ -23,6 +25,7 @@ function VisibilityPicker({
   value: "public" | "private";
   onChange: (v: "public" | "private") => void;
 }) {
+  const t = useDict();
   return (
     <div>
       <div className="inline-flex overflow-hidden rounded-sm border border-line">
@@ -35,14 +38,12 @@ function VisibilityPicker({
               i > 0 ? "border-l border-line" : ""
             } ${value === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
           >
-            {VISIBILITY_LABELS[opt]}
+            {orgVisibilityLabel(t, opt)}
           </button>
         ))}
       </div>
       <p className="mt-1 text-2xs text-gray">
-        {value === "public"
-          ? "公开：出现在组织广场，任何人可申请加入（需你审批）"
-          : "私有：不出现在组织广场，只能凭邀请码申请"}
+        {value === "public" ? t.org.formPublicHint : t.org.formPrivateHint}
       </p>
       <input type="hidden" name="visibility" value={value} />
     </div>
@@ -51,6 +52,7 @@ function VisibilityPicker({
 
 // 组织广场页顶：凭邀请码申请
 export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
+  const t = useDict();
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     applyByCodeAction,
     {},
@@ -63,7 +65,7 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
   return (
     <form action={formAction} className="rounded-md border border-line bg-panel p-4">
       <label htmlFor="invite-code" className={`${labelCls} mb-2 block`}>
-        有邀请码？输入后提交申请
+        {t.org.codeFormLabel}
       </label>
       <CodeBoxes
         length={INVITE_CODE_LENGTH}
@@ -79,7 +81,7 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
         disabled={pending || code.length < INVITE_CODE_LENGTH}
         className={`${primaryBtnCls} mt-3 w-full`}
       >
-        {pending ? "提交中" : "提交申请"}
+        {pending ? t.common.submitting : t.org.codeFormSubmit}
       </button>
       {state.error && <p className="mt-2 text-xs text-ink">{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
@@ -89,6 +91,7 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
 
 // 组织详情页（非成员视角）：申请加入
 export function ApplyPlazaButton({ orgId }: { orgId: number }) {
+  const t = useDict();
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     applyPlazaAction,
     {},
@@ -97,7 +100,7 @@ export function ApplyPlazaButton({ orgId }: { orgId: number }) {
     <form action={formAction}>
       <input type="hidden" name="orgId" value={orgId} />
       <button type="submit" disabled={pending} className={`${primaryBtnCls} w-full`}>
-        {pending ? "提交中" : "申请加入"}
+        {pending ? t.common.submitting : t.org.applyJoin}
       </button>
       {state.error && <p className="mt-2 text-xs text-ink">{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
@@ -116,6 +119,7 @@ export function OrgSettingsForm({
     visibility: "public" | "private";
   };
 }) {
+  const t = useDict();
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
     updateOrgAction,
     {},
@@ -129,7 +133,7 @@ export function OrgSettingsForm({
       <input type="hidden" name="orgId" value={org.id} />
       <div>
         <label htmlFor="edit-org-name" className={`${labelCls} mb-1 block`}>
-          名称
+          {t.org.formName}
         </label>
         <input
           id="edit-org-name"
@@ -143,7 +147,7 @@ export function OrgSettingsForm({
       </div>
       <div>
         <label htmlFor="edit-org-desc" className={`${labelCls} mb-1 block`}>
-          简介
+          {t.org.formDescription}
         </label>
         <textarea
           id="edit-org-desc"
@@ -156,7 +160,7 @@ export function OrgSettingsForm({
         />
       </div>
       <div>
-        <span className={`${labelCls} mb-1 block`}>类型</span>
+        <span className={`${labelCls} mb-1 block`}>{t.org.formType}</span>
         <VisibilityPicker value={visibility} onChange={setVisibility} />
       </div>
       {state.error && <p className="text-xs text-ink">{state.error}</p>}
@@ -166,7 +170,7 @@ export function OrgSettingsForm({
         disabled={pending}
         className="h-11 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
       >
-        {pending ? "保存中" : "保存资料"}
+        {pending ? t.common.saving : t.org.formSaveProfile}
       </button>
     </form>
   );

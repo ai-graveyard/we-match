@@ -4,6 +4,7 @@ import { orgMembers, users } from "@/lib/db/schema";
 import { apiError, authenticate } from "@/lib/api/auth";
 import { visibleCard } from "@/lib/card";
 import { getMembership } from "@/lib/queries";
+import { getRequestDict } from "@/lib/i18n/request";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -15,9 +16,9 @@ export async function GET(request: Request, { params }: Context) {
   if (auth instanceof Response) return auth;
   const orgId = Number((await params).id);
   if (!Number.isInteger(orgId) || orgId <= 0)
-    return apiError(404, "not_found", "组织不存在或你不是成员");
+    return apiError(404, "not_found", (await getRequestDict()).api.orgNotFoundOrNotMember);
   if (!(await getMembership(orgId, auth.user.id)))
-    return apiError(404, "not_found", "组织不存在或你不是成员");
+    return apiError(404, "not_found", (await getRequestDict()).api.orgNotFoundOrNotMember);
 
   const searchParams = new URL(request.url).searchParams;
   const tag = searchParams.get("tag")?.trim();

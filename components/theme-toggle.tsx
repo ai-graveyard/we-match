@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useDict } from "@/lib/i18n/client";
 
 type Theme = "light" | "dark";
 
@@ -59,11 +60,12 @@ export function ThemeApplier() {
 }
 
 export function ThemeToggle() {
+  const t = useDict();
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label="切换明暗主题"
+      aria-label={t.theme.toggleLabel}
       className="flex size-8 items-center justify-center rounded-sm text-gray transition-colors duration-100 hover:bg-bg-3 hover:text-ink"
     >
       <Moon size={15} className="dark:hidden" aria-hidden />
@@ -73,18 +75,19 @@ export function ThemeToggle() {
 }
 
 export function ThemeToggleRow() {
+  const t = useDict();
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label="切换明暗主题"
+      aria-label={t.theme.toggleLabel}
       className="flex min-h-16 w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold">明暗主题</span>
+        <span className="block text-sm font-semibold">{t.theme.title}</span>
         <span className="mt-0.5 block text-xs text-gray">
-          <span className="dark:hidden">当前为浅色外观</span>
-          <span className="hidden dark:inline">当前为深色外观</span>
+          <span className="dark:hidden">{t.theme.currentLight}</span>
+          <span className="hidden dark:inline">{t.theme.currentDark}</span>
         </span>
       </span>
       <span
@@ -92,10 +95,10 @@ export function ThemeToggleRow() {
         aria-hidden
       >
         <span className="flex h-6 items-center justify-center rounded-[5px] bg-ink px-2 font-mono text-3xs text-panel dark:bg-transparent dark:text-gray">
-          浅色
+          {t.theme.light}
         </span>
         <span className="flex h-6 items-center justify-center rounded-[5px] px-2 font-mono text-3xs text-gray dark:bg-ink dark:text-panel">
-          深色
+          {t.theme.dark}
         </span>
       </span>
     </button>

@@ -8,11 +8,13 @@ import {
 } from "@/app/actions/auth";
 import { CodeBoxes } from "@/components/code-boxes";
 import { PhoneInput, PHONE_LENGTH } from "@/components/phone-input";
+import { useDict } from "@/lib/i18n/client";
 
 const RESEND_SECONDS = 60;
 const CODE_LENGTH = 6;
 
 export function LoginForm({ next }: { next: string }) {
+  const t = useDict();
   const [sendState, sendAction, sendPending] = useActionState<
     AuthFormState,
     FormData
@@ -65,9 +67,9 @@ export function LoginForm({ next }: { next: string }) {
           {countdown > 0 ? (
             <span className="font-mono">{countdown}s</span>
           ) : sendPending ? (
-            "发送中"
+            t.login.sending
           ) : (
-            "获取验证码"
+            t.login.getCode
           )}
         </button>
       </div>
@@ -75,7 +77,7 @@ export function LoginForm({ next }: { next: string }) {
         length={CODE_LENGTH}
         format="numeric"
         name="code"
-        label="6 位验证码"
+        label={t.login.codeLabel}
         autoComplete="one-time-code"
         required
         value={code}
@@ -105,7 +107,7 @@ export function LoginForm({ next }: { next: string }) {
         }
         className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
-        {loginPending ? "登录中" : "登录"}
+        {loginPending ? t.login.submitting : t.login.submit}
       </button>
     </form>
   );

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { User } from "@/lib/db/schema";
 import {
   CONTACT_FIELDS,
@@ -10,36 +9,42 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
 import { ShareCard } from "@/components/share-card";
+import { getDict } from "@/lib/i18n/server";
+import { LocaleLink } from "@/lib/i18n/link";
+import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
+import type { UiDict } from "@/lib/i18n/dict/types";
 
-const VISIBILITY_LABELS = {
-  public: "公开",
-  authenticated: "登录可见",
-  orgs: "共同组织可见",
-  hidden: "隐藏",
-} as const;
-
-function VisibilityLabel({ user, field }: { user: User; field: CardFieldKey }) {
+function VisibilityLabel({
+  t,
+  user,
+  field,
+}: {
+  t: UiDict;
+  user: User;
+  field: CardFieldKey;
+}) {
   return (
     <span className="shrink-0 font-mono text-3xs text-gray">
-      {VISIBILITY_LABELS[fieldVisibility(user.fieldVisibility, field)]}
+      {cardVisibilityLabel(t, fieldVisibility(user.fieldVisibility, field))}
     </span>
   );
 }
 
-export function MeCardOverview({
+export async function MeCardOverview({
   user,
   shareUrl,
 }: {
   user: User;
   shareUrl: string;
 }) {
+  const t = await getDict();
   const publicCard = visibleCard(user, {
     loggedIn: false,
     sharesOrg: false,
   });
   const groups = [
-    { title: "联系方式", fields: CONTACT_FIELDS },
-    { title: "社媒账号", fields: SOCIAL_FIELDS },
+    { title: t.card.groupContact, fields: CONTACT_FIELDS },
+    { title: t.card.groupSocial, fields: SOCIAL_FIELDS },
   ]
     .map((group) => ({
       title: group.title,
@@ -98,18 +103,18 @@ export function MeCardOverview({
         )}
 
         <div className="mt-4 flex items-center gap-4 border-t border-line pt-3">
-          <Link
+          <LocaleLink
             href={`/u/${user.id}`}
             className="text-xs text-gray transition-colors duration-100 hover:text-ink"
           >
-            对外预览
-          </Link>
-          <Link
+            {t.me.previewPublic}
+          </LocaleLink>
+          <LocaleLink
             href="/me/card"
             className="ml-auto text-sm font-semibold tracking-[0.06em] hover:underline"
           >
-            编辑名片
-          </Link>
+            {t.me.editCard}
+          </LocaleLink>
         </div>
       </section>
 
@@ -130,8 +135,10 @@ export function MeCardOverview({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xs text-gray">{item.label}</span>
-                  <VisibilityLabel user={user} field={item.key} />
+                  <span className="text-2xs text-gray">
+                    {cardFieldLabel(t, item.key)}
+                  </span>
+                  <VisibilityLabel t={t} user={user} field={item.key} />
                 </div>
                 <div className="truncate font-mono text-sm">
                   {item.value}
@@ -143,9 +150,7 @@ export function MeCardOverview({
         </section>
       ))}
 
-      <p className="mt-3 text-2xs text-gray">
-        此处展示你已填写的全部名片内容，对外展示仍按各字段的可见范围过滤。
-      </p>
+      <p className="mt-3 text-2xs text-gray">{t.me.cardOverviewHint}</p>
     </>
   );
 }
