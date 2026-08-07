@@ -267,6 +267,7 @@ export async function promoteOrgAdminAction(
   _prev: OrgFormState,
   formData: FormData,
 ): Promise<OrgFormState> {
+  const t = await getRequestDict();
   const orgId = Number(formData.get("orgId"));
   const userId = Number(formData.get("userId"));
   if (
@@ -275,9 +276,8 @@ export async function promoteOrgAdminAction(
     !Number.isInteger(userId) ||
     userId <= 0
   ) {
-    return { error: (await getRequestDict()).common.badParams };
+    return { error: t.common.badParams };
   }
-  const t = await getRequestDict();
 
   const ctx = await requireOrgAdmin(orgId);
   if (!ctx) return { error: t.org.promoteAdminOnly };

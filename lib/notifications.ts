@@ -20,11 +20,16 @@ export type NotificationPayload =
 
 type Rendered = { title: string; body: string | null };
 
-/** 按给定语言渲染一条通知的标题与正文 */
+/**
+ * 按给定语言渲染一条通知的标题与正文。
+ * payload 来自 DB 里的 type + params（见 notificationText），不受类型系统保护：
+ * 未来下线某个通知类型后，旧行还留着对应 params，此时 type 就对不上任何分支。
+ * 显式返回 null 而不是让 switch 落空隐式返回 undefined，调用方才能正确回退到快照。
+ */
 export function renderNotification(
   t: ServerDict,
   payload: NotificationPayload,
-): Rendered {
+): Rendered | null {
   const n = t.notification;
   switch (payload.type) {
     case "org_join_requested":
@@ -77,6 +82,10 @@ export function renderNotification(
         title: fmt(n.needMatchesTitle, { n: payload.n }),
         body: fmt(n.needMatchesBody, { need: payload.need }),
       };
+    default:
+      // TS 认为上面已穷举 NotificationPayload，但运行时的 payload.type
+      // 来自不受信任的 DB 字符串，可能对不上任何分支
+      return null;
   }
 }
 
@@ -85,12 +94,13 @@ export function notificationText(
   t: ServerDict,
   row: Pick<Notification, "type" | "title" | "body" | "params">,
 ): Rendered {
-  if (!row.params) return { title: row.title, body: row.body };
+  const fallback = { title: row.title, body: row.body };
+  if (!row.params) return fallback;
   const payload = { type: row.type, ...row.params } as NotificationPayload;
   try {
-    return renderNotification(t, payload);
+    // 未知或残缺的 params：宁可显示旧快照，也不要空白或崩溃
+    return renderNotification(t, payload) ?? fallback;
   } catch {
-    // 未知或残缺的 params：宁可显示旧快照，也不要空白
-    return { title: row.title, body: row.body };
+    return fallback;
   }
 }

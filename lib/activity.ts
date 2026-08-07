@@ -24,10 +24,13 @@ export async function notify(input: {
   href?: string | null;
 }) {
   const { type, ...params } = input.payload;
-  const snapshot = renderNotification(
-    SERVER_DICTS[DEFAULT_LOCALE],
-    input.payload,
-  );
+  // input.payload 是完整类型化的 NotificationPayload（没有走 as 断言），
+  // renderNotification 的 switch 穷举了这个联合类型，这里不可能拿到 null——
+  // 拿到就是 switch 少了一支，代码有 bug，宁可现在炸出来也不要往库里写空标题。
+  const snapshot = renderNotification(SERVER_DICTS[DEFAULT_LOCALE], input.payload);
+  if (!snapshot) {
+    throw new Error(`renderNotification 未覆盖通知类型：${type}`);
+  }
   await db.insert(notifications).values({
     userId: input.userId,
     type,

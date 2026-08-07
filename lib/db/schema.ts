@@ -228,7 +228,7 @@ export const notifications = sqliteTable(
       .references(() => users.id),
     type: text("type").notNull(),
     // title / body 是按默认语言渲染的快照，只作为老数据与未知类型的兜底；
-    // params 在则按查看者的语言现渲染，见 lib/notifications.ts
+    // params 存在的话按查看者的语言现渲染，见 lib/notifications.ts
     title: text("title").notNull(),
     body: text("body"),
     params: text("params", { mode: "json" }).$type<Record<string, unknown>>(),
