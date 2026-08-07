@@ -56,7 +56,7 @@ export function OrgOverviewCard({
           >
             {org.name}
           </Link>
-          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
             {VISIBILITY_LABELS[org.visibility]}
           </span>
           <Link
@@ -65,7 +65,7 @@ export function OrgOverviewCard({
                 ? `/orgs/${org.id}#settings`
                 : `/orgs/${org.id}`
             }
-            className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+            className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-2xs text-gray transition-colors duration-100 hover:text-ink"
           >
             {role === "owner" ? "设置" : role === "admin" ? "管理" : "主页"}
             <ChevronRight size={12} aria-hidden />
@@ -80,7 +80,7 @@ export function OrgOverviewCard({
           <p className="mt-1 text-xs text-gray">暂无组织简介</p>
         )}
 
-        <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-gray">
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-2xs text-gray">
           <span>{memberCount} 名成员</span>
           <span aria-hidden>·</span>
           <span>{openNeedCount} 条开放需求</span>
@@ -106,7 +106,7 @@ export function OrgOverviewCard({
           <Link
             key={action.label}
             href={action.href}
-            className={`flex h-10 items-center justify-center text-[11px] font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-bg-3 ${
+            className={`flex h-11 items-center justify-center text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-bg-3 ${
               index > 0 ? "border-l border-line" : ""
             }`}
           >
@@ -114,7 +114,7 @@ export function OrgOverviewCard({
           </Link>
         ))}
         {canShare && (
-          <div className="border-l border-line [&>button]:h-10 [&>button]:min-h-10 [&>button]:w-full [&>button]:justify-center [&>button]:rounded-none [&>button]:border-0 [&>button]:px-2 [&>button]:text-[11px]">
+          <div className="border-l border-line [&>button]:h-11 [&>button]:min-h-11 [&>button]:w-full [&>button]:justify-center [&>button]:rounded-none [&>button]:border-0 [&>button]:px-2 [&>button]:text-2xs">
             <ShareCard
               data={{
                 kind: "org",

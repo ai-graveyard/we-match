@@ -82,7 +82,7 @@ export function NeedForm({
     setDeadline(toLocalInput(expiryFromPreset(preset).toISOString()));
   };
 
-  const labelCls = "text-[11px] font-semibold tracking-[0.08em] text-gray";
+  const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
   const inputCls =
     "w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
   const eligibleContacts = contactOptions.filter(
@@ -131,7 +131,7 @@ export function NeedForm({
         <input
           id="title"
           name="title"
-          className={`${inputCls} h-10`}
+          className={`${inputCls} h-11`}
           maxLength={NEED_LIMITS.title}
           required
           value={title}
@@ -184,14 +184,14 @@ export function NeedForm({
           ))}
         </div>
         {expiryPreset === "permanent" ? (
-          <p className="mt-2 text-[11px] text-gray">
+          <p className="mt-2 text-2xs text-gray">
             长期有效，直到你手动关闭或标记完成
           </p>
         ) : (
           <input
             type="datetime-local"
             aria-label="自定义截止时间"
-            className={`${inputCls} mt-2 h-10 font-mono text-xs`}
+            className={`${inputCls} mt-2 h-11 font-mono text-xs`}
             required
             value={deadline}
             onChange={(event) => {
@@ -243,7 +243,7 @@ export function NeedForm({
               )}
             </div>
             {orgs.length === 0 && (
-              <p className="mt-1 text-[11px] text-gray">
+              <p className="mt-1 text-2xs text-gray">
                 加入组织后可选择只发到组织内
               </p>
             )}
@@ -270,19 +270,19 @@ export function NeedForm({
                 >
                   {option.label}
                   {option.visibility === "orgs" && (
-                    <span className="ml-1 font-mono text-[10px] opacity-70">
+                    <span className="ml-1 font-mono text-3xs opacity-70">
                       共同组织可见
                     </span>
                   )}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-gray">
+            <p className="mt-2 text-2xs leading-5 text-gray">
               对方联系你时，会优先看到这个渠道
             </p>
           </>
         ) : (
-          <p className="text-[11px] leading-5 text-gray">
+          <p className="text-2xs leading-5 text-gray">
             当前范围没有可用的联系方式，请先
             <Link href="/me/card" className="ml-1 text-ink underline">
               编辑名片
@@ -300,7 +300,7 @@ export function NeedForm({
       <button
         type="submit"
         disabled={pending}
-        className="h-10 rounded-sm bg-accent text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
         {pending ? "提交中" : editing ? "保存修改" : "发布"}
       </button>

@@ -16,7 +16,7 @@ import { CopyButton } from "@/components/copy-button";
 import { relativeTime } from "@/lib/format";
 
 const smallBtnCls =
-  "inline-flex h-8 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-[11px] font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+  "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
 
 // 邀请码面板：查看、复制码/链接、两步确认重置
 export function InviteCodePanel({
@@ -53,7 +53,7 @@ export function InviteCodePanel({
             </form>
             <button
               type="button"
-              className="text-[11px] text-gray hover:text-ink"
+              className="text-2xs text-gray hover:text-ink"
               onClick={() => setConfirming(false)}
             >
               取消
@@ -62,7 +62,7 @@ export function InviteCodePanel({
         ) : (
           <button
             type="button"
-            className="flex items-center gap-1 text-[11px] text-gray hover:text-ink"
+            className="flex items-center gap-1 text-2xs text-gray hover:text-ink"
             onClick={() => setConfirming(true)}
           >
             <RotateCw size={11} aria-hidden />
@@ -108,10 +108,10 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
             >
               {req.applicant.nickname}
             </a>
-            <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+            <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
               {REQUEST_VIA_LABELS[req.via]}
             </span>
-            <span className="shrink-0 font-mono text-[10px] text-gray">
+            <span className="shrink-0 font-mono text-3xs text-gray">
               {relativeTime(new Date(req.createdAt))}
             </span>
             <div className="ml-auto flex shrink-0 gap-1.5">
@@ -129,9 +129,9 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
                 <button
                   type="submit"
                   disabled={pending}
-                  className="inline-flex h-8 items-center gap-1 rounded-sm px-2 text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+                  className="inline-flex h-11 items-center gap-1 rounded-sm px-2 text-sm text-gray transition-colors duration-100 hover:text-ink"
                 >
-                  <X size={12} aria-hidden />
+                  <X size={14} aria-hidden />
                   拒绝
                 </button>
               </form>
@@ -161,14 +161,14 @@ export function RemoveMemberButton({
           <input type="hidden" name="userId" value={userId} />
           <button
             type="submit"
-            className="text-[11px] font-semibold text-ink"
+            className="text-2xs font-semibold text-ink"
           >
             确认移除
           </button>
         </form>
         <button
           type="button"
-          className="text-[11px] text-gray"
+          className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
           取消
@@ -180,7 +180,7 @@ export function RemoveMemberButton({
     <button
       type="button"
       aria-label={`移除成员 ${nickname}`}
-      className="flex items-center gap-1 text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+      className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       <UserMinus size={12} aria-hidden />
@@ -208,7 +208,7 @@ export function PromoteAdminButton({
 
   if (limitReached) {
     return (
-      <span className="text-[11px] text-gray" title="已任命 3 名管理员，拥有者另计">
+      <span className="text-2xs text-gray" title="已任命 3 名管理员，拥有者另计">
         管理员已满
       </span>
     );
@@ -224,21 +224,21 @@ export function PromoteAdminButton({
             <button
               type="submit"
               disabled={pending}
-              className="text-[11px] font-semibold text-ink disabled:text-gray"
+              className="text-2xs font-semibold text-ink disabled:text-gray"
             >
               {pending ? "任命中…" : "确认任命"}
             </button>
           </form>
           <button
             type="button"
-            className="text-[11px] text-gray"
+            className="text-2xs text-gray"
             onClick={() => setConfirming(false)}
           >
             取消
           </button>
         </span>
         {state.error && (
-          <span className="max-w-48 text-right text-[10px] text-ink">
+          <span className="max-w-48 text-right text-3xs text-ink">
             {state.error}
           </span>
         )}
@@ -250,7 +250,7 @@ export function PromoteAdminButton({
     <button
       type="button"
       aria-label={`将 ${nickname} 设为管理员`}
-      className="flex items-center gap-1 text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+      className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       <ShieldCheck size={12} aria-hidden />
@@ -272,7 +272,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
         </form>
         <button
           type="button"
-          className="text-[11px] text-gray"
+          className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
           取消
@@ -283,7 +283,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
   return (
     <button
       type="button"
-      className="text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+      className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       退出组织
@@ -300,14 +300,14 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
           <input type="hidden" name="orgId" value={orgId} />
           <button
             type="submit"
-            className="h-8 rounded-sm border border-ink bg-panel px-3 text-[11px] font-semibold tracking-[0.08em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+            className="h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
           >
             确认解散（需求和成员一并删除，不可恢复）
           </button>
         </form>
         <button
           type="button"
-          className="text-[11px] text-gray"
+          className="text-2xs text-gray"
           onClick={() => setConfirming(false)}
         >
           取消
@@ -318,7 +318,7 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
   return (
     <button
       type="button"
-      className="text-[11px] text-gray transition-colors duration-100 hover:text-ink"
+      className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
       onClick={() => setConfirming(true)}
     >
       解散组织

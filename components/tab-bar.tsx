@@ -18,12 +18,14 @@ function isActive(pathname: string, href: string) {
 export function TabBar() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 grid h-14 grid-cols-2 border-t border-line bg-panel md:hidden">
+    // fixed 相对视口定位，吃不到 body 的左右安全区内边距，横屏刘海会压住 Tab 文字，
+    // 所以这里自己垫一份（见 globals.css 的 --safe-l / --safe-r）
+    <nav className="fixed inset-x-0 bottom-0 z-10 grid h-[var(--tabbar-h)] grid-cols-2 border-t border-line bg-panel pb-[var(--safe-b)] pl-[var(--safe-l)] pr-[var(--safe-r)] md:hidden">
       {TABS.map((tab) => (
         <Link
           key={tab.href}
           href={tab.href}
-          className={`flex items-center justify-center text-[15px] ${
+          className={`flex items-center justify-center text-base ${
             isActive(pathname, tab.href)
               ? "font-semibold text-accent"
               : "text-gray"
@@ -48,7 +50,7 @@ export function TopNav() {
         >
           <Brand />
           <span className="h-4 w-px bg-line" aria-hidden />
-          <span className="text-[11px] text-gray">{BRAND_SLOGAN}</span>
+          <span className="text-2xs text-gray">{BRAND_SLOGAN}</span>
         </Link>
         <div className="flex items-center gap-4">
           <nav className="flex gap-8">

@@ -73,6 +73,9 @@ function shareCopy(data: ShareCardData) {
   };
 }
 
+// 导出成 PNG 的固定画布，不是界面的一部分：字号、颜色一律写死，不走
+// --text-* 与主题令牌。html-to-image 快照的是这一棵树，跟着界面字号阶梯
+// 走会让分享图随主题和阶梯调整而变形，且暗色模式下直接烧成黑底。
 function Poster({ data }: { data: ShareCardData }) {
   const isUser = data.kind === "user";
   const isNeed = data.kind === "need";
@@ -317,7 +320,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm border border-line bg-panel px-3 text-xs font-semibold tracking-[0.08em] text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3"
+        className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm border border-line bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3"
         aria-label={
           data.kind === "user"
             ? "分享名片"
@@ -350,7 +353,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
                     ? "分享需求"
                     : "分享组织"}
               </h2>
-              <p className="mt-0.5 font-mono text-[10px] text-gray">
+              <p className="mt-0.5 font-mono text-2xs text-gray">
                 图片底部二维码可直接扫码
               </p>
             </div>
@@ -374,7 +377,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               type="button"
               onClick={handleShare}
               disabled={busy !== null}
-              className="flex h-11 min-w-0 items-center justify-center gap-2 rounded-sm bg-ink px-3 text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-50"
+              className="flex h-11 min-w-0 items-center justify-center gap-2 rounded-sm bg-ink px-3 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-50"
             >
               <Share2 size={14} aria-hidden />
               {busy === "share" ? "正在准备图片…" : "立即分享"}
@@ -400,7 +403,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               <LinkIcon size={15} aria-hidden />
             </button>
           </div>
-          <p className="mt-2 min-h-5 text-center text-[11px] text-gray" aria-live="polite">
+          <p className="mt-2 min-h-5 text-center text-3xs text-gray" aria-live="polite">
             {notice}
           </p>
         </div>

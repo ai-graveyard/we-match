@@ -27,7 +27,7 @@ export function SafetyActions({
 
   return (
     <section className="mt-6 border-t border-line pt-4">
-      <div className="flex items-center gap-4 text-[11px] text-gray">
+      <div className="flex items-center gap-4 text-2xs text-gray">
         <button type="button" onClick={() => setOpen(!open)} className="underline">
           举报{targetType === "need" ? "这条需求" : "该用户"}
         </button>
@@ -46,7 +46,7 @@ export function SafetyActions({
             name="reason"
             required
             defaultValue=""
-            className="h-10 w-full rounded-sm border border-line bg-bg px-3 text-sm"
+            className="h-11 w-full rounded-sm border border-line bg-bg px-3 text-sm"
           >
             <option value="" disabled>选择原因</option>
             <option value="spam">垃圾广告</option>
@@ -67,7 +67,7 @@ export function SafetyActions({
           <button
             type="submit"
             disabled={pending || !!state.ok}
-            className="mt-2 h-9 rounded-sm border border-ink px-3 text-[11px] font-semibold disabled:opacity-60"
+            className="mt-2 h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:opacity-60"
           >
             {pending ? "提交中" : "提交举报"}
           </button>

@@ -93,11 +93,11 @@ const REPORT_STATUS_LABELS = {
 } as const;
 
 const actionButtonCls =
-  "flex h-10 w-full items-center justify-center rounded-sm border border-ink bg-panel text-[11px] font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+  "flex h-11 w-full items-center justify-center rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
 const tableActionButtonCls =
-  "inline-flex h-5 items-center justify-center whitespace-nowrap rounded-sm border border-line bg-panel px-1.5 text-[10px] font-semibold transition-colors duration-100 hover:border-ink hover:bg-bg-3 active:translate-y-px";
+  "inline-flex h-5 items-center justify-center whitespace-nowrap rounded-sm border border-line bg-panel px-1.5 text-3xs font-semibold transition-colors duration-100 hover:border-ink hover:bg-bg-3 active:translate-y-px";
 const thCls =
-  "whitespace-nowrap px-3 py-1.5 text-left text-[10px] font-semibold tracking-[0.08em] text-gray";
+  "whitespace-nowrap px-3 py-1.5 text-left text-3xs font-semibold tracking-[0.08em] text-gray";
 const tdCls = "px-3 py-1 align-middle text-xs";
 const PAGE_SIZE = 10;
 
@@ -189,7 +189,7 @@ function Pagination({
       ) : (
         <span className={disabledCls}>上一页</span>
       )}
-      <span className="font-mono text-[11px] text-gray">
+      <span className="font-mono text-2xs text-gray">
         {page} / {pageCount}
       </span>
       {page < pageCount ? (
@@ -224,7 +224,7 @@ function Field({
 }) {
   return (
     <div className={full ? "col-span-2" : undefined}>
-      <dt className="text-[10px] font-semibold tracking-[0.08em] text-gray">
+      <dt className="text-3xs font-semibold tracking-[0.08em] text-gray">
         {label}
       </dt>
       <dd
@@ -238,7 +238,7 @@ function Field({
 
 function Status({ children }: { children: React.ReactNode }) {
   return (
-    <span className="shrink-0 rounded-sm bg-bg-3 px-2 py-1 font-mono text-[10px] text-gray">
+    <span className="shrink-0 rounded-sm bg-bg-3 px-2 py-1 font-mono text-3xs text-gray">
       {children}
     </span>
   );
@@ -421,7 +421,7 @@ export default async function AdminPage({
               >
                 {VIEW_LABELS[view]}
                 {viewCounts[view] !== undefined && (
-                  <span className="font-mono text-[10px]">
+                  <span className="font-mono text-3xs">
                     {viewCounts[view]}
                   </span>
                 )}
@@ -440,7 +440,7 @@ export default async function AdminPage({
                   key={stat.label}
                   className="rounded-md border border-line bg-panel px-4 py-3"
                 >
-                  <div className="text-[11px] text-gray">{stat.label}</div>
+                  <div className="text-2xs text-gray">{stat.label}</div>
                   <div className="mt-1 font-mono text-xl font-semibold">
                     {stat.value}
                   </div>
@@ -453,7 +453,7 @@ export default async function AdminPage({
             <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-line gap-px sm:grid-cols-4">
               {funnel.map((item) => (
                 <div key={item.label} className="bg-panel p-4">
-                  <div className="text-[11px] text-gray">{item.label}</div>
+                  <div className="text-2xs text-gray">{item.label}</div>
                   <div className="mt-1 font-mono text-xl font-semibold">
                     {item.value}
                   </div>
@@ -538,10 +538,10 @@ export default async function AdminPage({
                           {report.details ?? "—"}
                         </span>
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {REPORT_STATUS_LABELS[report.status]}
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(report.createdAt)}
                       </td>
                       <td className={tdCls}>
@@ -598,7 +598,7 @@ export default async function AdminPage({
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-[10px] font-mono text-gray">
+                          <div className="text-3xs font-mono text-gray">
                             REPORT #{report.id}
                           </div>
                           <Link
@@ -704,7 +704,7 @@ export default async function AdminPage({
                     <td className={`${tdCls} whitespace-nowrap`}>
                       {user.city ?? "—"}
                     </td>
-                    <td className={`${tdCls} max-w-48 font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
                       <span className="line-clamp-2">
                         {user.tags.join(" · ") || "—"}
                       </span>
@@ -715,7 +715,7 @@ export default async function AdminPage({
                     <td className={`${tdCls} font-mono`}>
                       {orgCountByUser.get(user.id) ?? 0}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {user.id === viewer.id
                         ? "当前管理员"
                         : user.status === "active"
@@ -724,7 +724,7 @@ export default async function AdminPage({
                             ? "已注销"
                             : "已暂停"}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(user.createdAt)}
                     </td>
                     <td className={tdCls}>
@@ -768,7 +768,7 @@ export default async function AdminPage({
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[10px] font-mono text-gray">
+                        <div className="text-3xs font-mono text-gray">
                           USER #{user.id}
                         </div>
                         <Link
@@ -860,7 +860,7 @@ export default async function AdminPage({
                     className="border-b border-line last:border-b-0"
                   >
                     <td className={`${tdCls} font-mono`}>{need.id}</td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px]`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
                       {TYPE_LABELS[need.type]}
                     </td>
                     <td className={`${tdCls} max-w-64`}>
@@ -877,19 +877,19 @@ export default async function AdminPage({
                     <td className={`${tdCls} whitespace-nowrap`}>
                       {org?.name ?? "广场"}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {need.moderationStatus === "hidden"
                         ? "已隐藏"
                         : isExpired(need)
                           ? "已过期"
                           : STATUS_LABELS[need.status]}
                     </td>
-                    <td className={`${tdCls} max-w-48 font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
                       <span className="line-clamp-2">
                         {need.tags.join(" · ") || "—"}
                       </span>
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(need.updatedAt)}
                     </td>
                     <td className={tdCls}>
@@ -929,7 +929,7 @@ export default async function AdminPage({
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[10px] font-mono text-gray">
+                        <div className="text-3xs font-mono text-gray">
                           {TYPE_LABELS[need.type]} #{need.id}
                         </div>
                         <Link
@@ -1026,7 +1026,7 @@ export default async function AdminPage({
                         {org.name}
                       </Link>
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px]`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
                       {VISIBILITY_LABELS[org.visibility]}
                     </td>
                     <td className={`${tdCls} whitespace-nowrap`}>
@@ -1038,7 +1038,7 @@ export default async function AdminPage({
                     <td className={`${tdCls} whitespace-nowrap font-mono`}>
                       {org.inviteCode}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(org.createdAt)}
                     </td>
                   </tr>
@@ -1053,7 +1053,7 @@ export default async function AdminPage({
                   >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-[10px] font-mono text-gray">
+                      <div className="text-3xs font-mono text-gray">
                         ORG #{org.id}
                       </div>
                       <Link
@@ -1130,13 +1130,13 @@ export default async function AdminPage({
                     <td className={`${tdCls} whitespace-nowrap`}>
                       {REQUEST_VIA_LABELS[req.via]}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {REQUEST_STATUS_LABELS[req.status]}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(req.createdAt)}
                     </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {req.handledAt ? shortDateTime(req.handledAt) : "—"}
                     </td>
                   </tr>
@@ -1151,7 +1151,7 @@ export default async function AdminPage({
                   >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-[10px] font-mono text-gray">
+                      <div className="text-3xs font-mono text-gray">
                         REQUEST #{req.id}
                       </div>
                       <Link
@@ -1273,19 +1273,19 @@ export default async function AdminPage({
                           {record.code}
                         </span>
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {CODE_STATE_LABELS[state]}
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(record.expiresAt)}
                       </td>
                       <td className={`${tdCls} font-mono`}>
                         {record.failCount}
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {record.ip}
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {relativeTime(record.createdAt)}
                       </td>
                     </tr>
@@ -1374,21 +1374,21 @@ export default async function AdminPage({
                       <td className={`${tdCls} whitespace-nowrap`}>
                         {actor?.nickname ?? "系统"}
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] font-semibold`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs font-semibold`}>
                         {log.action}
                       </td>
                       <td className={`${tdCls} whitespace-nowrap`}>
                         {log.targetType}
                         {log.targetId ? ` #${log.targetId}` : ""}
                       </td>
-                      <td className={`${tdCls} max-w-64 font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} max-w-64 font-mono text-3xs text-gray`}>
                         <span className="line-clamp-2 break-all">
                           {log.metadata
                             ? JSON.stringify(log.metadata)
                             : "—"}
                         </span>
                       </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-[10px] text-gray`}>
+                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(log.createdAt)}
                       </td>
                     </tr>
@@ -1414,7 +1414,7 @@ export default async function AdminPage({
                           {log.targetId ? ` #${log.targetId}` : ""}
                         </div>
                       </div>
-                      <time className="shrink-0 font-mono text-[10px] text-gray">
+                      <time className="shrink-0 font-mono text-3xs text-gray">
                         {shortDateTime(log.createdAt)}
                       </time>
                     </div>
@@ -1423,7 +1423,7 @@ export default async function AdminPage({
                         <summary className="cursor-pointer text-xs text-gray">
                           查看附加信息
                         </summary>
-                        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] text-gray">
+                        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-3xs text-gray">
                           {JSON.stringify(log.metadata, null, 2)}
                         </pre>
                       </details>

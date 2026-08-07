@@ -30,7 +30,7 @@ export function PhoneInput({
   placeholder?: string;
 }) {
   return (
-    <div className="flex h-10 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
+    <div className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
       <span className="flex h-full shrink-0 select-none items-center border-r border-line bg-bg-3 px-2.5 font-mono text-sm text-gray">
         +86
       </span>

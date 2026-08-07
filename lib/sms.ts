@@ -137,3 +137,8 @@ let cached: SmsProvider | undefined;
 export function getSmsProvider(): SmsProvider {
   return (cached ??= createProvider());
 }
+
+// 短信是否真的会到用户手机上。log 通道只写日志和后台，得引导用户去要验证码。
+export function isSmsDeliveryEnabled() {
+  return (process.env.SMS_PROVIDER ?? "log") !== "log";
+}

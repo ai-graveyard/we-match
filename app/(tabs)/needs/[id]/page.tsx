@@ -20,7 +20,7 @@ import {
   ContactPanel,
   type ContactChannel,
 } from "@/components/contact-panel";
-import { ConnectionPanel, InterestForm } from "@/components/connection-panel";
+import { ConnectionPanel } from "@/components/connection-panel";
 import { isBlockedEitherWay } from "@/lib/activity";
 import { SafetyActions } from "@/components/safety-actions";
 
@@ -114,8 +114,6 @@ export default async function NeedDetailPage({
         : [],
   );
   const canContact = !isOwner && need.status === "open" && !expired;
-  const showContactAction =
-    canContact && (!viewer || contactChannels.length > 0);
   const query = await searchParams;
   const contactQuery = Array.isArray(query.contact)
     ? query.contact[0]
@@ -145,6 +143,15 @@ export default async function NeedDetailPage({
     initiatorConfirmed: !!connection.initiatorConfirmedAt,
   }));
   const currentConnection = connectionItems[0];
+  // 非发布者视角下 connectionItems 只会有自己的那条举手
+  const interestStatus = isOwner ? null : currentConnection?.status ?? null;
+  const canExpressInterest =
+    !interestStatus ||
+    interestStatus === "rejected" ||
+    interestStatus === "cancelled";
+  // 未登录先引导登录；登录后只要还能举手、或有可见联系方式，就给一个入口
+  const showContactAction =
+    canContact && (!viewer || canExpressInterest || contactChannels.length > 0);
 
   return (
     <div>
@@ -153,7 +160,7 @@ export default async function NeedDetailPage({
         <div className="flex items-center gap-2">
           <TypeBadge type={need.type} />
           <StatusBadge need={need} />
-          <span className="font-mono text-[11px] text-gray">
+          <span className="font-mono text-2xs text-gray">
             {orgName ? `${orgName} · ` : ""}
             {relativeTime(need.updatedAt)}
           </span>
@@ -184,14 +191,14 @@ export default async function NeedDetailPage({
               <Link
                 key={tag}
                 href={`/?tag=${encodeURIComponent(tag)}`}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-[11px] text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
               >
                 {tag}
               </Link>
             ))}
           </div>
         )}
-        <p className="mt-3 border-t border-line pt-3 font-mono text-[11px] text-gray">
+        <p className="mt-3 border-t border-line pt-3 font-mono text-2xs text-gray">
           {need.expiresAt
             ? `截止 ${shortDateTime(need.expiresAt)}`
             : "永久有效"}
@@ -202,24 +209,12 @@ export default async function NeedDetailPage({
         <section className="mt-4">
           <NeedActions id={need.id} status={need.status} expired={expired} />
           {expired && (
-            <p className="mt-2 text-[11px] text-gray">
+            <p className="mt-2 text-2xs text-gray">
               这条需求已超过截止时间并从列表隐藏；点「续期一个月」可快速恢复
             </p>
           )}
         </section>
       )}
-
-      {viewer && !isOwner && canContact &&
-        (!currentConnection ||
-          currentConnection.status === "rejected" ||
-          currentConnection.status === "cancelled") && (
-          <section className="mt-4">
-            <InterestForm
-              needId={need.id}
-              label={need.type === "need" ? "我能提供" : "我想了解"}
-            />
-          </section>
-        )}
 
       {viewer && (
         <ConnectionPanel
@@ -230,11 +225,12 @@ export default async function NeedDetailPage({
       )}
 
       {showContactAction && (
-        <section className="sticky bottom-[72px] z-20 mt-4 bg-bg py-2 md:static md:py-0">
+        <section className="sticky bottom-[calc(var(--tabbar-h)+16px)] z-20 mt-4 bg-bg py-2 md:static md:py-0">
           <ContactPanel
-            need={{ type: need.type, title: need.title }}
+            need={{ id: need.id, type: need.type, title: need.title }}
             author={author.nickname}
             channels={contactChannels}
+            interestStatus={interestStatus}
             preferredContact={viewer ? need.preferredContact : null}
             loginHref={
               viewer
@@ -247,7 +243,7 @@ export default async function NeedDetailPage({
       )}
 
       <section className="mt-4">
-        <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
           发布者
         </h2>
         <Link

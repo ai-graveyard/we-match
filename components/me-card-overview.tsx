@@ -20,7 +20,7 @@ const VISIBILITY_LABELS = {
 
 function VisibilityLabel({ user, field }: { user: User; field: CardFieldKey }) {
   return (
-    <span className="shrink-0 font-mono text-[10px] text-gray">
+    <span className="shrink-0 font-mono text-3xs text-gray">
       {VISIBILITY_LABELS[fieldVisibility(user.fieldVisibility, field)]}
     </span>
   );
@@ -89,7 +89,7 @@ export function MeCardOverview({
             {user.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-[11px] text-gray"
+                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
               >
                 {tag}
               </span>
@@ -106,7 +106,7 @@ export function MeCardOverview({
           </Link>
           <Link
             href="/me/card"
-            className="ml-auto text-xs font-semibold tracking-[0.08em] hover:underline"
+            className="ml-auto text-sm font-semibold tracking-[0.06em] hover:underline"
           >
             编辑名片
           </Link>
@@ -118,7 +118,7 @@ export function MeCardOverview({
           key={group.title}
           className="mt-4 rounded-md border border-line bg-panel"
         >
-          <h2 className="border-b border-line px-4 py-2 text-[11px] font-semibold tracking-[0.08em] text-gray">
+          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
             {group.title}
           </h2>
           {group.items.map((item, index) => (
@@ -130,10 +130,10 @@ export function MeCardOverview({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray">{item.label}</span>
+                  <span className="text-2xs text-gray">{item.label}</span>
                   <VisibilityLabel user={user} field={item.key} />
                 </div>
-                <div className="truncate font-mono text-[13px]">
+                <div className="truncate font-mono text-sm">
                   {item.value}
                 </div>
               </div>
@@ -143,7 +143,7 @@ export function MeCardOverview({
         </section>
       ))}
 
-      <p className="mt-3 text-[11px] text-gray">
+      <p className="mt-3 text-2xs text-gray">
         此处展示你已填写的全部名片内容，对外展示仍按各字段的可见范围过滤。
       </p>
     </>

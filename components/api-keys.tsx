@@ -10,10 +10,10 @@ import {
 import { CopyButton } from "@/components/copy-button";
 
 const inputCls =
-  "h-10 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-[11px] font-semibold tracking-[0.08em] text-gray";
+  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
 const primaryBtnCls =
-  "h-10 rounded-sm bg-accent px-4 text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
+  "h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
 
 // Key 列表只显示末四位；明文仅在创建成功时显示一次。
 export function ApiKeyRow({
@@ -43,14 +43,14 @@ export function ApiKeyRow({
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
-              className="inline-flex items-center gap-1 rounded-sm border border-ink px-2 py-1 text-[11px] font-semibold tracking-[0.08em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+              className="inline-flex items-center gap-1 rounded-sm border border-ink px-2 py-2 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
             >
               <Trash2 size={11} aria-hidden />
               确认删除
             </button>
             <button
               type="button"
-              className="text-[11px] text-gray hover:text-ink"
+              className="text-2xs text-gray hover:text-ink"
               onClick={() => setConfirming(false)}
             >
               取消
@@ -59,7 +59,7 @@ export function ApiKeyRow({
         ) : (
           <button
             type="button"
-            className="ml-auto inline-flex shrink-0 items-center gap-1 text-[11px] text-gray hover:text-ink"
+            className="ml-auto inline-flex shrink-0 items-center gap-1 text-2xs text-gray hover:text-ink"
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={11} aria-hidden />
@@ -68,13 +68,13 @@ export function ApiKeyRow({
         )}
       </div>
       <div className="mt-2 flex items-center gap-1">
-        <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-gray">
+        <code className="min-w-0 flex-1 break-all font-mono text-2xs text-gray">
           {masked}
         </code>
       </div>
-      <p className="mt-1.5 font-mono text-[11px] text-gray">{meta}</p>
+      <p className="mt-1.5 font-mono text-2xs text-gray">{meta}</p>
       {confirming && (
-        <p className="mt-1.5 text-[11px] text-gray">
+        <p className="mt-1.5 text-2xs text-gray">
           删除后此 Key 立即失效，正在使用它的 Agent 将无法访问
         </p>
       )}
@@ -130,17 +130,17 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
               required
             />
           </div>
-          <p className="text-[11px] text-gray">
+          <p className="text-2xs text-gray">
             Key 默认拥有完整读写权限。出于安全考虑，明文只显示一次
           </p>
           {state.error && <p className="text-xs text-ink">{state.error}</p>}
           {state.createdKey && (
             <div className="rounded-sm border border-accent bg-bg p-3">
-              <p className="text-[11px] font-semibold text-accent">
+              <p className="text-2xs font-semibold text-accent">
                 请立即复制，此 Key 只显示一次
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <code className="min-w-0 flex-1 break-all font-mono text-[11px]">
+                <code className="min-w-0 flex-1 break-all font-mono text-2xs">
                   {state.createdKey}
                 </code>
                 <CopyButton text={state.createdKey} />

@@ -19,6 +19,20 @@
   --radius-sm: 8px;
   --radius-md: 12px;
 
+  /* 字号阶梯，按微信小程序 / WeUI 与 iOS HIG 的手机端惯例整体上调一档。
+     整套界面只在这里换档，组件里不写死 text-[12px] 这类数值——写死的那些
+     没法统一调，上一版就是这么散掉的。角色对照见 docs/DESIGN.md「字号阶梯」。
+
+     xs / sm / base 覆盖 Tailwind 自带档位，行高沿用它的比例值（如 --text-xs
+     配 calc(1/0.75)≈1.33）。2xs / 3xs 是本项目新增的辅助档，刻意不配
+     --text-*--line-height：这两档只用在单行的元信息、徽章、表头上，行高
+     继承 body 的 1.5 即可，配了反而在紧凑表格里撑开行距。 */
+  --text-3xs: 11px;
+  --text-2xs: 12px;
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 17px;
+
   /* 品牌 loading：编织图案横移一个波长（106 单位）后与自身重合，侧视投影上等效于
      双股螺旋绕水平轴匀速旋转（螺纹转动），见 docs/DESIGN.md「品牌标识」 */
   --animate-logo-thread: logo-thread 1.6s linear infinite;
@@ -37,6 +51,32 @@ html {
   color-scheme: light;
 }
 
+/* 手机端安全区：微信内置浏览器底部没有工具栏，网页直接贴到屏幕物理底边，
+   小黑条和屏幕圆角都会啃掉底部 Tab 栏。safe-area-inset-bottom 给出的正是
+   「不被圆角 / 小黑条遮挡」的那段距离，垫上它即可。依赖 app/layout.tsx 的
+   viewportFit: "cover"，缺了它 env() 恒为 0。
+
+   这里先给 --safe-b 一个死值兜底：env() 若不被内核支持（微信安卓部分 X5 版本），
+   写进自定义属性会让它变成无效值，连带 calc(56px + var(--safe-b)) 一起失效、
+   Tab 栏塌高——比不垫安全区更糟。 */
+:root {
+  --safe-b: 12px;
+  --safe-l: 0px;
+  --safe-r: 0px;
+  --tabbar-h: calc(56px + var(--safe-b));
+}
+
+/* env() 与 max() 都支持时才覆盖。底部取 max 是因为一部分安卓内核在圆角屏上仍然
+   把 inset 报成 0，这时保底 12px，Tab 文字不会贴死屏幕最底边。
+   左右不保底 —— 竖屏时刘海不在两侧，凭空垫 12px 只会白白吃掉窄屏的横向空间。 */
+@supports (padding-bottom: max(env(safe-area-inset-bottom), 12px)) {
+  :root {
+    --safe-b: max(env(safe-area-inset-bottom), 12px);
+    --safe-l: env(safe-area-inset-left);
+    --safe-r: env(safe-area-inset-right);
+  }
+}
+
 /* 暗色令牌（<html data-theme="dark">），--accent 为品牌常量、明暗一致 */
 [data-theme="dark"] {
   color-scheme: dark;
@@ -53,9 +93,14 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* viewport-fit=cover 后横屏刘海会压住内容，左右也一并让开。
+     注意这只管得住文档流里的东西：fixed 定位相对视口，吃不到 body 内边距，
+     Tab 栏和悬浮发布按钮得各自垫 --safe-l / --safe-r。 */
+  padding-left: var(--safe-l);
+  padding-right: var(--safe-r);
 }
 
 @media (prefers-reduced-motion: reduce) {

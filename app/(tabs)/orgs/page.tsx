@@ -72,7 +72,7 @@ export default async function OrgPlazaPage({
             name="q"
             defaultValue={q ?? ""}
             placeholder="搜索公开组织"
-            className="h-9 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
+            className="h-10 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
           />
         </form>
       </div>
@@ -94,7 +94,7 @@ export default async function OrgPlazaPage({
                 <span className="min-w-0 truncate text-sm font-semibold">
                   {org.name}
                 </span>
-                <span className="ml-auto flex shrink-0 items-center gap-1 font-mono text-[11px] text-gray">
+                <span className="ml-auto flex shrink-0 items-center gap-1 font-mono text-2xs text-gray">
                   <Users size={11} aria-hidden />
                   {memberCount}
                 </span>

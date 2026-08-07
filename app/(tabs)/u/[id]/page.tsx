@@ -115,7 +115,7 @@ export default async function UserCardPage({
                 key={option.value}
                 href={`/u/${owner.id}?view=${option.value}`}
                 replace
-                className={`flex h-9 flex-1 items-center justify-center px-2 text-center text-[11px] transition-colors duration-100 ${
+                className={`flex h-10 flex-1 items-center justify-center px-2 text-center text-2xs transition-colors duration-100 ${
                   index > 0 ? "border-l border-line" : ""
                 } ${
                   previewView === option.value
@@ -127,7 +127,7 @@ export default async function UserCardPage({
               </Link>
             ))}
           </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-gray">
+          <div className="mt-2 flex items-center justify-between gap-3 text-2xs text-gray">
             <span>正在预览该身份看到的版本</span>
             <Link href="/me/card" className="shrink-0 text-ink underline">
               编辑名片
@@ -161,7 +161,7 @@ export default async function UserCardPage({
             {card.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-[11px] text-gray"
+                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
               >
                 {tag}
               </span>
@@ -172,7 +172,7 @@ export default async function UserCardPage({
 
       {showLoginGate && (
         <section className="mt-4 rounded-md border border-line bg-panel">
-          <h2 className="border-b border-line px-4 py-2 text-[11px] font-semibold tracking-[0.08em] text-gray">
+          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
             联系方式与社媒
           </h2>
           <div className="p-4">
@@ -183,7 +183,7 @@ export default async function UserCardPage({
                   ? `/u/${owner.id}?view=user`
                   : `/login?next=${encodeURIComponent(`/u/${owner.id}`)}`
               }
-              className="mt-3 flex h-10 w-full items-center justify-center rounded-sm bg-accent text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px"
+              className="mt-3 flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
             >
               登录后查看
             </Link>
@@ -196,7 +196,7 @@ export default async function UserCardPage({
           key={group.title}
           className="mt-4 rounded-md border border-line bg-panel"
         >
-          <h2 className="border-b border-line px-4 py-2 text-[11px] font-semibold tracking-[0.08em] text-gray">
+          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
             {group.title}
           </h2>
           {group.items.map((item, i) => (
@@ -208,14 +208,14 @@ export default async function UserCardPage({
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray">{item.label}</span>
+                  <span className="text-2xs text-gray">{item.label}</span>
                   {item.visibility === "orgs" && (
-                    <span className="font-mono text-[10px] text-gray">
+                    <span className="font-mono text-3xs text-gray">
                       共同组织可见
                     </span>
                   )}
                 </div>
-                <div className="truncate font-mono text-[13px]">
+                <div className="truncate font-mono text-sm">
                   {item.value}
                 </div>
               </div>
@@ -266,7 +266,7 @@ async function PlazaNeeds({
 
   return (
     <section className="mt-4">
-      <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+      <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
         {isSelf ? "我的广场需求" : "对方的广场需求"}
       </h2>
       {list.length === 0 ? (

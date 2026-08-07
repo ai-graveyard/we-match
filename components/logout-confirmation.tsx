@@ -16,7 +16,7 @@ export function LogoutConfirmation() {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="flex h-10 w-full items-center justify-center gap-1.5 rounded-sm border border-ink bg-panel text-xs font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+        className="flex h-11 w-full items-center justify-center gap-1.5 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
       >
         <LogOut size={13} aria-hidden />
         退出登录
@@ -40,13 +40,13 @@ export function LogoutConfirmation() {
           ref={cancelRef}
           type="button"
           onClick={() => setConfirming(false)}
-          className="h-9 rounded-sm border border-line text-xs font-semibold tracking-[0.08em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px"
+          className="h-11 rounded-sm border border-line text-sm font-semibold tracking-[0.06em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px"
         >
           取消
         </button>
         <button
           type="submit"
-          className="flex h-9 items-center justify-center gap-1.5 rounded-sm bg-ink text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-sm bg-ink text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
         >
           <LogOut size={13} aria-hidden />
           确认退出

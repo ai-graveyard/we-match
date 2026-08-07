@@ -60,7 +60,7 @@ export function LoginForm({ next }: { next: string }) {
           disabled={
             sendPending || countdown > 0 || phone.length < PHONE_LENGTH
           }
-          className="h-10 shrink-0 rounded-sm border border-ink bg-panel px-3 text-xs font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray"
+          className="h-11 shrink-0 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray"
         >
           {countdown > 0 ? (
             <span className="font-mono">{countdown}s</span>
@@ -81,13 +81,29 @@ export function LoginForm({ next }: { next: string }) {
         value={code}
         onChange={setCode}
       />
+      {/* 普通面板 + 6px 状态灯，橙只剩这一个点：本屏的焦橙主控件是「登录」按钮，
+          警示框式的橙边框和警示图标都是清单外的装饰（见 DESIGN.md 焦橙纪律） */}
+      {sendState.notice && (
+        <div
+          role="alert"
+          className="rounded-sm border border-line bg-panel p-3"
+        >
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <i className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+            {sendState.notice.title}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-gray">
+            {sendState.notice.body}
+          </p>
+        </div>
+      )}
       {error && <p className="text-xs text-ink">{error}</p>}
       <button
         type="submit"
         disabled={
           loginPending || phone.length < PHONE_LENGTH || code.length < CODE_LENGTH
         }
-        className="h-10 rounded-sm bg-accent text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
         {loginPending ? "登录中" : "登录"}
       </button>

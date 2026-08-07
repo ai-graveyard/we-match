@@ -23,8 +23,14 @@ import {
   verifyCodeAndLogin,
 } from "@/lib/auth";
 import { audit } from "@/lib/activity";
+import { isSmsDeliveryEnabled } from "@/lib/sms";
+import { SMS_FALLBACK_CONTACT } from "@/lib/brand";
 
-export type AuthFormState = { error?: string; sentAt?: number };
+export type AuthFormState = {
+  error?: string;
+  sentAt?: number;
+  notice?: { title: string; body: string };
+};
 
 // 登录后回跳只允许站内路径，防开放重定向
 function safeNext(next: unknown): string {
@@ -41,7 +47,19 @@ export async function requestCodeAction(
   const phone = String(formData.get("phone") ?? "").trim();
   const { error } = await requestVerificationCode(phone);
   if (error) return { error };
-  return { sentAt: Date.now() };
+  // 生产还没接真实短信通道，验证码只有管理后台看得到，得告诉用户去哪儿要。
+  // 开发环境固定 888888，登录页已另有说明，不重复提示。
+  const needsFallback =
+    process.env.NODE_ENV === "production" && !isSmsDeliveryEnabled();
+  return {
+    sentAt: Date.now(),
+    notice: needsFallback
+      ? {
+          title: "短信通道还没开通，你收不到短信",
+          body: `请联系${SMS_FALLBACK_CONTACT}获取本次登录的 6 位验证码`,
+        }
+      : undefined,
+  };
 }
 
 export async function loginAction(

@@ -17,8 +17,11 @@ export const metadata: Metadata = {
 };
 
 // 移动端浏览器地址栏 / 状态栏底色，取 --bg 而非焦橙——大面积橙底不做界面色。
-// 用户手动切主题时由 ThemeApplier 覆盖这两条 media 规则
+// 用户手动切主题时由 ThemeApplier 覆盖这两条 media 规则。
+// viewportFit "cover" 是底部 Tab 栏能读到 env(safe-area-inset-bottom) 的前提，
+// 缺了它微信里 iPhone 小黑条会压住 Tab 栏，见 globals.css 的 --safe-b。
 export const viewport: Viewport = {
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F7F7" },
     { media: "(prefers-color-scheme: dark)", color: "#121212" },

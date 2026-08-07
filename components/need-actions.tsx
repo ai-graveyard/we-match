@@ -17,7 +17,7 @@ import {
 } from "@/app/actions/needs";
 
 const btnCls =
-  "inline-flex h-8 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-[11px] font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+  "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
 
 export function NeedActions({
   id,
@@ -86,7 +86,7 @@ export function NeedActions({
           </button>
           <button
             type="button"
-            className="text-[11px] text-gray hover:text-ink"
+            className="text-2xs text-gray hover:text-ink"
             onClick={() => setConfirming(false)}
           >
             取消
@@ -95,7 +95,7 @@ export function NeedActions({
       ) : (
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-[11px] text-gray hover:text-ink"
+          className="inline-flex items-center gap-1 text-2xs text-gray hover:text-ink"
           onClick={() => setConfirming(true)}
         >
           <Trash2 size={12} aria-hidden />

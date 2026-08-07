@@ -55,7 +55,7 @@ function VisibilitySegment({
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`px-2 py-1 text-[11px] transition-colors duration-100 ${
+          className={`px-2 py-1 text-2xs transition-colors duration-100 ${
             i > 0 ? "border-l border-line" : ""
           } ${value === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
         >
@@ -97,9 +97,9 @@ export function CardForm({
     setVis((prev) => ({ ...prev, [key]: v }));
 
   const inputCls =
-    "h-10 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+    "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
   const labelCls =
-    "text-[11px] font-semibold tracking-[0.08em] text-gray";
+    "text-2xs font-semibold tracking-[0.08em] text-gray";
   const sectionCls = "rounded-md border border-line bg-panel p-4";
 
   return (
@@ -118,7 +118,7 @@ export function CardForm({
               <label htmlFor="nickname" className={labelCls}>
                 昵称（必填）
               </label>
-              <span className="font-mono text-[11px] text-gray">始终公开</span>
+              <span className="font-mono text-2xs text-gray">始终公开</span>
             </div>
             <input
               id="nickname"
@@ -201,7 +201,7 @@ export function CardForm({
       ).map((group) => (
         <section key={group.title} className={sectionCls}>
           <h2 className={`${labelCls} mb-3 block`}>{group.title}</h2>
-          <p className="mb-3 text-[11px] leading-5 text-gray">
+          <p className="mb-3 text-2xs leading-5 text-gray">
             不向未登录访客展示；“登录可见”表示任意已登录用户可查看。
           </p>
           <div className="flex flex-col gap-3">
@@ -253,7 +253,7 @@ export function CardForm({
       <button
         type="submit"
         disabled={pending}
-        className="h-10 rounded-sm bg-accent text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
         {pending ? "保存中" : "保存"}
       </button>

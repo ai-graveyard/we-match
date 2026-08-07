@@ -124,7 +124,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
               <Bell size={15} className="text-gray" aria-hidden />
               通知
               {(unreadRow?.n ?? 0) > 0 && (
-                <span className="ml-auto rounded-full bg-accent px-2 py-0.5 font-mono text-[10px] text-panel">
+                <span className="ml-auto rounded-full bg-accent px-2 py-0.5 font-mono text-3xs text-panel">
                   {unreadRow.n}
                 </span>
               )}
@@ -144,10 +144,10 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         organization={
           <section>
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+              <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
                 我的组织
               </h2>
-              <span className="font-mono text-[11px] text-gray">
+              <span className="font-mono text-2xs text-gray">
                 {myOrgs.length} / 3
               </span>
             </div>
@@ -155,14 +155,14 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Link
                 href="/orgs/new"
-                className="flex h-10 items-center justify-center gap-1.5 rounded-sm bg-accent text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
               >
                 <Plus size={14} strokeWidth={2.5} aria-hidden />
                 创建组织
               </Link>
               <Link
                 href="/orgs"
-                className="flex h-10 items-center justify-center gap-1.5 rounded-sm border border-ink bg-panel text-xs font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
               >
                 <Search size={13} aria-hidden />
                 发现组织
@@ -181,7 +181,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
 
             {myPending.length > 0 && (
               <section className="mt-4">
-                <h3 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+                <h3 className="text-2xs font-semibold tracking-[0.08em] text-gray">
                   申请中
                 </h3>
                 <div className="mt-2 rounded-md border border-line bg-panel">
@@ -195,7 +195,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
                       <span className="min-w-0 truncate">
                         {pendingOrg.orgName}
                       </span>
-                      <span className="ml-auto shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+                      <span className="ml-auto shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
                         等待审批
                       </span>
                     </div>
@@ -208,10 +208,10 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         need={
           <section>
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+              <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
                 我的需求
               </h2>
-              <span className="font-mono text-[11px] text-gray">
+              <span className="font-mono text-2xs text-gray">
                 {myNeeds.length} 条
               </span>
             </div>
@@ -258,7 +258,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
                       平台运营、内容治理与操作日志
                     </span>
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                  <span className="shrink-0 font-mono text-2xs text-gray transition-colors duration-100 group-hover:text-ink">
                     进入
                   </span>
                 </Link>
@@ -266,7 +266,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             </div>
 
             <section className="mt-6">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+              <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
                 关于
               </h2>
               <div className="mt-2 overflow-hidden rounded-md border border-line bg-panel">
@@ -275,7 +275,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
                   className="group flex h-12 items-center gap-4 px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
                 >
                   <span className="min-w-0 flex-1">用户协议</span>
-                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                  <span className="shrink-0 font-mono text-2xs text-gray transition-colors duration-100 group-hover:text-ink">
                     查看
                   </span>
                 </Link>
@@ -284,7 +284,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
                   className="group flex h-12 items-center gap-4 border-t border-line px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
                 >
                   <span className="min-w-0 flex-1">隐私政策</span>
-                  <span className="shrink-0 font-mono text-[11px] text-gray transition-colors duration-100 group-hover:text-ink">
+                  <span className="shrink-0 font-mono text-2xs text-gray transition-colors duration-100 group-hover:text-ink">
                     查看
                   </span>
                 </Link>
@@ -292,7 +292,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
                   <span className="min-w-0 flex-1 text-sm font-semibold">
                     版本
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-gray">
+                  <span className="shrink-0 font-mono text-2xs text-gray">
                     v{version}
                   </span>
                 </div>
@@ -300,7 +300,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             </section>
 
             <section className="mt-6">
-              <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+              <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
                 账号
               </h2>
               <div className="mt-2 overflow-hidden rounded-md border border-line bg-panel">

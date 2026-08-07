@@ -171,7 +171,7 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
         )}
         <Link
           href={publishHref}
-          className="ml-auto hidden shrink-0 items-center gap-1 rounded-sm bg-accent px-3 py-1.5 text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px md:inline-flex"
+          className="ml-auto hidden shrink-0 items-center gap-1 rounded-sm bg-accent px-3 py-2 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px md:inline-flex"
         >
           <Plus size={14} strokeWidth={2.5} />
           发布
@@ -185,7 +185,7 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
           </p>
           <Link
             href={`/orgs?code=${encodeURIComponent(normalizeInviteCode(inviteCode!))}`}
-            className="shrink-0 rounded-sm bg-accent px-3 py-1.5 text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px"
+            className="shrink-0 rounded-sm bg-accent px-3 py-2 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
           >
             去申请
           </Link>
@@ -198,7 +198,7 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
       <div className="mt-4 flex gap-2">
         <form
           action="/"
-          className="relative flex h-9 min-w-0 flex-1 overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink"
+          className="relative flex h-10 min-w-0 flex-1 overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink"
         >
           {activeOrg && (
             <input type="hidden" name="org" value={activeOrg.id} />
@@ -217,9 +217,9 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
             type="submit"
             aria-label="搜索"
             title="搜索"
-            className="flex w-9 shrink-0 items-center justify-center border-l border-line text-gray transition-colors duration-100 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
+            className="flex w-10 shrink-0 items-center justify-center border-l border-line text-gray transition-colors duration-100 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
           >
-            <Search size={14} aria-hidden />
+            <Search size={16} aria-hidden />
           </button>
         </form>
         <div className="flex shrink-0 overflow-hidden rounded-sm border border-line">
@@ -246,7 +246,7 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
         {tag && (
           <Link
             href={buildQuery({ ...current, tag: undefined })}
-            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-[11px]"
+            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
           >
             {tag}
             <X size={11} aria-hidden />
@@ -255,13 +255,13 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
         {q && (
           <Link
             href={buildQuery({ ...current, q: undefined })}
-            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-[11px]"
+            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
           >
             “{q}”
             <X size={11} aria-hidden />
           </Link>
         )}
-        <div className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-gray">
+        <div className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-2xs text-gray">
           {!showAll && (
             <i className="size-1.5 rounded-full bg-accent" aria-hidden />
           )}
@@ -304,7 +304,7 @@ export default async function PlazaPage({ searchParams }: PageProps<"/">) {
 
       <Link
         href={publishHref}
-        className="fixed bottom-[72px] right-4 z-10 flex items-center gap-1 rounded-sm bg-accent px-4 py-2.5 text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px md:hidden"
+        className="fixed bottom-[calc(var(--tabbar-h)+16px)] right-[calc(16px+var(--safe-r))] z-10 flex h-11 items-center gap-1 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px md:hidden"
       >
         <Plus size={14} strokeWidth={2.5} />
         发布

@@ -20,10 +20,10 @@ export function AgentAccessContent({
       </p>
 
       <div className="mt-6 flex items-baseline justify-between">
-        <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
           API Key
         </h2>
-        <span className="font-mono text-[11px] text-gray">
+        <span className="font-mono text-2xs text-gray">
           {apiKeys.length} / {API_KEY_LIMITS.perUser}
         </span>
       </div>
@@ -50,19 +50,19 @@ export function AgentAccessContent({
       </div>
 
       <section className="mt-6">
-        <h2 className="text-[11px] font-semibold tracking-[0.08em] text-gray">
+        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
           安装 Skill
         </h2>
         <div className="mt-2 rounded-md border border-line bg-panel p-4 text-sm">
           <p>把安装指令和新建的 API Key 发给 Agent。</p>
           <div className="mt-2 flex items-center gap-1 rounded-sm bg-bg-3 px-2 py-1.5">
-            <code className="min-w-0 flex-1 break-all font-mono text-[11px]">
+            <code className="min-w-0 flex-1 break-all font-mono text-2xs">
               {installMessage}
             </code>
             <CopyButton text={installMessage} />
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-gray">
+        <p className="mt-2 text-2xs text-gray">
           <a href="/we-match-skill.zip" download className="underline">
             手动下载 Skill 包
           </a>

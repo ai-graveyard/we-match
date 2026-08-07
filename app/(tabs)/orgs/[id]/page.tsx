@@ -25,7 +25,7 @@ import { PageHeader } from "@/components/page-header";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
 
 const sectionTitleCls =
-  "text-[11px] font-semibold tracking-[0.08em] text-gray";
+  "text-2xs font-semibold tracking-[0.08em] text-gray";
 
 export async function generateMetadata({
   params,
@@ -116,7 +116,7 @@ export default async function OrgDetailPage({
             <h1 className="min-w-0 truncate text-xl font-semibold">
               {org.name}
             </h1>
-            <span className="ml-auto flex shrink-0 items-center gap-1 font-mono text-[11px] text-gray">
+            <span className="ml-auto flex shrink-0 items-center gap-1 font-mono text-2xs text-gray">
               <Users size={11} aria-hidden />
               {memberCount?.n ?? 0} 名成员
             </span>
@@ -124,7 +124,7 @@ export default async function OrgDetailPage({
           {org.description && (
             <p className="mt-2 whitespace-pre-wrap text-sm">{org.description}</p>
           )}
-          <p className="mt-2 text-[11px] text-gray">
+          <p className="mt-2 text-2xs text-gray">
             加入后可查看组织内的需求和成员
           </p>
         </section>
@@ -132,7 +132,7 @@ export default async function OrgDetailPage({
           {!viewer ? (
             <Link
               href={`/login?next=/orgs/${oid}`}
-              className="block h-10 rounded-sm bg-accent text-center text-xs font-semibold leading-10 tracking-[0.08em] text-panel"
+              className="flex h-11 items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
             >
               登录后申请加入
             </Link>
@@ -197,12 +197,12 @@ export default async function OrgDetailPage({
       <section className="rounded-md border border-line bg-panel p-4">
         <div className="flex items-center gap-2">
           <h1 className="min-w-0 truncate text-xl font-semibold">{org.name}</h1>
-          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
             {VISIBILITY_LABELS[org.visibility]}
           </span>
           <Link
             href={`/?org=${oid}`}
-            className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-[11px] text-gray hover:text-ink"
+            className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-2xs text-gray hover:text-ink"
           >
             看组织内需求
             <ChevronRight size={12} aria-hidden />
@@ -259,7 +259,7 @@ export default async function OrgDetailPage({
         <div className="flex items-baseline justify-between">
           <h2 className={sectionTitleCls}>成员（{members.length}）</h2>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[11px] text-gray">
+            <span className="font-mono text-2xs text-gray">
               已任命管理员 {adminCount} / {ORG_LIMITS.maxAdmins}
             </span>
             {membership.role !== "owner" && <LeaveOrgButton orgId={oid} />}
@@ -277,14 +277,14 @@ export default async function OrgDetailPage({
             name="mq"
             defaultValue={mq ?? ""}
             placeholder="按昵称搜索成员"
-            className="h-9 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
+            className="h-10 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
           />
         </form>
         {mtag && (
           <div className="mt-2">
             <Link
               href={memberQuery({ mq })}
-              className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-[11px]"
+              className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
             >
               {mtag}
               <X size={11} aria-hidden />
@@ -319,12 +319,12 @@ export default async function OrgDetailPage({
                       {member.nickname}
                     </Link>
                     {role === "owner" && (
-                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
                         拥有者 · 管理员
                       </span>
                     )}
                     {role === "admin" && (
-                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-[10px] text-gray">
+                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
                         管理员
                       </span>
                     )}
@@ -335,7 +335,7 @@ export default async function OrgDetailPage({
                         <Link
                           key={tag}
                           href={memberQuery({ mq, mtag: tag })}
-                          className="rounded-sm border border-line px-1 py-px font-mono text-[10px] text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+                          className="rounded-sm border border-line px-1 py-px font-mono text-3xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
                         >
                           {tag}
                         </Link>

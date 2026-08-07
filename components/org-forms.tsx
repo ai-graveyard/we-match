@@ -11,10 +11,10 @@ import { INVITE_CODE_LENGTH, ORG_LIMITS, VISIBILITY_LABELS } from "@/lib/orgs";
 import { CodeBoxes, sanitizeCode } from "@/components/code-boxes";
 
 const inputCls =
-  "h-10 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-[11px] font-semibold tracking-[0.08em] text-gray";
+  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
 const primaryBtnCls =
-  "h-10 rounded-sm bg-accent px-4 text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
+  "h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
 
 function VisibilityPicker({
   value,
@@ -39,7 +39,7 @@ function VisibilityPicker({
           </button>
         ))}
       </div>
-      <p className="mt-1 text-[11px] text-gray">
+      <p className="mt-1 text-2xs text-gray">
         {value === "public"
           ? "公开：出现在组织广场，任何人可申请加入（需你审批）"
           : "私有：不出现在组织广场，只能凭邀请码申请"}
@@ -164,7 +164,7 @@ export function OrgSettingsForm({
       <button
         type="submit"
         disabled={pending}
-        className="h-9 rounded-sm border border-ink bg-panel text-xs font-semibold tracking-[0.08em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+        className="h-11 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
       >
         {pending ? "保存中" : "保存资料"}
       </button>

@@ -55,7 +55,7 @@ export function CopyButton({
   return (
     <button
       type="button"
-      className={`flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-semibold tracking-[0.08em] transition-colors duration-100 active:translate-y-px ${
+      className={`flex shrink-0 items-center gap-1 rounded-sm px-2 py-2 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 active:translate-y-px ${
         state === "idle"
           ? accent
             ? "text-accent"

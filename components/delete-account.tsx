@@ -75,14 +75,14 @@ export function DeleteAccountRow({
           type="button"
           disabled={pending}
           onClick={() => setConfirming(false)}
-          className="h-9 rounded-sm border border-line text-xs font-semibold tracking-[0.08em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
+          className="h-11 rounded-sm border border-line text-sm font-semibold tracking-[0.06em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={pending || ownedOrgNames.length > 0}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-sm bg-ink text-xs font-semibold tracking-[0.08em] text-panel active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-sm bg-ink text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
         >
           <UserRoundX size={13} aria-hidden />
           {pending ? "正在注销…" : "确认注销"}

@@ -91,10 +91,10 @@ export function ThemeToggleRow() {
         className="grid shrink-0 grid-cols-2 rounded-sm border border-line bg-bg-2 p-0.5"
         aria-hidden
       >
-        <span className="flex h-6 items-center justify-center rounded-[5px] bg-ink px-2 font-mono text-[10px] text-panel dark:bg-transparent dark:text-gray">
+        <span className="flex h-6 items-center justify-center rounded-[5px] bg-ink px-2 font-mono text-3xs text-panel dark:bg-transparent dark:text-gray">
           浅色
         </span>
-        <span className="flex h-6 items-center justify-center rounded-[5px] px-2 font-mono text-[10px] text-gray dark:bg-ink dark:text-panel">
+        <span className="flex h-6 items-center justify-center rounded-[5px] px-2 font-mono text-3xs text-gray dark:bg-ink dark:text-panel">
           深色
         </span>
       </span>

@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               手机号登录
             </h1>
             <LoginForm next={next} />
-            <p className="mt-4 text-center text-[11px] leading-5 text-gray">
+            <p className="mt-4 text-center text-2xs leading-5 text-gray">
               登录即代表你已阅读并同意
               <Link href="/terms" className="underline underline-offset-2">
                 《用户协议》
@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             </p>
           </div>
           {process.env.NODE_ENV !== "production" && (
-            <p className="mt-3 font-mono text-[11px] text-gray">
+            <p className="mt-3 font-mono text-2xs text-gray">
               dev：验证码固定 888888
             </p>
           )}

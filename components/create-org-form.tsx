@@ -8,8 +8,8 @@ import {
 import { ORG_LIMITS, VISIBILITY_LABELS } from "@/lib/orgs";
 
 const inputCls =
-  "h-10 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-[11px] font-semibold tracking-[0.08em] text-gray";
+  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
 
 export function CreateOrgForm() {
   const [state, formAction, pending] = useActionState<OrgFormState, FormData>(
@@ -70,7 +70,7 @@ export function CreateOrgForm() {
             </button>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-gray">
+        <p className="mt-1 text-2xs text-gray">
           {visibility === "public"
             ? "公开：出现在组织广场，任何人可申请加入（需你审批）"
             : "私有：不出现在组织广场，只能凭邀请码申请"}
@@ -83,7 +83,7 @@ export function CreateOrgForm() {
       <button
         type="submit"
         disabled={pending}
-        className="h-10 rounded-sm bg-accent px-4 text-xs font-semibold tracking-[0.08em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className="h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
         {pending ? "保存中" : "保存"}
       </button>

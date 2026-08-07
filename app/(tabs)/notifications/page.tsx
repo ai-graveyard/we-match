@@ -31,7 +31,7 @@ export default async function NotificationsPage() {
         <PageHeader title="通知" />
         {unread > 0 && (
           <form action={markAllNotificationsReadAction}>
-            <button className="text-[11px] text-gray underline">全部已读</button>
+            <button className="text-2xs text-gray underline">全部已读</button>
           </form>
         )}
       </div>
@@ -61,7 +61,7 @@ export default async function NotificationsPage() {
                       {item.body}
                     </span>
                   )}
-                  <span className="mt-1 block font-mono text-[10px] text-gray">
+                  <span className="mt-1 block font-mono text-3xs text-gray">
                     {relativeTime(item.createdAt)}
                   </span>
                 </span>

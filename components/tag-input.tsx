@@ -37,7 +37,7 @@ export function TagInput({
           {value.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-sm border border-line px-1.5 py-0.5 font-mono text-[11px] text-gray"
+              className="inline-flex items-center gap-1 rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
             >
               {tag}
               <button
@@ -54,7 +54,7 @@ export function TagInput({
       )}
       <div className="relative">
         <input
-          className="h-10 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
+          className="h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
           value={draft}
           placeholder={
             value.length >= maxCount ? `最多 ${maxCount} 个` : "输入后回车添加"
