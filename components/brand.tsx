@@ -17,6 +17,13 @@ import {
 const PERIOD = 106;
 const CRUISE = PERIOD / 1.6;
 const ACCEL = 55;
+/* 归位快慢：1 表示补完剩余相位的时间正好等于巡航走这段距离，越小越快。
+   但它同时决定归位那一下的峰值速度——settle 走的是 ease-in-out，速度从 0
+   冲到中点再回落，峰值恒为 2 * CRUISE / SETTLE_PACE，与补的距离无关。
+   调小虽然缩短拖尾，峰值却会飙上去：0.6 时峰值有 3.3 倍巡航，减速停稳后
+   又猛冲一下才停，看着就不像在减速了。取 1.6 让峰值压到 1.25 倍巡航，
+   代价是归位只向前补（见下方 Math.ceil），最长要补近一整个波长，拖尾偏长 */
+const SETTLE_PACE = 1.6;
 
 /* 字标与标识的尺寸配比固定成两档，避免在页面上随手缩放，见 docs/DESIGN.md「品牌标识」 */
 const SIZES = {
@@ -40,7 +47,7 @@ export function Brand({
   const mode = useRef<"idle" | "accel" | "cruise" | "decel" | "settle">(
     "idle",
   );
-  const settle = useRef({ from: 0, dist: 0, start: 0, dur: 1 });
+  const settle = useRef({ from: 0, dist: 0, elapsed: 0, dur: 1 });
   const [spinning, setSpinning] = useState(false);
 
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
@@ -63,8 +70,11 @@ export function Brand({
         settle.current = {
           from: phase.current,
           dist: target - phase.current,
-          start: t,
-          dur: Math.max(0.35, (Math.abs(target - phase.current) * 1.5) / CRUISE),
+          elapsed: 0,
+          dur: Math.max(
+            0.35,
+            (Math.abs(target - phase.current) * SETTLE_PACE) / CRUISE,
+          ),
         };
         speed.current = 0;
         mode.current = "settle";
@@ -72,10 +82,13 @@ export function Brand({
         phase.current += speed.current * dt;
       }
     } else if (mode.current === "settle") {
-      const { from, dist, start, dur } = settle.current;
-      const p = Math.min((t - start) / dur, 1);
+      /* 跟加减速一样按 dt 累加，而不是拿绝对时间算进度：标签页切走时 rAF 会停，
+         用绝对时间的话切回来 t 已经跳了几秒，归位会瞬移到位；dt 上面 clamp 过 */
+      const s = settle.current;
+      s.elapsed += dt;
+      const p = Math.min(s.elapsed / s.dur, 1);
       const e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p);
-      phase.current = from + dist * e;
+      phase.current = s.from + s.dist * e;
       if (p === 1) {
         phase.current = 0;
         mode.current = "idle";
@@ -107,17 +120,21 @@ export function Brand({
   }
 
   return (
-    <span
-      onMouseEnter={enter}
-      onMouseLeave={leave}
-      className={`flex items-center gap-2 ${className}`}
-    >
+    <span className={`flex items-center gap-2 ${className}`}>
+      {/* 悬停只认标识本身：动的是这块 svg，触发区就限定在这块，
+          挂到外层 span 会把字标也算进热区，鼠标扫过「We Match」就莫名转起来。
+          p-1 把热区往外撑 4px（sm 档 25×16 太细，指不准），box-content 保证
+          撑的是 padding 而不是压缩标识本身，-m-1 抵消掉占位——视觉尺寸和
+          「与字标间距 8px」（见 docs/DESIGN.md「品牌标识」）都保持不变 */}
       <svg
+        onMouseEnter={enter}
+        onMouseLeave={leave}
         width={mark * ASPECT}
         height={mark}
         viewBox={VIEW_BOX}
         fill="none"
         aria-hidden
+        className="-m-1 box-content p-1"
       >
         {spinning ? (
           <g ref={g}>
