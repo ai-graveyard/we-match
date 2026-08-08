@@ -439,13 +439,13 @@ export const en: UiDict = {
     logoutConfirm: "Sign out",
 
     deleteTitle: "Delete account",
-    deleteHint: "Permanent — this phone number can never sign in again",
+    deleteHint: "Permanent — this email can never sign in again",
     deleteConfirmLabel: "Confirm account deletion",
     deleteConfirmTitle: "Permanently delete your account?",
     deleteBullet1: "· Your card is wiped and your name becomes “Deleted user”",
     deleteBullet2: "· All your posts close and pending raises are withdrawn",
     deleteBullet3: "· You leave every group and all API Keys stop working",
-    deleteBullet4: "· This phone number can never sign in again — no undo",
+    deleteBullet4: "· This email can never sign in again — no undo",
     deleteOwnedOrgs:
       "You still own “{orgs}”. Delete those groups in their settings before deleting your account.",
     deleteConfirm: "Delete account",

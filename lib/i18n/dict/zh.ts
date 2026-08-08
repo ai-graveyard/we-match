@@ -425,13 +425,13 @@ export const zh = {
     logoutConfirm: "确认退出",
 
     deleteTitle: "注销账号",
-    deleteHint: "永久注销，手机号无法再次登录",
+    deleteHint: "永久注销，该邮箱无法再次登录",
     deleteConfirmLabel: "确认注销账号",
     deleteConfirmTitle: "确认永久注销账号？",
     deleteBullet1: "· 名片资料将被清空，昵称显示为「已注销用户」",
     deleteBullet2: "· 已发布的需求全部关闭，进行中的举手撤回",
     deleteBullet3: "· 退出所有组织，API Key 全部失效",
-    deleteBullet4: "· 该手机号从此无法再次登录，不可恢复",
+    deleteBullet4: "· 该邮箱从此无法再次登录，不可恢复",
     deleteOwnedOrgs:
       "你还是「{orgs}」的所有者，请先在组织设置里解散组织，才能注销账号。",
     deleteConfirm: "确认注销",
