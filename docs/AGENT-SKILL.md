@@ -68,47 +68,18 @@ api_keys   id, user_id, name, key(明文, 唯一),
 - 鉴权：`Authorization: Bearer wm_xxx`。**所有端点都要求 Key**——广场数据虽然网页上公开，但统一要求鉴权可以把每次调用绑定到具体用户，权限判断（组织需求、`共同组织可见`字段）和限流才有主体；不额外泄露任何东西。
 - 新增 `lib/api-auth.ts`：`authenticate(request)` 解析 Bearer → 按 Key 查表（查不到即已删除或不存在）→ 返回 `{ user }`。所有 route.ts 第一行调它。
 - 响应：JSON。错误统一 `{ "error": { "code": "...", "message": "中文可读信息" } }`，状态码 401（无效 Key）/ 404（不存在或无权，与主站「组织内容对非成员 404」口径一致）/ 422（校验失败）/ 429（限流）。
-- 限流：每 Key 每分钟 120 次（部署形态是单进程 `next start`，内存 Map 滑动窗口即可，不落库）；写操作同时受主站既有限额约束（如每天 10 条需求）。
+- 限流：每 Key 每分钟 120 次，复用 `lib/rate-limit.ts` 的 SQLite 固定窗口（与验证码同一套，重启不丢、多进程共享）；写操作同时受主站既有限额约束（如每天 10 条需求）。
 - 不做 CORS 放开：调用方是服务端/CLI 里的 Agent，不是浏览器。
 
-### 3.2 端点清单
+### 3.2 端点范围
 
-| 方法 + 路径 | 操作 | 说明 |
-|-------------|-------|------|
-| `GET /api/v1/me` | read | 本人名片全量字段 + `fieldVisibility` 设置 |
-| `PATCH /api/v1/me/card` | write | 改名片字段与逐项可见性；完整复用网页版校验（长度限额、可联系性非阻断提醒改为响应里的 `warning` 字段） |
-| `GET /api/v1/me/needs` | read | 我的全部需求（含组织内的），带状态与是否过期 |
-| `GET /api/v1/me/orgs` | read | 我加入的组织（含角色、申请中状态） |
-| `GET /api/v1/needs?org=&type=&tag=&q=&status=&all=&limit=` | read | 需求流；`org=<id>` 时校验成员身份，非成员 404；缺省广场、只看开放未过期 |
-| `GET /api/v1/needs/:id` | read | 需求详情 + 发布者摘要；组织需求对非成员 404 |
-| `POST /api/v1/needs` | write | 发布需求（body 含 `orgId`、`expiresAt` 与可选 `preferredContact`）；复用可联系性阻断校验与每日 10 条限额 |
-| `PATCH /api/v1/needs/:id` | write | 编辑内容 / 状态 / `expiresAt` / `preferredContact`；`expiresAt=null` 为永久，空 body `{}` 快速续期一个月 |
-| `DELETE /api/v1/needs/:id` | write | 删除自己的需求 |
-| `GET /api/v1/users/:id` | read | 他人名片，以已登录的 Key 主人视角过滤可见性（可见`authenticated`，同组织时额外可见`orgs`）；附其广场开放需求 |
-| `GET /api/v1/orgs/:id/members?tag=&q=` | read | 组织成员列表（需成员身份），支持技能标签筛选 |
+覆盖三类：本人视角（名片读写、我的需求、我的组织）、需求 CRUD（含状态、续期、优先联系方式）、他人只读（名片、组织成员）。
 
-序列化层新增 `lib/api/serialize.ts` 统一「对外形状」（时间戳转 ISO 字符串、剔除 `phone` 等），各 route 不各写各的。
+**端点清单、参数与响应字段以 [`skills/we-match/references/api.md`](../skills/we-match/references/api.md) 为准**，那份文档随 Skill 一起发给 Agent，改接口时改它，本文不再重复一份会漂移的表。
 
-### 3.3 目录结构
+序列化层 `lib/api/serialize.ts` 统一「对外形状」（时间戳转 ISO 字符串、剔除 `phone` 等），各 route 不各写各的。
 
-```
-app/api/v1/
-  me/route.ts                # GET
-  me/card/route.ts           # PATCH
-  me/needs/route.ts          # GET
-  me/orgs/route.ts           # GET
-  needs/route.ts             # GET, POST
-  needs/[id]/route.ts        # GET, PATCH, DELETE
-  users/[id]/route.ts        # GET
-  orgs/[id]/members/route.ts # GET
-lib/api-auth.ts              # Bearer 鉴权 + 限流
-lib/api/serialize.ts         # 对外序列化
-lib/api-keys.ts              # Key 生成/校验/吊销
-app/(tabs)/me/page.tsx       # 「我的 → Agent」内嵌管理区
-app/actions/api-keys.ts      # 管理页的 server actions（走网页 session，不走 API）
-```
-
-业务逻辑不在 route.ts 里重写：现有 server actions 里的校验逻辑（`app/actions/needs.ts`、`app/actions/card.ts`）先抽到 `lib/` 成纯函数，网页 action 和 API route 共同调用——这一步是本方案唯一的存量重构，也顺手提升了主站代码质量。
+业务逻辑不在 route.ts 里重写：server actions 里的校验逻辑抽到 `lib/` 成纯函数（`lib/needs-service.ts`、`lib/card-service.ts` 等），网页 action 和 API route 共同调用——这是本方案唯一的存量重构。
 
 ## 4. 官方 Skill 包
 
@@ -157,12 +128,3 @@ skills/we-match/
 - 组织管理 API（管理员任命、审批、成员管理）与 webhook（新申请、新需求通知 Agent）。
 - 如后续确有需要，再评估 Key 级细粒度权限。
 - 官方 Skill 的自动匹配剧本升级为站内真实「自动撮合」功能（与 PRD 二期第 8 节合流）。
-
-## 7. 里程碑
-
-| 阶段 | 内容 | 验收标准 |
-|------|------|----------|
-| A1 | `api_keys` 表与迁移、`lib/api-keys.ts`、Agent 标签页管理区 | 能生成/查看明文/复制/删除 Key；满 3 个时不能再生成，删除后名额释放；列表显示最近使用 |
-| A2 | 鉴权中间件 + 读取端点（me/needs/orgs/users/members） | 用 curl + Key 能拉到与网页视角完全一致的数据；无 Key/已删除 Key 返回 401 |
-| A3 | 写端点（需求 CRUD、状态、续期、名片 PATCH），存量校验逻辑抽到 `lib/` | 网页与 API 两条路径共用同一份校验；所有有效 Key 均可调用写接口 |
-| A4 | 官方 Skill 包 + Agent 标签页安装指引 + zip 分发 | 新用户照页面指引 10 分钟内完成接入，跑通「查广场 → 发需求 → 续期」全流程 |

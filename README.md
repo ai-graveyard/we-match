@@ -4,9 +4,10 @@
 
 极简供需匹配工具：每人一张名片，可发布「我需要 / 我提供」到公开广场或组织；靠浏览、筛选、搜索找到人，再用对方开放的渠道线下联系。
 
-- 产品文档：[docs/PRD.md](docs/PRD.md)
+- 产品文档：[docs/PRD.md](docs/PRD.md)（含里程碑；M6 连接制尚未落地）
 - 设计规范：[docs/DESIGN.md](docs/DESIGN.md)
-- Agent / 开放 API：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)
+- Agent / 开放 API 方案：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)，接口清单见 [skills/we-match/references/api.md](skills/we-match/references/api.md)
+- 额度与反滥用设计稿：[docs/QUOTA.md](docs/QUOTA.md)（随 M6 落地，尚无代码）
 
 官方站点：https://wematch.v2ai.org
 
