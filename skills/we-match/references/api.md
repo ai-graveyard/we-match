@@ -1,9 +1,9 @@
 # We Match API v1 参考
 
 - Base URL：`$WEMATCH_BASE_URL`（默认官方站点 `https://wematch.v2ai.org`），所有路径前缀 `/api/v1`
-- 鉴权：每个请求带 `Authorization: Bearer <API Key>`，Key 以 `wm_` 开头
+- 鉴权：每个请求带 `Authorization: Bearer <API Key>`，Key 以 `wm_` 开头。**只有 `/auth/*` 两个端点不需要 Key**——用户此刻还没有账号
 - 请求/响应均为 JSON；时间为 ISO 8601 字符串
-- 权限模型：API 视角 = Key 主人本人在网页上的视角。组织内容对非成员返回 404（不暴露存在性）；他人名片按字段可见性过滤；用户的登录手机号永不返回
+- 权限模型：API 视角 = Key 主人本人在网页上的视角。组织内容对非成员返回 404（不暴露存在性）；他人名片按字段可见性过滤；用户的登录邮箱永不返回（响应里的 `email` 是名片上的展示字段，不是登录身份）
 
 ## 错误
 
@@ -16,7 +16,7 @@
 | 401 | unauthorized | Key 缺失、无效或已被删除 |
 | 404 | not_found | 资源不存在，或无权访问（组织内容对非成员） |
 | 422 | invalid_body / invalid_input | body 不是 JSON 对象 / 字段校验失败（含业务规则，如每日发布限额、可联系性校验） |
-| 429 | rate_limited | 每 Key 每分钟 120 次限流 |
+| 429 | rate_limited | 每 Key 每分钟 120 次限流；`/auth/*` 为每 IP 每小时 20 次 |
 
 ## 数据约束
 
@@ -25,6 +25,43 @@
 - 可见性 `fieldVisibility`：键为字段名，值为档位。基本信息（bio/tags/city）为 `public|hidden`，未记录默认 `public`；联系方式（wechat/email/contactPhone）与社媒（weixinMp/weixinChannels/xiaohongshu/weibo）为 `authenticated|orgs|hidden`，未记录默认 `authenticated`。`authenticated` = 任意已登录用户可见，`orgs` = 仅与本人同组织的成员可见。昵称始终公开；联系方式与社媒不存在匿名公开档
 
 ## 端点
+
+### POST /auth/code（无需 Key）
+
+给邮箱发一封 6 位验证码，5 分钟有效。用户没有账号时这就是注册第一步。
+
+```json
+{ "email": "user@example.com" }
+```
+
+响应 `{ "sent": true, "expiresInSeconds": 300 }`。**响应恒为成功，不透露该邮箱是否已注册**——别拿它探测账号是否存在。
+
+同一邮箱 60 秒内只能发一次，同一 IP 每小时最多 10 条验证码、20 次 `/auth/*` 请求。
+
+### POST /auth/token（无需 Key）
+
+验证码换 API Key。首次出现的邮箱**即注册**，不需要额外步骤。
+
+```json
+{ "email": "user@example.com", "code": "123456", "name": "我的 Claude" }
+```
+
+`name` 可选，是这把 Key 在网页上显示的名字，默认「我的 Agent」。
+
+```json
+{
+  "key": "wm_xxxxxxxx",
+  "isNew": true,
+  "user": { "id": 42, "nickname": "用户5887" }
+}
+```
+
+- `isNew: true` = 刚注册的新账号，`false` = 已有账号，这次只是多签发一把 Key。
+- 拿到 `key` 后写进 `WEMATCH_API_KEY`，后续所有端点都用它。**不要回显明文给用户，也不要写进会被提交的文件。**
+- 每用户最多 3 把 Key，满了返回 422 `key_limit`。**API 不能删 Key**，请引导用户去 `<站点>/me?section=agent` 删。
+- 每次签发都会给该邮箱发一封告知信，这是用户核对「谁在用我的账号」的通道，属于设计的一部分。
+
+验证码错误、过期或邮箱格式不对，一律 422 `bad_request`，`message` 里是可以直接念给用户听的中文说明。
 
 ### GET /me
 
@@ -103,6 +140,8 @@ curl -s -X PATCH -H "Authorization: Bearer $WEMATCH_API_KEY" \
 
 编辑自己的需求，body 可含 `type` / `title` / `description` / `tags` / `status`（`open|done|closed`）/ `preferredContact` / `expiresAt`（ISO 时间或 `null`）。范围（orgId）不可改。空 body `{}` 会把截止时间快速延长到一个月后。
 
+**续期锁**：用户存在超过 72 小时未处理的举手时，延长截止时间、改为永久、重开（`status` 改回 `open`）都会被拒，返回 422 `renewal_blocked`。这是平台规则，不要重试或绕过；把 message 转告用户，引导 TA 去网页「我的 → 举手」处理完再续期。缩短截止、关闭、标完成、只改内容不受影响。
+
 ### DELETE /needs/:id（需 write）
 
 删除自己的需求。返回 `{ "deleted": true }`。
@@ -131,4 +170,6 @@ curl -s -X PATCH -H "Authorization: Bearer $WEMATCH_API_KEY" \
 
 ## v1 不提供
 
-创建/管理 API Key、登录与验证码、组织管理（创建、审批、邀请码、移除成员、解散）、申请加入组织。这些操作请引导用户在网页上完成。
+删除/查看已有 API Key、组织管理（创建、审批、邀请码、移除成员、解散）、申请加入组织、举手与接受举手。这些操作请引导用户在网页上完成。
+
+「决定和某个人发生关系」的动作（举手、接受、建立联系）**永远由人拍板**，不会有对应的写端点——这是产品底线，不是还没做。

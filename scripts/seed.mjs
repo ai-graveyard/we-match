@@ -12,27 +12,27 @@ const HOUR = 3600_000;
 const DAY = 24 * HOUR;
 const now = Date.now();
 
-if (db.prepare("SELECT id FROM users WHERE phone = ?").get("13800000001")) {
+if (db.prepare("SELECT id FROM users WHERE login_email = ?").get("chenpi@example.com")) {
   console.log("种子数据已存在，跳过（如需重建请先删除 data/we-match.db 或手动清理）");
   process.exit(0);
 }
 
 const insertUser = db.prepare(`
-  INSERT INTO users (phone, nickname, bio, tags, city, wechat, email, contact_phone,
+  INSERT INTO users (login_email, nickname, bio, tags, city, wechat, email, contact_phone,
     weixin_mp, weixin_channels, xiaohongshu, weibo, field_visibility, created_at)
-  VALUES (@phone, @nickname, @bio, @tags, @city, @wechat, @email, NULL,
+  VALUES (@loginEmail, @nickname, @bio, @tags, @city, @wechat, @email, NULL,
     NULL, NULL, @xiaohongshu, NULL, @vis, @createdAt)
 `);
 
 const users = [
-  { phone: "13800000001", nickname: "陈皮", bio: "产品经理，关注增长和用户研究", tags: ["产品", "增长"], city: "北京", wechat: "chenpi_pm", email: null, xiaohongshu: null, vis: {} },
-  { phone: "13800000002", nickname: "小竹", bio: "独立设计师，接品牌和 UI", tags: ["设计", "UI", "插画"], city: "杭州", wechat: "xiaozhu_design", email: "zhu@example.com", xiaohongshu: null, vis: { email: "orgs" } },
-  { phone: "13800000003", nickname: "老白", bio: "十年后端，Go / 数据库", tags: ["后端", "Go", "数据库"], city: "深圳", wechat: null, email: "laobai@example.com", xiaohongshu: null, vis: {} },
-  { phone: "13800000004", nickname: "阿枣", bio: "自由撰稿人，科技与生活方式", tags: ["写作", "文案"], city: "成都", wechat: "azao_writer", email: "azao@example.com", xiaohongshu: null, vis: { wechat: "orgs" } },
-  { phone: "13800000005", nickname: "大鱼", bio: "执业律师，擅长合同与合规", tags: ["法律", "合同"], city: "上海", wechat: null, email: "dayu@example.com", xiaohongshu: null, vis: {} },
-  { phone: "13800000006", nickname: "冬冬", bio: "前端实习生，求带", tags: ["前端", "React"], city: "广州", wechat: "dongdong_fe", email: null, xiaohongshu: null, vis: {} },
-  { phone: "13800000007", nickname: "木木", bio: "人像摄影师，胶片爱好者", tags: ["摄影", "修图"], city: "上海", wechat: "mumu_photo", email: null, xiaohongshu: "木木的取景框", vis: {} },
-  { phone: "13800000008", nickname: "石头", bio: "连续创业者，正在做 AI 工具", tags: ["创业", "融资"], city: "北京", wechat: "shitou_ai", email: "stone@example.com", xiaohongshu: null, vis: { wechat: "hidden" } },
+  { loginEmail: "chenpi@example.com", nickname: "陈皮", bio: "产品经理，关注增长和用户研究", tags: ["产品", "增长"], city: "北京", wechat: "chenpi_pm", email: null, xiaohongshu: null, vis: {} },
+  { loginEmail: "xiaozhu@example.com", nickname: "小竹", bio: "独立设计师，接品牌和 UI", tags: ["设计", "UI", "插画"], city: "杭州", wechat: "xiaozhu_design", email: "zhu@example.com", xiaohongshu: null, vis: { email: "orgs" } },
+  { loginEmail: "laobai@example.com", nickname: "老白", bio: "十年后端，Go / 数据库", tags: ["后端", "Go", "数据库"], city: "深圳", wechat: null, email: "laobai@example.com", xiaohongshu: null, vis: {} },
+  { loginEmail: "azao@example.com", nickname: "阿枣", bio: "自由撰稿人，科技与生活方式", tags: ["写作", "文案"], city: "成都", wechat: "azao_writer", email: "azao@example.com", xiaohongshu: null, vis: { wechat: "orgs" } },
+  { loginEmail: "dayu@example.com", nickname: "大鱼", bio: "执业律师，擅长合同与合规", tags: ["法律", "合同"], city: "上海", wechat: null, email: "dayu@example.com", xiaohongshu: null, vis: {} },
+  { loginEmail: "dongdong@example.com", nickname: "冬冬", bio: "前端实习生，求带", tags: ["前端", "React"], city: "广州", wechat: "dongdong_fe", email: null, xiaohongshu: null, vis: {} },
+  { loginEmail: "mumu@example.com", nickname: "木木", bio: "人像摄影师，胶片爱好者", tags: ["摄影", "修图"], city: "上海", wechat: "mumu_photo", email: null, xiaohongshu: "木木的取景框", vis: {} },
+  { loginEmail: "shitou@example.com", nickname: "石头", bio: "连续创业者，正在做 AI 工具", tags: ["创业", "融资"], city: "北京", wechat: "shitou_ai", email: "stone@example.com", xiaohongshu: null, vis: { wechat: "hidden" } },
 ];
 
 const uid = {};

@@ -13,7 +13,8 @@ export function normalizePhoneInput(raw: string): string {
   return digits.slice(0, PHONE_LENGTH);
 }
 
-// 中国大陆手机号输入框：固定 +86 前缀，仅数字，11 位
+// 中国大陆手机号输入框：固定 +86 前缀，仅数字，11 位。
+// 登录已改用邮箱，这个组件现在只服务名片上的 contactPhone 字段。
 export function PhoneInput({
   value,
   onChange,
@@ -44,7 +45,7 @@ export function PhoneInput({
         name={name}
         inputMode="numeric"
         maxLength={PHONE_LENGTH}
-        placeholder={placeholder ?? t.login.phonePlaceholder}
+        placeholder={placeholder ?? t.card.fieldContactPhone}
         required={required}
         autoComplete={autoComplete}
         value={value}

@@ -3,7 +3,8 @@ import { isExpired } from "@/lib/needs";
 import type { OrgRole } from "@/lib/orgs";
 import { normalizedFieldVisibility } from "@/lib/card";
 
-// 对外序列化：时间转 ISO 字符串；登录手机号 phone 永不出站（docs/AGENT-SKILL.md 2.2）
+// 对外序列化：时间转 ISO 字符串；登录邮箱 loginEmail 永不出站（docs/AGENT-SKILL.md 2.2）。
+// serializeSelf 里的 email 是名片上的展示字段，不是登录身份，两者不要混。
 
 export function serializeNeed(
   need: Need,

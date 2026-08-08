@@ -5,6 +5,8 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { getDict } from "@/lib/i18n/server";
 import { pageTitle } from "@/lib/i18n/metadata";
 import { LocaleLink } from "@/lib/i18n/link";
+import { fmt } from "@/lib/i18n/fmt";
+import { FIXED_CODE, isFixedCodeMode } from "@/lib/auth";
 
 export const generateMetadata = pageTitle((t) => t.login.metaTitle);
 
@@ -56,9 +58,13 @@ export default async function LoginPage({
               </LocaleLink>
             </p>
           </div>
-          {process.env.NODE_ENV !== "production" && (
+          {/* 固定码模式必须让人一眼看见——生产环境开着它等于门没锁，
+              悄悄跑在这个状态下是最坏的情况（见 lib/auth.ts isFixedCodeMode） */}
+          {isFixedCodeMode() && (
             <p className="mt-3 font-mono text-2xs text-gray">
-              {t.login.devHint}
+              {process.env.NODE_ENV === "production"
+                ? fmt(t.login.betaHint, { code: FIXED_CODE })
+                : fmt(t.login.devHint, { code: FIXED_CODE })}
             </p>
           )}
         </div>

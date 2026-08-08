@@ -1,29 +1,40 @@
-// 服务端文案（中文）：Server Action / Route Handler 的报错与提示、短信正文、
+// 服务端文案（中文）：Server Action / Route Handler 的报错与提示、邮件正文、
 // 以及通知的渲染模板。这些永远不会随 RSC payload 进浏览器。
 
 export const zhServer = {
   auth: {
     loginRequired: "请先登录",
     sessionExpired: "登录已失效，请重新登录",
-    badPhone: "请输入大陆 11 位手机号",
-    accountDeleted: "该手机号的账号已注销，无法再次登录",
+    badEmail: "请输入有效的邮箱地址",
+    accountDeleted: "该邮箱的账号已注销，无法再次登录",
     accountSuspended: "账号已暂停使用，如有疑问请联系管理员",
     resendTooSoon: "发送太频繁，请一分钟后再试",
     tooManyRequests: "请求过于频繁，请稍后再试",
-    smsFailed: "短信发送失败，请稍后再试",
+    mailFailed: "邮件发送失败，请稍后再试",
     badCode: "请输入 6 位数字验证码",
     codeExpired: "验证码无效或已过期，请重新获取",
     codeWrong: "验证码错误",
     defaultNickname: "用户{suffix}",
     deletedNickname: "已注销用户",
-    smsUnavailableTitle: "短信通道还没开通，你收不到短信",
-    smsUnavailableBody: "请联系{contact}获取本次登录的 6 位验证码",
+    mailUnavailableTitle: "邮件通道还没开通，你收不到邮件",
+    mailUnavailableBody: "请联系{contact}获取本次登录的 6 位验证码",
     deleteOwnedOrgs: "你还是「{orgs}」的所有者，请先解散组织再注销",
   },
 
-  sms: {
-    // 真实短信由服务商模板渲染，这条只用于 log 通道与后台展示
-    verificationCode: "验证码 {code}，5 分钟内有效。",
+  mail: {
+    verificationSubject: "We Match 验证码 {code}",
+    // 末尾这段防钓鱼提示是刻意写的：Agent 注册流程会训练用户「把验证码念给 AI」，
+    // 这个习惯一旦养成就会被别的服务借用，成本为零的一句话该写就写。
+    verificationText: `验证码 {code}，5 分钟内有效。
+
+这封邮件用于登录或注册 We Match。如果你正在让 AI Agent 代你注册，把验证码给它即可。
+如果你没有主动发起过，请直接忽略这封邮件，也不要把验证码转给任何向你索要的人。`,
+
+    keyIssuedSubject: "We Match 签发了一个新的 API Key",
+    keyIssuedText: `你的 We Match 账号刚刚通过 Agent 注册接口签发了一个 API Key：「{name}」。
+
+这把 Key 拥有你账号的完整读写权限，可以代你发布需求、修改名片。
+如果这不是你本人的操作，请立刻到 {origin}/me?section=agent 删掉它。`,
   },
 
   common: {
@@ -62,6 +73,8 @@ export const zhServer = {
     dailyLimit: "每天最多发布 {max} 条需求",
     notOwner: "只能编辑自己的需求",
     noContactForScope: "当前可见范围下没有可用的联系方式，请先编辑名片",
+    staleHandsBlockRenewal:
+      "有举手等你回应超过 3 天了，先到「我的 → 举手」处理完，才能续期或重新开放",
   },
 
   org: {
@@ -114,6 +127,7 @@ export const zhServer = {
     accountSuspended: "账号已暂停使用",
     accountDeleted: "账号已注销",
     rateLimited: "请求过于频繁（每 Key 每分钟 {max} 次），请稍后再试",
+    authRateLimited: "注册登录请求过于频繁（每 IP 每小时 {max} 次），请稍后再试",
     bodyNotObject: "请求体需为 JSON 对象",
     orgParamNotId: "org 参数需为组织 id",
     orgNotFoundOrNotMember: "组织不存在或你不是成员",
@@ -129,6 +143,8 @@ export const zhServer = {
     emptyName: "请给 Key 起个名字（如「我的 Claude」）",
     nameTooLong: "名称最多 {max} 字",
     perUserLimit: "最多同时持有 {max} 个 Key，请先删除不用的",
+    // Agent 走 /api/v1/auth/token 注册时没传名字的默认值
+    agentDefaultName: "我的 Agent",
   },
 
   // GET /skill 返回的安装说明，读者是 AI Agent。整篇是 Markdown，{origin} 是站点地址。
@@ -151,10 +167,29 @@ rm /tmp/we-match-skill.zip
 
 解压后应存在 \`~/.claude/skills/we-match/SKILL.md\`。
 
-## 2. 配置 API Key
+## 2. 拿到 API Key
 
-请用户到 {origin}/me?section=agent 生成一个 API Key。用户可以直接把 Key 提供给你，
-请帮用户写入 shell 配置（如 \`~/.zshrc\`）：
+**用户已经有账号**：请他到 {origin}/me?section=agent 复制一个 Key 给你。
+
+**用户还没有账号**：不用让他打开网站，你可以直接代办——问他要一个邮箱，然后：
+
+\`\`\`bash
+# 第一步：给这个邮箱发验证码
+curl -s -X POST {origin}/api/v1/auth/code \\
+  -H "Content-Type: application/json" -d '{"email":"<用户的邮箱>"}'
+
+# 第二步：让用户把收到的 6 位验证码告诉你，换成 Key
+curl -s -X POST {origin}/api/v1/auth/token \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"<用户的邮箱>","code":"<验证码>","name":"我的 Claude"}'
+\`\`\`
+
+响应里的 \`key\` 就是凭证，\`isNew: true\` 表示这是刚注册的新账号。
+只在用户自己发起注册时索要验证码，用完即弃，不要留存。
+
+## 3. 写入环境变量
+
+帮用户写入 shell 配置（如 \`~/.zshrc\`）：
 
 \`\`\`bash
 export WEMATCH_API_KEY=<用户的 Key>
@@ -163,15 +198,17 @@ export WEMATCH_BASE_URL={origin}
 
 Key 拥有完整读写权限。配置完成后不要在后续输出中主动回显 Key 明文。
 
-## 3. 验证
+## 4. 验证
 
 \`\`\`bash
 curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" {origin}/api/v1/me
 \`\`\`
 
 返回用户名片的 JSON 即安装成功（新开终端或 source 配置后生效；
-Claude Code 需重启会话以加载新 Skill）。之后告诉用户可以试试：
-「帮我看看 We Match 广场上有没有和我需求匹配的人」。
+Claude Code 需重启会话以加载新 Skill）。
+
+新注册的账号名片是空的，接着帮用户建一张——Skill 里的「首次建卡」剧本有具体做法。
+老用户则可以直接试试：「帮我看看 We Match 广场上有没有和我需求匹配的人」。
 `,
   },
 

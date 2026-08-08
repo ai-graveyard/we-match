@@ -11,6 +11,7 @@
     "build:skill": "node scripts/build-skill.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:seed": "node scripts/seed.mjs",
     "db:backup": "node scripts/backup-db.mjs"
@@ -36,7 +37,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
   },
   "packageManager": "pnpm@11.15.1"
 }

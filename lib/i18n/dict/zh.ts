@@ -66,8 +66,8 @@ export const zh = {
 
   login: {
     metaTitle: "登录",
-    heading: "手机号登录",
-    phonePlaceholder: "手机号",
+    heading: "邮箱登录",
+    emailPlaceholder: "邮箱地址",
     getCode: "获取验证码",
     sending: "发送中",
     codeLabel: "6 位验证码",
@@ -77,7 +77,8 @@ export const zh = {
     agreementAnd: "与",
     termsLink: "《用户协议》",
     privacyLink: "《隐私政策》",
-    devHint: "dev：验证码固定 888888",
+    devHint: "dev：验证码固定 {code}",
+    betaHint: "内测中：验证码固定 {code}",
   },
 
   plaza: {

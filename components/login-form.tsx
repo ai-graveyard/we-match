@@ -7,7 +7,7 @@ import {
   type AuthFormState,
 } from "@/app/actions/auth";
 import { CodeBoxes } from "@/components/code-boxes";
-import { PhoneInput, PHONE_LENGTH } from "@/components/phone-input";
+import { EmailInput, looksLikeEmail } from "@/components/email-input";
 import { useDict } from "@/lib/i18n/client";
 
 const RESEND_SECONDS = 60;
@@ -23,8 +23,8 @@ export function LoginForm({ next }: { next: string }) {
     AuthFormState,
     FormData
   >(loginAction, {});
-  // React 19 会在 action 完成后重置非受控表单，手机号/验证码必须受控保留
-  const [phone, setPhone] = useState("");
+  // React 19 会在 action 完成后重置非受控表单，邮箱/验证码必须受控保留
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   // 倒计时由 sentAt 派生，effect 里只订阅时钟，不同步 setState
   const [now, setNow] = useState(() => Date.now());
@@ -44,24 +44,23 @@ export function LoginForm({ next }: { next: string }) {
   }, [deadline]);
 
   const error = loginState.error ?? sendState.error;
+  const emailReady = looksLikeEmail(email);
 
   return (
     <form action={loginFormAction} className="flex flex-col gap-3">
       <input type="hidden" name="next" value={next} />
       <div className="flex gap-2">
-        <PhoneInput
-          name="phone"
-          value={phone}
-          onChange={setPhone}
+        <EmailInput
+          name="email"
+          value={email}
+          onChange={setEmail}
           required
         />
         <button
           type="submit"
           formAction={sendAction}
           formNoValidate
-          disabled={
-            sendPending || countdown > 0 || phone.length < PHONE_LENGTH
-          }
+          disabled={sendPending || countdown > 0 || !emailReady}
           className="h-11 shrink-0 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray"
         >
           {countdown > 0 ? (
@@ -102,9 +101,7 @@ export function LoginForm({ next }: { next: string }) {
       {error && <p className="text-xs text-ink">{error}</p>}
       <button
         type="submit"
-        disabled={
-          loginPending || phone.length < PHONE_LENGTH || code.length < CODE_LENGTH
-        }
+        disabled={loginPending || !emailReady || code.length < CODE_LENGTH}
         className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
       >
         {loginPending ? t.login.submitting : t.login.submit}

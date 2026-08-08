@@ -65,8 +65,8 @@ export const en: UiDict = {
 
   login: {
     metaTitle: "Sign in",
-    heading: "Sign in with your phone",
-    phonePlaceholder: "Phone number",
+    heading: "Sign in with your email",
+    emailPlaceholder: "Email address",
     getCode: "Send code",
     sending: "Sending",
     codeLabel: "6-digit code",
@@ -76,7 +76,8 @@ export const en: UiDict = {
     agreementAnd: " and the ",
     termsLink: "Terms of Service",
     privacyLink: "Privacy Policy",
-    devHint: "dev: the code is always 888888",
+    devHint: "dev: the code is always {code}",
+    betaHint: "Closed beta: the code is always {code}",
   },
 
   plaza: {

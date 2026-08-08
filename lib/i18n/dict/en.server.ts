@@ -4,27 +4,44 @@ export const enServer: ServerDict = {
   auth: {
     loginRequired: "Please sign in first",
     sessionExpired: "Your session expired — please sign in again",
-    badPhone: "Enter an 11-digit mainland China phone number",
+    badEmail: "Enter a valid email address",
     accountDeleted:
-      "The account for this number was deleted and cannot sign in again",
+      "The account for this address was deleted and cannot sign in again",
     accountSuspended:
       "This account is suspended. Contact an administrator if you think this is a mistake.",
     resendTooSoon: "Too many requests — try again in a minute",
     tooManyRequests: "Too many requests — please try again later",
-    smsFailed: "Could not send the SMS, please try again later",
+    mailFailed: "Could not send the email, please try again later",
     badCode: "Enter the 6-digit code",
     codeExpired: "That code is invalid or expired — request a new one",
     codeWrong: "Wrong code",
     defaultNickname: "User {suffix}",
     deletedNickname: "Deleted user",
-    smsUnavailableTitle: "SMS delivery is not live yet, so no message will arrive",
-    smsUnavailableBody: "Contact {contact} for this sign-in's 6-digit code",
+    mailUnavailableTitle:
+      "Email delivery is not live yet, so no message will arrive",
+    mailUnavailableBody: "Contact {contact} for this sign-in's 6-digit code",
     deleteOwnedOrgs:
       "You still own “{orgs}”. Delete those groups before deleting your account.",
   },
 
-  sms: {
-    verificationCode: "Your code is {code}. It expires in 5 minutes.",
+  mail: {
+    verificationSubject: "Your We Match code is {code}",
+    verificationText: `Your code is {code}. It expires in 5 minutes.
+
+This email is for signing in to or registering with We Match. If you asked an AI
+agent to register for you, hand it this code.
+
+If you did not request this, ignore this email — and never pass the code on to
+anyone who asks you for it.`,
+
+    keyIssuedSubject: "A new We Match API key was issued",
+    keyIssuedText: `Your We Match account just issued an API key through the agent
+registration endpoint: “{name}”.
+
+This key has full read and write access to your account — it can post needs and
+edit your card on your behalf.
+
+If this wasn't you, delete it right away at {origin}/me?section=agent`,
   },
 
   common: {
@@ -67,6 +84,8 @@ export const enServer: ServerDict = {
     notOwner: "You can only edit your own posts",
     noContactForScope:
       "No contact is available for this scope — edit your card first",
+    staleHandsBlockRenewal:
+      "Raised hands have been waiting on you for over 3 days. Respond to them under Me → Raises before renewing or reopening this post.",
   },
 
   org: {
@@ -121,6 +140,8 @@ export const enServer: ServerDict = {
     invalidKey: "API Key is invalid or has been deleted",
     accountSuspended: "This account is suspended",
     accountDeleted: "This account was deleted",
+    authRateLimited:
+      "Too many sign-up requests ({max} per hour per IP) — try again later",
     rateLimited:
       "Too many requests ({max} per key per minute), please try again later",
     bodyNotObject: "Request body must be a JSON object",
@@ -139,6 +160,7 @@ export const enServer: ServerDict = {
     emptyName: "Give the key a name (e.g. “My Claude”)",
     nameTooLong: "Name is at most {max} characters",
     perUserLimit: "You can hold at most {max} keys — delete one first",
+    agentDefaultName: "My agent",
   },
 
   skill: {
@@ -161,10 +183,29 @@ rm /tmp/we-match-skill.zip
 
 After unpacking, \`~/.claude/skills/we-match/SKILL.md\` should exist.
 
-## 2. Configure the API Key
+## 2. Get an API key
 
-Ask the user to generate an API Key at {origin}/me?section=agent. They can hand the key
-straight to you; write it into their shell config (for example \`~/.zshrc\`):
+**If the user already has an account**: ask them to copy a key from {origin}/me?section=agent.
+
+**If they don't**: they never need to open the site — ask for an email address and do it yourself:
+
+\`\`\`bash
+# Step one: send a code to that address
+curl -s -X POST {origin}/api/v1/auth/code \\
+  -H "Content-Type: application/json" -d '{"email":"<the user's email>"}'
+
+# Step two: ask the user for the 6-digit code, trade it for a key
+curl -s -X POST {origin}/api/v1/auth/token \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"<the user's email>","code":"<the code>","name":"My Claude"}'
+\`\`\`
+
+The \`key\` in the response is the credential; \`isNew: true\` means the account was just created.
+Only ask for a verification code inside a registration the user started. Use it and discard it.
+
+## 3. Write the environment variables
+
+Write them into the user's shell config (for example \`~/.zshrc\`):
 
 \`\`\`bash
 export WEMATCH_API_KEY=<the user's key>
@@ -173,15 +214,18 @@ export WEMATCH_BASE_URL={origin}
 
 The key has full read and write access. Once configured, do not echo the key in later output.
 
-## 3. Verify
+## 4. Verify
 
 \`\`\`bash
 curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" {origin}/api/v1/me
 \`\`\`
 
 JSON describing the user's card means the install worked (open a new terminal or source the
-config first; Claude Code needs a session restart to load the new Skill). Then tell the user
-they can try: "See if anyone on the We Match plaza matches what I need."
+config first; Claude Code needs a session restart to load the new Skill).
+
+A freshly registered account has an empty card — build one with the "first card" workflow in
+the Skill. Existing users can go straight to: "See if anyone on the We Match plaza matches
+what I need."
 `,
   },
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, isNull, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { PHONE_RE } from "@/lib/auth";
+import { PHONE_RE } from "@/lib/card";
 import { needs, users, type FieldVisibility, type User } from "@/lib/db/schema";
 import {
   BASIC_FIELDS,

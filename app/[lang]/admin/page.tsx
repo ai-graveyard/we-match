@@ -135,11 +135,11 @@ const thCls =
 const tdCls = "px-3 py-1 align-middle text-xs";
 const PAGE_SIZE = 10;
 
-function adminHref(view: AdminView, page = 1, phone = "") {
+function adminHref(view: AdminView, page = 1, email = "") {
   const params = new URLSearchParams();
   if (view !== "overview") params.set("view", view);
   if (page > 1) params.set("page", String(page));
-  if (phone) params.set("phone", phone);
+  if (email) params.set("email", email);
   const query = params.toString();
   return query ? `/admin?${query}` : "/admin";
 }
@@ -198,13 +198,13 @@ function Pagination({
   view,
   page,
   pageCount,
-  phone = "",
+  email = "",
 }: {
   t: AdminDict;
   view: AdminView;
   page: number;
   pageCount: number;
-  phone?: string;
+  email?: string;
 }) {
   if (pageCount <= 1) return null;
 
@@ -219,7 +219,7 @@ function Pagination({
       className="mt-4 flex items-center justify-between gap-3"
     >
       {page > 1 ? (
-        <LocaleLink href={adminHref(view, page - 1, phone)} className={linkCls}>
+        <LocaleLink href={adminHref(view, page - 1, email)} className={linkCls}>
           {t.prevPage}
         </LocaleLink>
       ) : (
@@ -229,7 +229,7 @@ function Pagination({
         {page} / {pageCount}
       </span>
       {page < pageCount ? (
-        <LocaleLink href={adminHref(view, page + 1, phone)} className={linkCls}>
+        <LocaleLink href={adminHref(view, page + 1, email)} className={linkCls}>
           {t.nextPage}
         </LocaleLink>
       ) : (
@@ -298,11 +298,15 @@ export default async function AdminPage({
   const activeView: AdminView = ADMIN_VIEWS.includes(rawView as AdminView)
     ? (rawView as AdminView)
     : "overview";
-  const rawPhone = Array.isArray(rawParams.phone)
-    ? rawParams.phone[0]
-    : rawParams.phone;
-  // 只留数字，既是手机号的实际形态，也顺手挡掉 like 通配符
-  const phoneQuery = (rawPhone ?? "").replace(/\D/g, "").slice(0, 11);
+  const rawEmail = Array.isArray(rawParams.email)
+    ? rawParams.email[0]
+    : rawParams.email;
+  // 去掉 like 的通配符再查，避免 % 和 _ 被当成模式
+  const emailQuery = (rawEmail ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[%_\\]/g, "")
+    .slice(0, 254);
 
   const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
   const allNeeds = await db
@@ -337,8 +341,8 @@ export default async function AdminPage({
         .select()
         .from(verificationCodes)
         .where(
-          phoneQuery
-            ? like(verificationCodes.phone, `%${phoneQuery}%`)
+          emailQuery
+            ? like(verificationCodes.email, `%${emailQuery}%`)
             : undefined,
         )
         .orderBy(desc(verificationCodes.createdAt))
@@ -346,7 +350,7 @@ export default async function AdminPage({
     ]);
 
   const userById = new Map(allUsers.map((user) => [user.id, user]));
-  const userByPhone = new Map(allUsers.map((user) => [user.phone, user]));
+  const userByEmail = new Map(allUsers.map((user) => [user.loginEmail, user]));
   const needCountByUser = new Map<number, number>();
   for (const { need } of allNeeds) {
     needCountByUser.set(
@@ -718,7 +722,7 @@ export default async function AdminPage({
                 headers={[
                   t.colId,
                   t.colNickname,
-                  t.colPhone,
+                  t.colEmail,
                   t.colCity,
                   t.colTags,
                   t.colNeeds,
@@ -743,7 +747,7 @@ export default async function AdminPage({
                       </LocaleLink>
                     </td>
                     <td className={`${tdCls} whitespace-nowrap font-mono`}>
-                      {user.phone}
+                      {user.loginEmail}
                     </td>
                     <td className={`${tdCls} whitespace-nowrap`}>
                       {user.city ?? "—"}
@@ -833,8 +837,8 @@ export default async function AdminPage({
                       </Status>
                     </div>
                     <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-                      <Field label={t.colPhone} mono>
-                        {user.phone}
+                      <Field label={t.colEmail} mono>
+                        {user.loginEmail}
                       </Field>
                       <Field label={t.colCity}>{user.city ?? "—"}</Field>
                       <Field label={t.colNeedsOrgs} mono>
@@ -1244,8 +1248,8 @@ export default async function AdminPage({
         <Section
           title={fmt(t.codesTitle, { n: recentCodes.length })}
           description={`${
-            phoneQuery
-              ? fmt(t.codesDescFiltered, { phone: phoneQuery })
+            emailQuery
+              ? fmt(t.codesDescFiltered, { email: emailQuery })
               : fmt(t.codesDescRecent, { n: CODE_LIST_LIMIT })
           }${fmt(t.codesDescSuffix, { n: activeCodeCount })}`}
         >
@@ -1254,9 +1258,9 @@ export default async function AdminPage({
               <input type="hidden" name="view" value="codes" />
               <input
                 type="search"
-                name="phone"
+                name="email"
                 inputMode="numeric"
-                defaultValue={phoneQuery}
+                defaultValue={emailQuery}
                 placeholder={t.codesFilterPlaceholder}
                 aria-label={t.codesFilterLabel}
                 className="h-8 min-w-0 flex-1 rounded-sm border border-line bg-panel px-3 font-mono text-xs placeholder:font-sans placeholder:text-gray focus:border-ink focus:outline-none md:max-w-64"
@@ -1267,7 +1271,7 @@ export default async function AdminPage({
               >
                 {t.codesFilter}
               </button>
-              {phoneQuery && (
+              {emailQuery && (
                 <LocaleLink
                   href={adminHref("codes")}
                   className="shrink-0 text-xs text-gray hover:text-ink"
@@ -1281,15 +1285,15 @@ export default async function AdminPage({
 
           {recentCodes.length === 0 ? (
             <EmptyList>
-              {phoneQuery
-                ? fmt(t.codesEmptyFiltered, { phone: phoneQuery })
+              {emailQuery
+                ? fmt(t.codesEmptyFiltered, { email: emailQuery })
                 : t.codesEmpty}
             </EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
-                  t.colPhone,
+                  t.colEmail,
                   t.colUser,
                   t.colCode,
                   t.colStatus,
@@ -1301,14 +1305,14 @@ export default async function AdminPage({
               >
                 {visibleCodes.map((record) => {
                   const state = codeState(record);
-                  const owner = userByPhone.get(record.phone);
+                  const owner = userByEmail.get(record.email);
                   return (
                     <tr
                       key={record.id}
                       className="border-b border-line last:border-b-0"
                     >
                       <td className={`${tdCls} whitespace-nowrap font-mono`}>
-                        {record.phone}
+                        {record.email}
                       </td>
                       <td className={`${tdCls} whitespace-nowrap`}>
                         {owner ? (
@@ -1354,7 +1358,7 @@ export default async function AdminPage({
               <ItemGrid>
                 {visibleCodes.map((record) => {
                   const state = codeState(record);
-                  const owner = userByPhone.get(record.phone);
+                  const owner = userByEmail.get(record.email);
                   return (
                     <article
                       key={record.id}
@@ -1363,7 +1367,7 @@ export default async function AdminPage({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="font-mono text-sm font-semibold">
-                            {record.phone}
+                            {record.email}
                           </div>
                           <div className="mt-1 text-xs text-gray">
                             {owner ? owner.nickname : t.codeUnregistered} ·{" "}
@@ -1399,7 +1403,7 @@ export default async function AdminPage({
                 view="codes"
                 page={currentPage}
                 pageCount={pageCount}
-                phone={phoneQuery}
+                email={emailQuery}
               />
             </>
           )}

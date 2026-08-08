@@ -12,6 +12,9 @@ export const LIMITS = {
 
 // 字段展示名在 lib/i18n/labels.ts 的 cardFieldLabel()，这里只留结构
 
+// 名片上的 contactPhone 用；登录身份是邮箱，与这里无关
+export const PHONE_RE = /^1[3-9]\d{9}$/;
+
 // 基本信息字段：两态 public | hidden
 export const BASIC_FIELDS = [
   { key: "bio" },

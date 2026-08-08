@@ -16,7 +16,7 @@
 - Next.js 16（App Router）+ React 19
 - SQLite（better-sqlite3）+ Drizzle ORM
 - Tailwind CSS 4
-- 手机号 + 短信验证码登录（开发环境验证码打日志，不真实发送）
+- 邮箱 + 验证码登录（开发环境验证码固定 888888，打日志不真实发送）
 
 单文件数据库、零外部服务依赖，适合自部署；**不适配 Vercel serverless**。
 
@@ -37,7 +37,24 @@ pnpm dev
 pnpm db:seed
 ```
 
-开发环境登录时，验证码会打印在服务端日志（形如 `[SMS] 验证码 …`）。
+开发环境登录时，验证码固定 `888888`，同时会打印在服务端日志（形如 `[MAIL] … | We Match 验证码 …`）。
+
+### 内测模式
+
+没配 Resend 时，验证码只会落在日志和管理后台里——那样谁都登不进来，内测没法做。所以生产环境下
+**只要没配 `MAIL_PROVIDER=resend`，验证码就自动固定为 `888888`**，登录页会显示「内测中：验证码固定 888888」，
+服务端日志也会打一条警告。
+
+想脱离自动判定：
+
+| 场景 | 配置 |
+|------|------|
+| Resend 已配好，但仍让内测用户用固定码 | `BETA_MODE=1` |
+| 邮件还没配好，但宁可谁都登不进去 | `BETA_MODE=0` |
+| 正式对外 | 配好 Resend，固定码自动关闭 |
+
+⚠️ 固定码模式下**任何人都能登录成任何人**，只有内测期可以接受。它的判定条件是「邮件通道没配」，
+所以正式上线时忘配 Resend 不会让站点悄悄敞开——登录页和日志都会喊出来，但仍请按上线前清单逐条核对。
 
 ## 环境变量
 
@@ -48,16 +65,17 @@ pnpm db:seed
 | `APP_PORT` | Docker 部署时宿主机对外映射端口。服务器和别的项目共用，生产环境**必填**，不能用默认的 `3000` |
 | `SESSION_SECRET` | Session 签名密钥。生产环境**必填**，至少 32 字符 |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `./data/we-match.db` |
-| `ADMIN_PHONES` | 管理后台手机号白名单，逗号分隔。生产必配；未配时仅开发环境放行 |
-| `SMS_PROVIDER` | 短信通道：`log`（默认，验证码打日志）或 `aliyun`。**生产必须配 `aliyun`**，否则用户收不到验证码 |
-| `ALIBABA_CLOUD_ACCESS_KEY_ID` / `ALIBABA_CLOUD_ACCESS_KEY_SECRET` | 阿里云 AccessKey（`SMS_PROVIDER=aliyun` 时必填） |
-| `ALIYUN_SMS_SIGN_NAME` / `ALIYUN_SMS_TEMPLATE_CODE` | 阿里云短信签名与模板（模板变量为 `${code}`） |
+| `ADMIN_EMAILS` | 管理后台登录邮箱白名单，逗号分隔。生产必配；未配时仅开发环境放行 |
+| `MAIL_PROVIDER` | 邮件通道：`log`（默认，验证码打日志）或 `resend`。**生产必须配 `resend`**，否则用户收不到验证码 |
+| `RESEND_API_KEY` | Resend API Key（`MAIL_PROVIDER=resend` 时必填） |
+| `MAIL_FROM` | 发信人，域名须已在 Resend 验证过，如 `We Match <noreply@wematch.v2ai.org>` |
+| `BETA_MODE` | 内测模式，验证码固定 `888888`。不填时按「没配 Resend = 还在内测」自动判定；`1` 强制开，`0` 强制关。**开着等于任何人可以登录成任何人**，正式对外前必须关掉 |
 
 示例：
 
 ```bash
 export SESSION_SECRET="$(openssl rand -hex 32)"
-export ADMIN_PHONES="13800000001"
+export ADMIN_EMAILS="you@example.com"
 ```
 
 ## 常用脚本
@@ -89,7 +107,7 @@ curl -s -H "Authorization: Bearer $WEMATCH_API_KEY" \
 ### Docker（推荐）
 
 ```bash
-cp .env.example .env   # 填好 APP_PORT（服务器和别的项目共用，别用默认 3000）、SESSION_SECRET、ADMIN_PHONES、SMS_PROVIDER=aliyun 及短信密钥
+cp .env.example .env   # 填好 APP_PORT（服务器和别的项目共用，别用默认 3000）、SESSION_SECRET、ADMIN_EMAILS、MAIL_PROVIDER=resend 及 RESEND_API_KEY / MAIL_FROM
 docker compose up -d --build
 ```
 
@@ -124,7 +142,7 @@ docker compose up -d --build
 
 ```bash
 pnpm build
-SESSION_SECRET=… ADMIN_PHONES=… SMS_PROVIDER=aliyun … pnpm start
+SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 ```
 
 将 `data/`（或 `DATABASE_PATH` 指向的目录）放在持久化卷上，并用 systemd / pm2 守护进程。站点 origin 会根据请求的 `Host` / `X-Forwarded-*` 自动推断，一般无需额外配置。
@@ -139,8 +157,9 @@ SESSION_SECRET=… ADMIN_PHONES=… SMS_PROVIDER=aliyun … pnpm start
 
 ### 上线前检查
 
-- [ ] 短信：阿里云签名 / 模板已过审，`SMS_PROVIDER=aliyun` 已配置并真机收到验证码
+- [ ] 邮件：Resend 发信域名已验证（SPF / DKIM 已生效），`MAIL_PROVIDER=resend` 已配置并真实收到验证码；顺手确认没进垃圾箱
+- [ ] 内测模式已关闭：登录页**不再**显示「内测中：验证码固定 888888」，验证码是随机的（配好 Resend 即自动关闭）
 - [ ] 法务：填写 [lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱（`/terms`、`/privacy` 会展示），文案经过人工确认
-- [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_PHONES` 已配置
+- [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_EMAILS` 已配置
 - [ ] `APP_PORT` 已配置为分配给 we-match 的实际端口，不是默认的 `3000`
 - [ ] 反向代理 HTTPS 就绪，备份 cron 已配置

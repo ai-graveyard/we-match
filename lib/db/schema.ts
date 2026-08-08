@@ -16,7 +16,10 @@ export type FieldVisibility = Record<
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  phone: text("phone").notNull().unique(),
+  // 登录身份，永不出站（docs/AGENT-SKILL.md 2.2）。与名片上的 email 是两回事：
+  // 那个是用户主动填的展示字段，受可见性控制——同 contactPhone 的关系。
+  // 统一存小写，唯一性因此大小写不敏感。
+  loginEmail: text("login_email").notNull().unique(),
   nickname: text("nickname").notNull(),
   bio: text("bio"),
   tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default([]),
@@ -32,7 +35,7 @@ export const users = sqliteTable("users", {
     .$type<FieldVisibility>()
     .notNull()
     .default({}),
-  // deleted = 用户主动注销：个人资料已清空，手机号保留用于永久禁止再次登录
+  // deleted = 用户主动注销：个人资料已清空，登录邮箱保留用于永久禁止再次登录
   status: text("status", { enum: ["active", "suspended", "deleted"] })
     .notNull()
     .default("active"),
@@ -47,7 +50,7 @@ export const verificationCodes = sqliteTable(
   "verification_codes",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    phone: text("phone").notNull(),
+    email: text("email").notNull(),
     code: text("code").notNull(),
     ip: text("ip").notNull(),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
@@ -56,7 +59,7 @@ export const verificationCodes = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index("verification_codes_phone_idx").on(t.phone)],
+  (t) => [index("verification_codes_email_idx").on(t.email)],
 );
 
 export const sessions = sqliteTable("sessions", {

@@ -8,12 +8,11 @@ services:
       - "${APP_PORT:?生产必须配置实际上线端口，不能用默认 3000（服务器和别的项目共用）}:3000"
     environment:
       SESSION_SECRET: ${SESSION_SECRET:?生产必须配置至少 32 字符的 SESSION_SECRET}
-      ADMIN_PHONES: ${ADMIN_PHONES:-}
-      SMS_PROVIDER: ${SMS_PROVIDER:-log}
-      ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
-      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
-      ALIYUN_SMS_SIGN_NAME: ${ALIYUN_SMS_SIGN_NAME:-}
-      ALIYUN_SMS_TEMPLATE_CODE: ${ALIYUN_SMS_TEMPLATE_CODE:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      BETA_MODE: ${BETA_MODE:-}
     volumes:
       - we-match-data:/app/data
       - we-match-backups:/app/backups
