@@ -54,7 +54,7 @@
 
   `2xs` / `3xs` 是本项目在 Tailwind 自带阶梯下方补的两档，刻意不配 `--text-*--line-height`，行高继承 body 的 1.5——它们只用在单行元信息上，配了行高反而把紧凑表格撑开。
 
-  两处例外，不受这张表约束：**分享图**（`components/share-card.tsx` 的 `Poster`）是导出成 PNG 的固定画布，字号颜色一律写死；**管理后台**（`app/admin`）是内部工具，表格密度优先。
+  两处例外，不受这张表约束：**分享图**（`components/share-card.tsx` 的 `Poster`）是导出成 PNG 的固定画布，宽度（`POSTER_WIDTH` 300px）、字号、颜色一律写死——截图用的那棵树挂在屏幕外，不跟视口宽度走；**管理后台**（`app/admin`）是内部工具，表格密度优先。
 
 ## 2. 品牌标识
 
