@@ -2,6 +2,9 @@
   "name": "we-match",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/build-skill.mjs && next build",
