@@ -81,13 +81,16 @@ export async function PATCH(request: Request, { params }: Context) {
     parsed.patch.preferredContact = preferredContact;
   }
 
-  const updated = await applyNeedPatch(
+  const applied = await applyNeedPatch(
     need,
     Object.keys(body).length === 0
       ? { expiresAt: expiryFromPreset("month") }
       : parsed.patch,
+    t,
   );
-  return Response.json({ need: serializeNeed(updated) });
+  // 续期锁：有超过 72 小时未处理的举手时，续期/重开被拒（见 lib/needs-service.ts）
+  if ("error" in applied) return apiError(422, "renewal_blocked", applied.error);
+  return Response.json({ need: serializeNeed(applied.need) });
 }
 
 // DELETE /api/v1/needs/:id：删除自己的需求

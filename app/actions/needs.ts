@@ -84,34 +84,55 @@ export async function updateNeedAction(
   }
 
   // 可见范围不可改；内容和截止时间可编辑
-  await applyNeedPatch(need, { ...parsed.patch, preferredContact });
+  const applied = await applyNeedPatch(need, { ...parsed.patch, preferredContact }, t);
+  if ("error" in applied) return { error: applied.error };
   redirect(localePath(locale, `/needs/${need.id}`));
 }
 
-export async function setNeedStatusAction(formData: FormData) {
+export async function setNeedStatusAction(
+  _prev: NeedFormState,
+  formData: FormData,
+): Promise<NeedFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return;
+  if (!user) return { error: t.auth.sessionExpired };
   const status = String(formData.get("status"));
-  if (status !== "open" && status !== "done" && status !== "closed") return;
+  if (status !== "open" && status !== "done" && status !== "closed") return {};
   const need = await getOwnNeed(user.id, Number(formData.get("id")));
-  if (!need) return;
-  await applyNeedPatch(need, {
-    status,
-    ...(status === "open" && hasDeadlinePassed(need)
-      ? { expiresAt: expiryFromPreset("month") }
-      : {}),
-  });
+  if (!need) return { error: t.need.notOwner };
+  const applied = await applyNeedPatch(
+    need,
+    {
+      status,
+      ...(status === "open" && hasDeadlinePassed(need)
+        ? { expiresAt: expiryFromPreset("month") }
+        : {}),
+    },
+    t,
+  );
+  if ("error" in applied) return { error: applied.error };
   refresh();
+  return {};
 }
 
 // 快速续期：将截止时间延长到一个月后
-export async function refreshNeedAction(formData: FormData) {
+export async function refreshNeedAction(
+  _prev: NeedFormState,
+  formData: FormData,
+): Promise<NeedFormState> {
+  const t = await getRequestDict();
   const user = await getSessionUser();
-  if (!user) return;
+  if (!user) return { error: t.auth.sessionExpired };
   const need = await getOwnNeed(user.id, Number(formData.get("id")));
-  if (!need) return;
-  await applyNeedPatch(need, { expiresAt: expiryFromPreset("month") });
+  if (!need) return { error: t.need.notOwner };
+  const applied = await applyNeedPatch(
+    need,
+    { expiresAt: expiryFromPreset("month") },
+    t,
+  );
+  if ("error" in applied) return { error: applied.error };
   refresh();
+  return {};
 }
 
 export async function deleteNeedAction(formData: FormData) {

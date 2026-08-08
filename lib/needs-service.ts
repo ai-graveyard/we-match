@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, gt, gte, isNull, ne, or, sql } from "drizzle-orm";
+import { and, count, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { connections, needs, type Need, type User } from "@/lib/db/schema";
 import { getMembership } from "@/lib/queries";
@@ -227,17 +227,57 @@ export async function getOwnNeed(
   return need;
 }
 
+// 续期锁：存在超过该时长未处理的举手时，发布者不能给任何需求续命。
+// 举手只能由人在网页处理，所以这条等于要求续命背后有人类心跳——
+// 人失联后帖子自然过期下架（QUOTA.md 第 6 节配套规则 / AGENT-FIRST.md 7.3）
+export const STALE_HAND_LOCK_HOURS = 72;
+
+export async function hasStaleIncomingHands(
+  userId: number,
+  now = Date.now(),
+): Promise<boolean> {
+  const cutoff = new Date(now - STALE_HAND_LOCK_HOURS * 60 * 60 * 1000);
+  const [row] = await db
+    .select({ n: count() })
+    .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
+    .where(
+      and(
+        eq(needs.userId, userId),
+        eq(connections.status, "pending"),
+        lt(connections.createdAt, cutoff),
+      ),
+    );
+  return (row?.n ?? 0) > 0;
+}
+
+// 续命 = 延长截止时间（含改为永久）或把非 open 状态重新开放；
+// 缩短截止、关闭、标完成、只改内容都不算
+export function isLifeExtension(need: Need, patch: NeedPatch): boolean {
+  if (patch.status === "open" && need.status !== "open") return true;
+  if (patch.expiresAt !== undefined) {
+    if (patch.expiresAt === null) return need.expiresAt != null;
+    if (need.expiresAt == null) return false;
+    return patch.expiresAt.getTime() > need.expiresAt.getTime();
+  }
+  return false;
+}
+
 // 应用补丁并刷新内容更新时间；截止时间只在补丁明确传入时改变
 export async function applyNeedPatch(
   need: Need,
   patch: NeedPatch,
-): Promise<Need> {
+  t: ServerDict,
+): Promise<{ error: string } | { need: Need }> {
+  if (isLifeExtension(need, patch) && (await hasStaleIncomingHands(need.userId))) {
+    return { error: t.need.staleHandsBlockRenewal };
+  }
   const [updated] = await db
     .update(needs)
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(needs.id, need.id))
     .returning();
-  return updated;
+  return { need: updated };
 }
 
 export async function deleteNeed(need: Need): Promise<void> {
