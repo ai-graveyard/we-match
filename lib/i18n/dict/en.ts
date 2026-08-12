@@ -88,6 +88,10 @@ export const en: UiDict = {
     inviteInvalid: "This invite link is no longer valid (unknown invite code)",
     searchPlaceholder: "Search titles and descriptions",
     searchLabel: "Search",
+    sortLabel: "Sort",
+    sortUpdated: "Recently updated",
+    sortNewest: "Newest",
+    sortExpiring: "Ending soon",
     typeAll: "All",
     typeAllShort: "All",
     countOngoing: "{n} open",
@@ -261,6 +265,8 @@ export const en: UiDict = {
     fieldWeixinChannels: "WeChat Channels",
     fieldXiaohongshu: "Xiaohongshu",
     fieldWeibo: "Weibo",
+    showEmail: "Show full email",
+    hideEmail: "Hide email",
 
     visPublic: "Public",
     visAuthenticated: "Signed-in users",
@@ -435,7 +441,7 @@ export const en: UiDict = {
     logout: "Sign out",
     logoutConfirmLabel: "Confirm sign out",
     logoutConfirmTitle: "Sign out of this account?",
-    logoutConfirmBody: "You'll need to verify your phone number again to return.",
+    logoutConfirmBody: "You'll need an email code to sign back in.",
     logoutConfirm: "Sign out",
 
     deleteTitle: "Delete account",

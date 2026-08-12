@@ -98,10 +98,11 @@
 - **截止与续期**：`开放`状态的需求超过用户选择的 `expires_at` 即显示为`已过期`，并默认从列表隐藏；`expires_at = NULL` 表示永久有效。发布者可编辑具体截止时间，或点「续期一个月」快速恢复。编辑其他内容不会偷偷改变截止时间。
 - 频率限制：每用户每天最多发布 10 条需求（新账号 3 条）。完整的额度与反滥用体系见 [QUOTA.md](QUOTA.md)——那里还约束同时开放的需求数，以及"手上攒着未处理的举手时不能发新需求"。
 - 列表与匹配（人工匹配）：
-  - 广场页：全部公开需求，时间倒序。
-  - 组织页：该组织内的需求，时间倒序。
+  - 广场页：全部公开需求，默认按最近更新时间倒序。
+  - 组织页：该组织内的需求，与广场页共用排序规则。
   - 两处均支持：按类型筛选（需要/提供）、按标签筛选、关键词搜索（匹配标题和描述）。
   - 默认只显示「开放」且未过期的需求，可切换查看全部。
+  - 支持三种排序：`最近更新`（默认，`updated_at` 倒序）、`最新发布`（`created_at` 倒序）、`即将截止`（开放且有期限的需求优先，按 `expires_at` 正序；其余需求排后）。排序条件写入 URL，并在切换范围、搜索、类型、标签和开放状态筛选时保留；默认排序不写冗余参数。
 - 需求详情页：完整内容 + 发布者名片入口 + 意图化举手按钮。「我需要」显示「我能提供」，「我提供」显示「我想了解」；仅开放且未过期的他人需求显示。**举手与联系共用这一个入口**：已举手后按钮转为「查看联系方式」，面板内容随举手状态切换（见 [DESIGN.md](DESIGN.md) 「需求快捷联系」），页面上不并列第二个动作按钮。
 - **举手表单**（未连接时）：一段给发布者的话（可选，≤ 200 字）+ 一个自己的联系方式选择器（默认取名片上第一项可用的）。表单里必须明写「接受后对方将看到你的微信号」，让用户在点之前就知道给出去什么，而不是事后才发现。
 - **快捷联系面板**（连接后）：展示交换到的那一项渠道——微信号一键复制、手机号直接拨打、邮箱打开邮件客户端并预填主题与正文；同时生成一段带需求标题的可编辑开场白，支持一键复制。**只展示交换的那一项，不展示对方名片上的其他联系方式**。
@@ -166,6 +167,11 @@
 - 额度概览（今日剩余与存量占用，见 [QUOTA.md](QUOTA.md) 第 11 节）。
 - 退出登录。
 
+### 3.7 管理后台
+
+- 举报、用户、需求、组织、加入申请、验证码和审计日志列表统一按每页 20 条分页，并展示跨页连续的序号。
+- 每类列表都提供关键词搜索与字段排序。桌面端搜索区在左、排序区在右，各自使用独立按钮提交；移动端上下排列。搜索时保留当前排序，排序时保留当前搜索；条件写入 URL，翻页时保持，修改条件时回到第一页。搜索先过滤、排序再应用于结果集，最后分页。
+
 ## 4. 页面结构与导航
 
 ### 4.1 导航（2 项 + 范围切换，不再增加）
@@ -223,13 +229,13 @@
 ## 6. 数据模型草案
 
 ```
-users               id, phone(唯一, 登录用), nickname, bio, tags(JSON), city,
+users               id, login_email(唯一, 登录用, 永不出站), nickname, bio, tags(JSON), city,
                     wechat, email, contact_phone,
                     weixin_mp(公众号), weixin_channels(视频号), xiaohongshu, weibo,
                     field_visibility(JSON 对象；基本资料 public|hidden，
                                      社媒 authenticated|orgs|hidden，
                                      联系方式 connected|orgs|authenticated|hidden), created_at
-verification_codes  id, phone, code, ip, expires_at, fail_count, created_at
+verification_codes  id, email, code, ip, expires_at, fail_count, created_at
 sessions            id(token), user_id, expires_at, created_at
 needs               id, user_id, type(need|offer), title, description, tags(JSON),
                     preferred_contact(wechat|email|contactPhone),

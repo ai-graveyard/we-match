@@ -17,9 +17,9 @@ import {
 } from "@/app/actions/needs";
 import { useDict } from "@/lib/i18n/client";
 import { LocaleLink } from "@/lib/i18n/link";
+import { fieldError, secondaryBtn, textBtn } from "@/lib/ui";
 
-const btnCls =
-  "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+const btnCls = secondaryBtn;
 
 export function NeedActions({
   id,
@@ -99,7 +99,7 @@ export function NeedActions({
             </button>
             <button
               type="button"
-              className="text-2xs text-gray hover:text-ink"
+              className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
@@ -108,7 +108,7 @@ export function NeedActions({
         ) : (
           <button
             type="button"
-            className="inline-flex items-center gap-1 text-2xs text-gray hover:text-ink"
+            className={textBtn}
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={12} aria-hidden />
@@ -116,7 +116,7 @@ export function NeedActions({
           </button>
         )}
       </div>
-      {error && <p className="text-xs text-accent">{error}</p>}
+      {error && <p className={fieldError}>{error}</p>}
     </div>
   );
 }

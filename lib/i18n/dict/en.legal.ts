@@ -5,7 +5,7 @@ import type { LegalDict } from "@/lib/i18n/dict/types";
 // 尤其是第 7 条免责、第 9 条法律适用，以及隐私政策里跨境存储的表述。
 
 export const enLegal: LegalDict = {
-  updatedAt: "2026-08-07",
+  updatedAt: "2026-08-09",
 
   terms: {
     metaTitle: "Terms of Service",
@@ -22,7 +22,7 @@ export const enLegal: LegalDict = {
     s1aSuffix: " any communication, collaboration or transaction between users.",
 
     s2Title: "2. Accounts",
-    s2a: "The service uses a phone number and an SMS code to register and sign in. You must use a number you hold yourself and keep your device and codes secure; anything done through your account is treated as done by you. You must have the legal capacity appropriate to your use of the service; minors should use it with the consent and guidance of a guardian.",
+    s2a: "The service uses an email address and an emailed verification code to register and sign in. You must use an address you hold yourself and keep your device and codes secure; anything done through your account is treated as done by you. You must have the legal capacity appropriate to your use of the service; minors should use it with the consent and guidance of a guardian.",
 
     s3Title: "3. Content and conduct",
     s3a: "You are responsible for the card, posts, group information and other content you publish, and you warrant that it is truthful, lawful and does not infringe anyone's rights. Content prohibited by law is not allowed, nor is harassment, fraud, impersonation, bulk advertising or spam, nor unauthorised scraping, crawling or resale of platform data.",
@@ -41,7 +41,7 @@ export const enLegal: LegalDict = {
     s7a: "The service is provided “as is”. To the extent permitted by law we do not warrant that it will be uninterrupted or error-free, and we are not liable for indirect losses arising from your use of it.",
 
     s8Title: "8. Changes and termination",
-    s8a: "We may revise these Terms; revisions are published on this page with the date updated, and significant changes are announced prominently in the app. You may stop using the service at any time, or delete your account yourself under Me → Settings → Delete account. Deletion cannot be undone, and the phone number can never sign in again.",
+    s8a: "We may revise these Terms; revisions are published on this page with the date updated, and significant changes are announced prominently in the app. You may stop using the service at any time, or delete your account yourself under Me → Settings → Delete account. Deletion cannot be undone, and the email address can never sign in again.",
 
     s9Title: "9. Governing law",
     s9a: "These Terms are made and interpreted under the law of the operator's jurisdiction. Disputes should first be settled amicably; failing that, they are submitted to a competent court in the operator's jurisdiction.",
@@ -61,8 +61,8 @@ export const enLegal: LegalDict = {
     s1Title: "1. What we collect",
     s1Items: [
       {
-        term: "Phone number",
-        desc: ": required to register and sign in, used for identity verification.",
+        term: "Sign-in email",
+        desc: ": required to register and sign in, used for identity verification; it is never shown to other users and never appears in any outbound API.",
       },
       {
         term: "Card details",
@@ -85,13 +85,13 @@ export const enLegal: LegalDict = {
     s3a: "Each contact and social field on your card can be set to “signed-in users / shared groups / hidden”. Note that “signed-in users” means any registered user can see that field; signed-out visitors and search engines never receive the raw contact values.",
 
     s4Title: "4. Sharing with others",
-    s4a: "We do not sell your personal information. We disclose it only in these cases: giving your phone number to the SMS provider so a code can be sent (used for that alone); and where law or a competent authority lawfully requires it.",
+    s4a: "We do not sell your personal information. We disclose it only in these cases: giving your sign-in email to the email provider so a code can be sent (used for that alone); and where law or a competent authority lawfully requires it.",
 
     s5Title: "5. Cookies and storage",
     s5a: "We use only the cookies needed to keep you signed in and to remember your interface language (the sign-in cookie is httpOnly, signed against tampering, and valid for 30 days). We use no third-party analytics or advertising cookies. Your data is stored on cloud servers outside mainland China and is transmitted over HTTPS.",
 
     s6Title: "6. Your rights",
-    s6a: "You can view, correct or clear your details at any time under Me → Card, close or delete your own posts, and revoke API Keys. You can also permanently delete your account under Me → Settings → Delete account: your card details are erased, your posts are closed and all API Keys stop working. The phone number is retained solely to ensure it can never sign in again (deletion cannot be undone), and information we are legally required to keep is retained accordingly. To exercise any other rights you have by law, contact us using the details below.",
+    s6a: "You can view, correct or clear your details at any time under Me → Card, close or delete your own posts, and revoke API Keys. You can also permanently delete your account under Me → Settings → Delete account: your card details are erased, your posts are closed and all API Keys stop working. The sign-in email is retained solely to ensure it can never sign in again (deletion cannot be undone), and information we are legally required to keep is retained accordingly. To exercise any other rights you have by law, contact us using the details below.",
 
     s7Title: "7. Minors",
     s7a: "The service is intended for users with the relevant legal capacity. If we find that we have collected a minor's personal information without a guardian's consent, we will delete it as soon as we can.",

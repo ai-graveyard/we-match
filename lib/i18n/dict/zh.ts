@@ -89,6 +89,10 @@ export const zh = {
     inviteInvalid: "邀请链接已失效（邀请码无效）",
     searchPlaceholder: "搜索标题、描述",
     searchLabel: "搜索",
+    sortLabel: "排序",
+    sortUpdated: "最近更新",
+    sortNewest: "最新发布",
+    sortExpiring: "即将截止",
     typeAll: "全部",
     typeAllShort: "全",
     countOngoing: "{n} 条进行中",
@@ -257,6 +261,8 @@ export const zh = {
     fieldWeixinChannels: "视频号",
     fieldXiaohongshu: "小红书",
     fieldWeibo: "微博",
+    showEmail: "显示完整邮箱",
+    hideEmail: "隐藏邮箱",
 
     visPublic: "公开",
     visAuthenticated: "登录可见",
@@ -421,7 +427,7 @@ export const zh = {
     logout: "退出登录",
     logoutConfirmLabel: "确认退出登录",
     logoutConfirmTitle: "确认退出当前账号？",
-    logoutConfirmBody: "退出后需要重新验证手机号登录。",
+    logoutConfirmBody: "退出后需要重新用邮箱验证码登录。",
     logoutConfirm: "确认退出",
 
     deleteTitle: "注销账号",

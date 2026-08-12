@@ -1,5 +1,5 @@
-import { Plus, Search, X } from "lucide-react";
-import { and, desc, eq, gt, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { Plus, X } from "lucide-react";
+import { and, eq, gt, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blocks, needs, orgs, users } from "@/lib/db/schema";
@@ -9,11 +9,27 @@ import { normalizeInviteCode } from "@/lib/orgs";
 import { NeedCard } from "@/components/need-card";
 import { EmptyState, ListEnd } from "@/components/list-states";
 import { BrandFooter } from "@/components/brand-footer";
+import { SearchField } from "@/components/search-field";
+import { PlazaSortSelect } from "@/components/plaza-sort";
+import {
+  panel,
+  primaryBtn,
+  secondaryBtn,
+  segmentGroup,
+  segmentItem,
+  statusDot,
+  tag as tagCls,
+} from "@/lib/ui";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { localePath } from "@/lib/i18n/routing";
 import { fmt } from "@/lib/i18n/fmt";
 import { typeLabel, typeShort } from "@/lib/i18n/labels";
+import {
+  normalizePlazaSort,
+  plazaOrderBy,
+  type PlazaSort,
+} from "@/lib/plaza-sort";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +39,7 @@ function buildQuery(params: {
   q?: string;
   tag?: string;
   all?: string;
+  sort?: PlazaSort;
 }) {
   const qs = new URLSearchParams();
   if (params.org) qs.set("org", params.org);
@@ -30,6 +47,7 @@ function buildQuery(params: {
   if (params.q) qs.set("q", params.q);
   if (params.tag) qs.set("tag", params.tag);
   if (params.all) qs.set("all", params.all);
+  if (params.sort && params.sort !== "updated") qs.set("sort", params.sort);
   const s = qs.toString();
   return s ? `/?${s}` : "/";
 }
@@ -46,6 +64,7 @@ export default async function PlazaPage({
   const q = pick(raw.q)?.trim();
   const tag = pick(raw.tag)?.trim();
   const showAll = pick(raw.all) === "1";
+  const sort = normalizePlazaSort(pick(raw.sort));
   const inviteCode = pick(raw.code)?.trim();
 
   const viewer = await getSessionUser();
@@ -107,7 +126,7 @@ export default async function PlazaPage({
     .from(needs)
     .innerJoin(users, eq(needs.userId, users.id))
     .where(and(...conds))
-    .orderBy(desc(needs.updatedAt))
+    .orderBy(...plazaOrderBy(sort))
     .limit(100);
   const list = rows.map((row) => row.need);
 
@@ -117,6 +136,7 @@ export default async function PlazaPage({
     q,
     tag,
     all: showAll ? "1" : undefined,
+    sort,
   };
   const typeTabs = [
     { label: t.plaza.typeAll, mobileLabel: t.plaza.typeAllShort, value: undefined },
@@ -178,21 +198,23 @@ export default async function PlazaPage({
         )}
         <LocaleLink
           href={publishHref}
-          className="ml-auto hidden shrink-0 items-center gap-1 rounded-sm bg-accent px-3 py-2 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px md:inline-flex"
+          className={`${primaryBtn} ml-auto shrink-0 max-md:hidden`}
         >
           <Plus size={14} strokeWidth={2.5} />
           {t.common.publish}
         </LocaleLink>
       </div>
 
+      {/* 「去申请」用墨色次按钮：本屏的焦橙已经给了「+ 发布」，
+          邀请横幅再来一个就是同屏两处焦橙（见 DESIGN.md 焦橙纪律） */}
       {invitedOrg && (
-        <div className="mt-4 flex items-center gap-2 rounded-md border border-line bg-panel p-3">
+        <div className={`mt-4 flex items-center gap-2 ${panel} p-3`}>
           <p className="min-w-0 flex-1 text-sm">
             {fmt(t.plaza.inviteBanner, { name: invitedOrg.name })}
           </p>
           <LocaleLink
             href={`/orgs?code=${encodeURIComponent(normalizeInviteCode(inviteCode!))}`}
-            className="shrink-0 rounded-sm bg-accent px-3 py-2 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
+            className={`${secondaryBtn} shrink-0`}
           >
             {t.plaza.inviteApply}
           </LocaleLink>
@@ -203,33 +225,28 @@ export default async function PlazaPage({
       )}
 
       <div className="mt-4 flex gap-2">
-        <form
+        <SearchField
           action={localePath(locale, "/")}
-          className="relative flex h-10 min-w-0 flex-1 overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink"
-        >
-          {activeOrg && (
-            <input type="hidden" name="org" value={activeOrg.id} />
-          )}
-          {type && <input type="hidden" name="type" value={type} />}
-          {tag && <input type="hidden" name="tag" value={tag} />}
-          {showAll && <input type="hidden" name="all" value="1" />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder={t.plaza.searchPlaceholder}
-            className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-gray"
-          />
-          <button
-            type="submit"
-            aria-label={t.plaza.searchLabel}
-            title={t.plaza.searchLabel}
-            className="flex w-10 shrink-0 items-center justify-center border-l border-line text-gray transition-colors duration-100 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
-          >
-            <Search size={16} aria-hidden />
-          </button>
-        </form>
-        <div className="flex shrink-0 overflow-hidden rounded-sm border border-line">
+          name="q"
+          defaultValue={q}
+          placeholder={t.plaza.searchPlaceholder}
+          label={t.plaza.searchLabel}
+          className="flex-1"
+          hidden={
+            <>
+              {activeOrg && (
+                <input type="hidden" name="org" value={activeOrg.id} />
+              )}
+              {type && <input type="hidden" name="type" value={type} />}
+              {tag && <input type="hidden" name="tag" value={tag} />}
+              {showAll && <input type="hidden" name="all" value="1" />}
+              {sort !== "updated" && (
+                <input type="hidden" name="sort" value={sort} />
+              )}
+            </>
+          }
+        />
+        <div className={`${segmentGroup} shrink-0`}>
           {typeTabs.map((tab, i) => {
             const active = type === tab.value || (!type && !tab.value);
             return (
@@ -237,9 +254,7 @@ export default async function PlazaPage({
                 key={tab.label}
                 href={buildQuery({ ...current, type: tab.value })}
                 aria-label={tab.label}
-                className={`flex items-center px-2.5 text-xs transition-colors duration-100 ${
-                  i > 0 ? "border-l border-line" : ""
-                } ${active ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
+                className={segmentItem(active, i === 0)}
               >
                 <span className="md:hidden">{tab.mobileLabel}</span>
                 <span className="hidden md:inline">{tab.label}</span>
@@ -253,7 +268,7 @@ export default async function PlazaPage({
         {tag && (
           <LocaleLink
             href={buildQuery({ ...current, tag: undefined })}
-            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
+            className={`${tagCls(true)} inline-flex items-center gap-1`}
           >
             {tag}
             <X size={11} aria-hidden />
@@ -262,16 +277,44 @@ export default async function PlazaPage({
         {q && (
           <LocaleLink
             href={buildQuery({ ...current, q: undefined })}
-            className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
+            className={`${tagCls(true)} inline-flex items-center gap-1`}
           >
             “{q}”
             <X size={11} aria-hidden />
           </LocaleLink>
         )}
+        <PlazaSortSelect
+          label={t.plaza.sortLabel}
+          value={sort}
+          options={[
+            {
+              value: "updated",
+              label: t.plaza.sortUpdated,
+              href: localePath(
+                locale,
+                buildQuery({ ...current, sort: "updated" }),
+              ),
+            },
+            {
+              value: "newest",
+              label: t.plaza.sortNewest,
+              href: localePath(
+                locale,
+                buildQuery({ ...current, sort: "newest" }),
+              ),
+            },
+            {
+              value: "expiring",
+              label: t.plaza.sortExpiring,
+              href: localePath(
+                locale,
+                buildQuery({ ...current, sort: "expiring" }),
+              ),
+            },
+          ]}
+        />
         <div className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-2xs text-gray">
-          {!showAll && (
-            <i className="size-1.5 rounded-full bg-accent" aria-hidden />
-          )}
+          {!showAll && <i className={statusDot} aria-hidden />}
           <span>
             {fmt(showAll ? t.plaza.countAll : t.plaza.countOngoing, {
               n: list.length,
@@ -300,7 +343,7 @@ export default async function PlazaPage({
         </EmptyState>
       ) : (
         <>
-          <div className="mt-3 rounded-md border border-line bg-panel">
+          <div className={`mt-3 ${panel}`}>
             {list.map((need, i) => (
               <NeedCard key={need.id} need={need} first={i === 0} />
             ))}
@@ -313,7 +356,7 @@ export default async function PlazaPage({
 
       <LocaleLink
         href={publishHref}
-        className="fixed bottom-[calc(var(--tabbar-h)+16px)] right-[calc(16px+var(--safe-r))] z-10 flex h-11 items-center gap-1 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px md:hidden"
+        className={`${primaryBtn} fixed bottom-[calc(var(--tabbar-h)+16px)] right-[calc(16px+var(--safe-r))] z-10 md:hidden`}
       >
         <Plus size={14} strokeWidth={2.5} />
         {t.common.publish}

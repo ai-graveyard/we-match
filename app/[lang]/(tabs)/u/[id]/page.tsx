@@ -10,9 +10,18 @@ import { CopyButton } from "@/components/copy-button";
 import { NeedCard } from "@/components/need-card";
 import { PageHeader } from "@/components/page-header";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
+import { MaskedEmail } from "@/components/masked-email";
 import { ShareCard } from "@/components/share-card";
 import { siteOrigin } from "@/lib/site-url";
 import { SafetyActions } from "@/components/safety-actions";
+import {
+  panel,
+  primaryBtn,
+  sectionLabel,
+  segmentGroup,
+  segmentItem,
+  tag as tagCls,
+} from "@/lib/ui";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
@@ -103,6 +112,7 @@ export default async function UserCardPage({
       }
     : { loggedIn: !!viewer, sharesOrg: !!shared };
   const card = visibleCard(owner, audience);
+  const visibleEmail = card.contacts.find((item) => item.key === "email")?.value;
   const publicCard = visibleCard(owner, {
     loggedIn: false,
     sharesOrg: false,
@@ -112,7 +122,10 @@ export default async function UserCardPage({
     !audience.loggedIn && hasAuthenticatedCardDetails(owner);
 
   const groups = [
-    { title: t.card.groupContact, items: card.contacts },
+    {
+      title: t.card.groupContact,
+      items: card.contacts.filter((item) => item.key !== "email"),
+    },
     { title: t.card.groupSocial, items: card.socials },
   ].filter((g) => g.items.length > 0);
   const primaryCopyKey = groups[0]?.items[0]?.key;
@@ -121,20 +134,17 @@ export default async function UserCardPage({
     <div>
       <PageHeader title={t.card.metaDetail} mobileOnly className="mb-4" />
       {isSelf && (
-        <section className="mb-4 rounded-md border border-line bg-panel p-3">
-          <div className="inline-flex w-full overflow-hidden rounded-sm border border-line">
+        <section className={`mb-4 ${panel} p-3`}>
+          <div className={`${segmentGroup} w-full`}>
             {PREVIEW_VIEWS.map((option, index) => (
               <LocaleLink
                 key={option.value}
                 href={`/u/${owner.id}?view=${option.value}`}
                 replace
-                className={`flex h-10 flex-1 items-center justify-center px-2 text-center text-2xs transition-colors duration-100 ${
-                  index > 0 ? "border-l border-line" : ""
-                } ${
-                  previewView === option.value
-                    ? "bg-ink font-semibold text-panel"
-                    : "text-gray hover:text-ink"
-                }`}
+                className={`${segmentItem(
+                  previewView === option.value,
+                  index === 0,
+                )} min-w-0 flex-1`}
               >
                 {option.label(t)}
               </LocaleLink>
@@ -148,11 +158,18 @@ export default async function UserCardPage({
           </div>
         </section>
       )}
-      <section className="rounded-md border border-line bg-panel p-4">
+      <section className={`${panel} p-4`}>
         <div className="flex items-center gap-3">
           <DefaultUserAvatar className="size-12" iconSize={22} />
           <div className="min-w-0">
             <h1 className="text-xl font-semibold">{card.nickname}</h1>
+            {visibleEmail && (
+              <MaskedEmail
+                email={visibleEmail}
+                showLabel={t.card.showEmail}
+                hideLabel={t.card.hideEmail}
+              />
+            )}
             {card.city && <p className="text-xs text-gray">{card.city}</p>}
           </div>
           <div className="ml-auto">
@@ -174,7 +191,7 @@ export default async function UserCardPage({
             {card.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
+                className={tagCls()}
               >
                 {tag}
               </span>
@@ -184,8 +201,8 @@ export default async function UserCardPage({
       </section>
 
       {showLoginGate && (
-        <section className="mt-4 rounded-md border border-line bg-panel">
-          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
+        <section className={`mt-4 ${panel}`}>
+          <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
             {t.card.loginGateTitle}
           </h2>
           <div className="p-4">
@@ -196,7 +213,7 @@ export default async function UserCardPage({
                   ? `/u/${owner.id}?view=user`
                   : `/login?next=${encodeURIComponent(`/u/${owner.id}`)}`
               }
-              className="mt-3 flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
+              className={`${primaryBtn} mt-3 w-full`}
             >
               {t.card.loginGateAction}
             </LocaleLink>
@@ -207,9 +224,9 @@ export default async function UserCardPage({
       {groups.map((group) => (
         <section
           key={group.title}
-          className="mt-4 rounded-md border border-line bg-panel"
+          className={`mt-4 ${panel}`}
         >
-          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
+          <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
             {group.title}
           </h2>
           {group.items.map((item, i) => (
@@ -283,13 +300,13 @@ async function PlazaNeeds({
 
   return (
     <section className="mt-4">
-      <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
+      <h2 className={sectionLabel}>
         {isSelf ? t.card.plazaNeedsSelf : t.card.plazaNeedsOther}
       </h2>
       {list.length === 0 ? (
         <p className="mt-3 text-xs text-gray">{t.card.plazaNeedsEmpty}</p>
       ) : (
-        <div className="mt-2 rounded-md border border-line bg-panel">
+        <div className={`mt-2 ${panel}`}>
           {list.map((need, i) => (
             <NeedCard key={need.id} need={need} first={i === 0} />
           ))}

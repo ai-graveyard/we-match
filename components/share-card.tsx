@@ -8,6 +8,7 @@ import { LogoMark } from "@/components/logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { copyText } from "@/components/copy-button";
 import { useDict } from "@/lib/i18n/client";
+import { iconBtnInk, iconBtnLine, inkBtn } from "@/lib/ui";
 import { fmt } from "@/lib/i18n/fmt";
 import { intentLabel, orgVisibilityLabel } from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
@@ -386,7 +387,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               ref={closeButtonRef}
               type="button"
               onClick={() => setOpen(false)}
-              className="flex size-11 items-center justify-center rounded-sm border border-line bg-panel text-gray transition-colors duration-100 active:bg-bg-3"
+              className={iconBtnLine}
               aria-label={t.share.dialogCloseLabel}
             >
               <X size={16} aria-hidden />
@@ -413,7 +414,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               type="button"
               onClick={handleShare}
               disabled={busy !== null}
-              className="flex h-11 min-w-0 items-center justify-center gap-2 rounded-sm bg-ink px-3 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-50"
+              className={`${inkBtn} min-w-0`}
             >
               <Share2 size={14} aria-hidden />
               {busy === "share" ? t.share.preparing : t.share.shareNow}
@@ -422,7 +423,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               type="button"
               onClick={handleSave}
               disabled={busy !== null}
-              className="flex size-11 items-center justify-center rounded-sm border border-ink bg-panel transition-colors duration-100 active:translate-y-px active:bg-bg-3 disabled:opacity-50"
+              className={`${iconBtnInk} disabled:opacity-50`}
               aria-label={t.share.saveLabel}
               title={t.share.saveTitle}
             >
@@ -432,7 +433,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               type="button"
               onClick={handleCopy}
               disabled={busy !== null}
-              className="flex size-11 items-center justify-center rounded-sm border border-ink bg-panel transition-colors duration-100 active:translate-y-px active:bg-bg-3 disabled:opacity-50"
+              className={`${iconBtnInk} disabled:opacity-50`}
               aria-label={t.share.copyLinkLabel}
               title={t.share.copyLinkTitle}
             >

@@ -3,6 +3,11 @@
 import { useLayoutEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useDict } from "@/lib/i18n/client";
+import {
+  miniSwitch,
+  miniSwitchItem,
+  settingsRowInteractive,
+} from "@/lib/ui";
 
 type Theme = "light" | "dark";
 
@@ -81,7 +86,7 @@ export function ThemeToggleRow() {
       type="button"
       onClick={toggleTheme}
       aria-label={t.theme.toggleLabel}
-      className="flex min-h-16 w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
+      className={settingsRowInteractive}
     >
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{t.theme.title}</span>
@@ -90,14 +95,17 @@ export function ThemeToggleRow() {
           <span className="hidden dark:inline">{t.theme.currentDark}</span>
         </span>
       </span>
-      <span
-        className="grid shrink-0 grid-cols-2 rounded-sm border border-line bg-bg-2 p-0.5"
-        aria-hidden
-      >
-        <span className="flex h-6 items-center justify-center rounded-[5px] bg-ink px-2 font-mono text-3xs text-panel dark:bg-transparent dark:text-gray">
+      {/* 选中态走 dark: 变体而不是 JS 判断：主题由 <html data-theme> 决定，
+          服务端渲染时读不到，用状态会先闪一下错的档位 */}
+      <span className={miniSwitch} aria-hidden>
+        <span
+          className={`${miniSwitchItem} bg-ink text-panel dark:bg-transparent dark:text-gray`}
+        >
           {t.theme.light}
         </span>
-        <span className="flex h-6 items-center justify-center rounded-[5px] px-2 font-mono text-3xs text-gray dark:bg-ink dark:text-panel">
+        <span
+          className={`${miniSwitchItem} text-gray dark:bg-ink dark:text-panel`}
+        >
           {t.theme.dark}
         </span>
       </span>

@@ -8,6 +8,11 @@ import {
   type ReportFormState,
 } from "@/app/actions/safety";
 import { useDict } from "@/lib/i18n/client";
+import {
+  fieldError,
+  panel,
+  secondaryBtn,
+} from "@/lib/ui";
 
 export function SafetyActions({
   targetType,
@@ -43,14 +48,14 @@ export function SafetyActions({
         )}
       </div>
       {open && (
-        <form action={action} className="mt-3 rounded-md border border-line bg-panel p-3">
+        <form action={action} className={`mt-3 ${panel} p-3`}>
           <input type="hidden" name="targetType" value={targetType} />
           <input type="hidden" name="targetId" value={targetId} />
           <select
             name="reason"
             required
             defaultValue=""
-            className="h-11 w-full rounded-sm border border-line bg-bg px-3 text-sm"
+            className="h-11 w-full rounded-sm border border-line bg-bg px-3 text-sm outline-none transition-colors duration-100 focus:border-ink"
           >
             <option value="" disabled>
               {t.safety.reasonPlaceholder}
@@ -66,14 +71,14 @@ export function SafetyActions({
             maxLength={500}
             rows={3}
             placeholder={t.safety.detailsPlaceholder}
-            className="mt-2 w-full resize-none rounded-sm border border-line bg-bg px-3 py-2 text-sm"
+            className="mt-2 w-full resize-none rounded-sm border border-line bg-bg px-3 py-2 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
           />
-          {state.error && <p className="mt-2 text-xs text-accent">{state.error}</p>}
+          {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
           {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
           <button
             type="submit"
             disabled={pending || !!state.ok}
-            className="mt-2 h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:opacity-60"
+            className={`${secondaryBtn} mt-2 disabled:opacity-60`}
           >
             {pending ? t.common.submitting : t.safety.submitReport}
           </button>

@@ -8,6 +8,12 @@ import {
 } from "@/app/actions/auth";
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
+import {
+  fieldError,
+  inkBtn,
+  quietBtn,
+  settingsRowInteractive,
+} from "@/lib/ui";
 
 // 设置里的「注销账号」行：展开两步确认后提交。
 // ownedOrgNames 非空时禁用提交，提示先解散组织（服务端会再校验一次）。
@@ -33,7 +39,7 @@ export function DeleteAccountRow({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="flex min-h-16 w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
+        className={settingsRowInteractive}
       >
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold">
@@ -70,7 +76,7 @@ export function DeleteAccountRow({
         </p>
       )}
       {state.error && (
-        <p role="alert" className="mt-3 text-xs font-semibold text-ink">
+        <p role="alert" className={`mt-3 ${fieldError}`}>
           {state.error}
         </p>
       )}
@@ -80,14 +86,14 @@ export function DeleteAccountRow({
           type="button"
           disabled={pending}
           onClick={() => setConfirming(false)}
-          className="h-11 rounded-sm border border-line text-sm font-semibold tracking-[0.06em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
+          className={quietBtn}
         >
           {t.common.cancel}
         </button>
         <button
           type="submit"
           disabled={pending || ownedOrgNames.length > 0}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-sm bg-ink text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
+          className={inkBtn}
         >
           <UserRoundX size={13} aria-hidden />
           {pending ? t.account.deleting : t.account.deleteConfirm}

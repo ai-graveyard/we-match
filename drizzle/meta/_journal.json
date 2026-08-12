@@ -57,6 +57,13 @@
       "when": 1786200000000,
       "tag": "0007_login-email",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786367060010,
+      "tag": "0008_lowly_namora",
+      "breakpoints": true
     }
   ]
 }

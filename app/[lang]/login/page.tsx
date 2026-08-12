@@ -7,6 +7,7 @@ import { pageTitle } from "@/lib/i18n/metadata";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
 import { FIXED_CODE, isFixedCodeMode } from "@/lib/auth";
+import { panel } from "@/lib/ui";
 
 export const generateMetadata = pageTitle((t) => t.login.metaTitle);
 
@@ -38,7 +39,7 @@ export default async function LoginPage({
           <p className="mb-8 mt-2 text-center text-sm text-gray">
             {t.brand.slogan}
           </p>
-          <div className="rounded-md border border-line bg-panel p-6">
+          <div className={`${panel} p-6`}>
             <h1 className="mb-4 text-xl font-semibold">{t.login.heading}</h1>
             <LoginForm next={next} />
             <p className="mt-4 text-center text-2xs leading-5 text-gray">

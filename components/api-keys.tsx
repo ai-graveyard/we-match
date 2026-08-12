@@ -11,12 +11,15 @@ import { CopyButton } from "@/components/copy-button";
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
 import { API_KEY_LIMITS } from "@/lib/api-keys";
-
-const inputCls =
-  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
-const primaryBtnCls =
-  "h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
+import {
+  fieldError,
+  input as inputCls,
+  primaryBtn,
+  secondaryBtn,
+  sectionLabel as labelCls,
+  statusDot,
+  textBtn,
+} from "@/lib/ui";
 
 // Key 列表只显示末四位；明文仅在创建成功时显示一次。
 export function ApiKeyRow({
@@ -45,16 +48,13 @@ export function ApiKeyRow({
             className="ml-auto flex shrink-0 items-center gap-2"
           >
             <input type="hidden" name="id" value={id} />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1 rounded-sm border border-ink px-2 py-2 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
-            >
+            <button type="submit" className={secondaryBtn}>
               <Trash2 size={11} aria-hidden />
               {t.common.confirmDelete}
             </button>
             <button
               type="button"
-              className="text-2xs text-gray hover:text-ink"
+              className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
@@ -63,7 +63,7 @@ export function ApiKeyRow({
         ) : (
           <button
             type="button"
-            className="ml-auto inline-flex shrink-0 items-center gap-1 text-2xs text-gray hover:text-ink"
+            className={`${textBtn} ml-auto shrink-0`}
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={11} aria-hidden />
@@ -134,10 +134,14 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
             />
           </div>
           <p className="text-2xs text-gray">{t.agent.keyScopeHint}</p>
-          {state.error && <p className="text-xs text-ink">{state.error}</p>}
+          {state.error && <p className={fieldError}>{state.error}</p>}
+          {/* 普通面板 + 6px 状态灯。橙边框是清单外的装饰，还会跟同屏的
+              「生成 Key」抢焦橙——本屏的焦橙主控件是那个按钮
+              （见 DESIGN.md 焦橙纪律「提示类信息不用警示框」） */}
           {state.createdKey && (
-            <div className="rounded-sm border border-accent bg-bg p-3">
-              <p className="text-2xs font-semibold text-accent">
+            <div className="rounded-sm border border-line bg-bg p-3">
+              <p className="flex items-center gap-2 text-2xs font-semibold">
+                <i className={statusDot} aria-hidden />
                 {t.agent.keyCreatedWarning}
               </p>
               <div className="mt-2 flex items-center gap-2">
@@ -148,7 +152,7 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
               </div>
             </div>
           )}
-          <button type="submit" disabled={pending} className={primaryBtnCls}>
+          <button type="submit" disabled={pending} className={primaryBtn}>
             {pending
               ? t.agent.keyGenerating
               : state.createdKey

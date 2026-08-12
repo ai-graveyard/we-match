@@ -44,13 +44,14 @@ const TEXT_FIELD_LIMITS: Record<TextFieldKey, number> = {
 export type CardPatch = Partial<Record<TextFieldKey, string | null>> & {
   nickname?: string;
   tags?: string[];
-  fieldVisibility?: FieldVisibility; // 整体替换，不做逐键合并
+  fieldVisibility?: FieldVisibility; // 网页整体替换；API route 会在落库前按键合并
 };
 
 // unknown 输入 → 合法补丁或错误。只校验出现的键；各类字段只存非默认档。
 export function validateCardPatch(
   input: Record<string, unknown>,
   t: ServerDict,
+  options: { preserveVisibilityDefaults?: boolean } = {},
 ): { error: string } | { patch: CardPatch } {
   const patch: CardPatch = {};
 
@@ -70,7 +71,7 @@ export function validateCardPatch(
         .slice(0, TEXT_FIELD_LIMITS[key]) || null;
   }
 
-  // 只支持中国大陆手机号（与登录一致），留空可以
+  // 名片展示用，只支持中国大陆手机号，留空可以（登录身份是邮箱，与此无关）
   if (patch.contactPhone && !PHONE_RE.test(patch.contactPhone))
     return { error: t.card.badContactPhone };
 
@@ -94,7 +95,12 @@ export function validateCardPatch(
     );
     for (const [key, value] of Object.entries(raw)) {
       if (basicKeys.has(key)) {
-        if (value === "public") continue;
+        if (value === "public") {
+          if (options.preserveVisibilityDefaults) {
+            visibility[key as CardFieldKey] = "public";
+          }
+          continue;
+        }
         if (value === "hidden") {
           visibility[key as CardFieldKey] = "hidden";
           continue;
@@ -102,7 +108,12 @@ export function validateCardPatch(
       }
       if (threeStateKeys.has(key)) {
         // public 是旧客户端的兼容别名，安全解释成默认 authenticated。
-        if (value === "authenticated" || value === "public") continue;
+        if (value === "authenticated" || value === "public") {
+          if (options.preserveVisibilityDefaults) {
+            visibility[key as CardFieldKey] = "authenticated";
+          }
+          continue;
+        }
         if (value === "orgs" || value === "hidden") {
           visibility[key as CardFieldKey] = value;
           continue;
@@ -112,7 +123,9 @@ export function validateCardPatch(
         error: fmt(t.card.badVisibilityValue, { key, value: String(value) }),
       };
     }
-    patch.fieldVisibility = normalizedFieldVisibility(visibility);
+    patch.fieldVisibility = options.preserveVisibilityDefaults
+      ? visibility
+      : normalizedFieldVisibility(visibility);
   }
 
   return { patch };

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { useDict, useLocale } from "@/lib/i18n/client";
 import { localePath, stripLocale } from "@/lib/i18n/routing";
+import { iconBtnBack } from "@/lib/ui";
 
 type PageVisit = { pathname: string; href: string };
 
@@ -89,7 +90,7 @@ export function BackButton() {
           router.replace(localePath(locale, fallbackFor(path)));
         }
       }}
-      className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-line bg-panel text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3 md:hidden"
+      className={`${iconBtnBack} md:hidden`}
     >
       <ChevronLeft size={18} aria-hidden />
     </button>

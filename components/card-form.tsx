@@ -13,6 +13,15 @@ import {
 import { TagInput } from "@/components/tag-input";
 import { PhoneInput, normalizePhoneInput } from "@/components/phone-input";
 import { useDict } from "@/lib/i18n/client";
+import {
+  fieldError,
+  input as sharedInput,
+  panel,
+  primaryBtn,
+  sectionLabel,
+  segmentGroup,
+  segmentItem,
+} from "@/lib/ui";
 import { fmt } from "@/lib/i18n/fmt";
 import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
@@ -48,15 +57,13 @@ function VisibilitySegment({
   options: Visibility[];
 }) {
   return (
-    <div className="inline-flex overflow-hidden rounded-sm border border-line">
+    <div className={segmentGroup}>
       {options.map((opt, i) => (
         <button
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`px-2 py-1 text-2xs transition-colors duration-100 ${
-            i > 0 ? "border-l border-line" : ""
-          } ${value === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
+          className={segmentItem(value === opt, i === 0)}
         >
           {cardVisibilityLabel(t, opt)}
         </button>
@@ -96,11 +103,9 @@ export function CardForm({
   const setVisOf = (key: CardFieldKey) => (v: Visibility) =>
     setVis((prev) => ({ ...prev, [key]: v }));
 
-  const inputCls =
-    "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-  const labelCls =
-    "text-2xs font-semibold tracking-[0.08em] text-gray";
-  const sectionCls = "rounded-md border border-line bg-panel p-4";
+  const inputCls = sharedInput;
+  const labelCls = sectionLabel;
+  const sectionCls = `${panel} p-4`;
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -247,7 +252,7 @@ export function CardForm({
         </section>
       ))}
 
-      {state.error && <p className="text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={fieldError}>{state.error}</p>}
       {state.saved && (
         <p className="text-xs text-gray">
           {state.warning
@@ -258,7 +263,7 @@ export function CardForm({
       <button
         type="submit"
         disabled={pending}
-        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className={primaryBtn}
       >
         {pending ? t.common.saving : t.common.save}
       </button>

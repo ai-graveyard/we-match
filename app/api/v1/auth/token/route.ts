@@ -1,5 +1,5 @@
 import { verifyCode } from "@/lib/auth";
-import { apiError, readJson } from "@/lib/api/auth";
+import { apiError, readJson, unknownJsonFields } from "@/lib/api/auth";
 import { guardPublicAuthRoute } from "@/lib/api/auth-public";
 import { createApiKey } from "@/lib/api-keys-service";
 import { getMailProvider, maskEmail } from "@/lib/mail";
@@ -20,6 +20,14 @@ export async function POST(request: Request) {
   const t = await getRequestDict();
   const body = await readJson(request);
   if (!body) return apiError(422, "bad_body", t.api.bodyNotObject);
+  const unknown = unknownJsonFields(body, ["email", "code", "name"]);
+  if (unknown.length > 0) {
+    return apiError(
+      422,
+      "unknown_fields",
+      t.api.unknownFields.replace("{fields}", unknown.join(", ")),
+    );
+  }
 
   const email = typeof body.email === "string" ? body.email : "";
   const code = typeof body.code === "string" ? body.code.trim() : "";

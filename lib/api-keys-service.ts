@@ -36,26 +36,34 @@ export async function createApiKey(
   if (!trimmed) return { error: t.apiKey.emptyName };
   if (trimmed.length > API_KEY_LIMITS.name)
     return { error: fmt(t.apiKey.nameTooLong, { max: API_KEY_LIMITS.name }) };
-  const [row] = await db
-    .select({ n: count() })
-    .from(apiKeys)
-    .where(eq(apiKeys.userId, userId));
-  if ((row?.n ?? 0) >= API_KEY_LIMITS.perUser) {
-    return {
-      error: fmt(t.apiKey.perUserLimit, { max: API_KEY_LIMITS.perUser }),
-    };
-  }
   const secret = `wm_${crypto.randomBytes(32).toString("base64url")}`;
-  await db
-    .insert(apiKeys)
-    .values({
-      userId,
-      name: trimmed,
-      key: hashApiKey(secret),
-      lastFour: secret.slice(-4),
-      scopes: ["read", "write"],
-    });
-  return { secret };
+  // 数量检查和插入必须共用一个 IMMEDIATE 事务。否则两次并发签发都可能
+  // 在 count=2 时通过，最终突破每用户 3 把的硬上限。
+  return db.transaction(
+    (tx) => {
+      const row = tx
+        .select({ n: count() })
+        .from(apiKeys)
+        .where(eq(apiKeys.userId, userId))
+        .all()[0];
+      if ((row?.n ?? 0) >= API_KEY_LIMITS.perUser) {
+        return {
+          error: fmt(t.apiKey.perUserLimit, { max: API_KEY_LIMITS.perUser }),
+        };
+      }
+      tx.insert(apiKeys)
+        .values({
+          userId,
+          name: trimmed,
+          key: hashApiKey(secret),
+          lastFour: secret.slice(-4),
+          scopes: ["read", "write"],
+        })
+        .run();
+      return { secret };
+    },
+    { behavior: "immediate" },
+  );
 }
 
 // 硬删除，即刻失效；只能删自己的

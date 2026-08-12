@@ -16,7 +16,7 @@ export function apiError(status: number, code: string, message: string) {
   return Response.json({ error: { code, message } }, { status });
 }
 
-export type ApiAuth = { user: User };
+export type ApiAuth = { user: User; apiKeyId: number };
 
 export async function authenticate(request: Request): Promise<ApiAuth | Response> {
   // 调用方多半是 Agent，没有 cookie，语言按 Accept-Language 判定
@@ -75,7 +75,19 @@ export async function authenticate(request: Request): Promise<ApiAuth | Response
   }
 
   // 权限已收敛为单一读写档；历史只读 Key 也按完整读写权限处理。
-  return { user: row.user };
+  return { user: row.user, apiKeyId: row.key.id };
+}
+
+/**
+ * Agent 调用最怕“拼错字段但服务端仍返回成功”。所有开放 API 的 JSON
+ * 入口都用这个白名单检查；未知字段必须显式报错，不能静默降级。
+ */
+export function unknownJsonFields(
+  body: Record<string, unknown>,
+  allowed: readonly string[],
+): string[] {
+  const allowedSet = new Set(allowed);
+  return Object.keys(body).filter((key) => !allowedSet.has(key));
 }
 
 // 读取 JSON 对象 body；不合法返回 null（空 body 视为 {}，需求接口用于快速续期）

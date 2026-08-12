@@ -6,13 +6,17 @@ import {
   type OrgFormState,
 } from "@/app/actions/orgs";
 import { ORG_LIMITS } from "@/lib/orgs";
+import { VisibilityPicker } from "@/components/org-forms";
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
-import { orgVisibilityLabel } from "@/lib/i18n/labels";
-
-const inputCls =
-  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
+import {
+  fieldError,
+  input as inputCls,
+  panel,
+  primaryBtn,
+  sectionLabel as labelCls,
+  textarea as textareaCls,
+} from "@/lib/ui";
 
 export function CreateOrgForm() {
   const t = useDict();
@@ -25,7 +29,7 @@ export function CreateOrgForm() {
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-4 rounded-md border border-line bg-panel p-4"
+      className={`flex flex-col gap-4 ${panel} p-4`}
     >
       <div>
         <label htmlFor="org-name" className={`${labelCls} mb-1 block`}>
@@ -49,46 +53,19 @@ export function CreateOrgForm() {
           id="org-desc"
           name="description"
           rows={4}
-          className={`${inputCls} h-auto resize-y py-2`}
+          className={textareaCls}
           maxLength={ORG_LIMITS.description}
         />
       </div>
 
       <div>
         <span className={`${labelCls} mb-1 block`}>{t.org.formType}</span>
-        <div className="inline-flex overflow-hidden rounded-sm border border-line">
-          {(["private", "public"] as const).map((option, index) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setVisibility(option)}
-              className={`px-3 py-1.5 text-xs transition-colors duration-100 ${
-                index > 0 ? "border-l border-line" : ""
-              } ${
-                visibility === option
-                  ? "bg-ink font-semibold text-panel"
-                  : "text-gray hover:text-ink"
-              }`}
-            >
-              {orgVisibilityLabel(t, option)}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-2xs text-gray">
-          {visibility === "public"
-            ? t.org.formPublicHint
-            : t.org.formPrivateHint}
-        </p>
-        <input type="hidden" name="visibility" value={visibility} />
+        <VisibilityPicker value={visibility} onChange={setVisibility} />
       </div>
 
-      {state.error && <p className="text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={fieldError}>{state.error}</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className={primaryBtn}>
         {pending ? t.common.saving : t.common.save}
       </button>
     </form>

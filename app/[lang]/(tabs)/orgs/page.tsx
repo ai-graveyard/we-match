@@ -1,4 +1,4 @@
-import { Search, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import { and } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -7,6 +7,8 @@ import { getSessionUser } from "@/lib/auth";
 import { ApplyByCodeForm } from "@/components/org-forms";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState, ListEnd } from "@/components/list-states";
+import { SearchField } from "@/components/search-field";
+import { panel } from "@/lib/ui";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { pageTitle } from "@/lib/i18n/metadata";
 import { LocaleLink } from "@/lib/i18n/link";
@@ -66,20 +68,14 @@ export default async function OrgPlazaPage({
       )}
 
       <div className="mt-4">
-        <form action={localePath(locale, "/orgs")} className="relative">
-          <Search
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray"
-            aria-hidden
-          />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder={t.org.plazaSearchPlaceholder}
-            className="h-10 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
-          />
-        </form>
+        <SearchField
+          action={localePath(locale, "/orgs")}
+          name="q"
+          defaultValue={q}
+          placeholder={t.org.plazaSearchPlaceholder}
+          label={t.plaza.searchLabel}
+          className="w-full"
+        />
       </div>
 
       {list.length === 0 ? (
@@ -88,7 +84,7 @@ export default async function OrgPlazaPage({
         </EmptyState>
       ) : (
         <>
-        <div className="mt-3 rounded-md border border-line bg-panel">
+        <div className={`mt-3 ${panel}`}>
           {list.map(({ org, memberCount }, i) => (
             <LocaleLink
               key={org.id}

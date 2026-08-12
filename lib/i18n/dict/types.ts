@@ -9,7 +9,7 @@ import type { zhLegal } from "@/lib/i18n/dict/zh.legal";
 /** 前台界面，随 I18nProvider 下发到客户端组件 */
 export type UiDict = typeof zh;
 
-/** Server Action / Route Handler / 短信的文案，只在服务端用 */
+/** Server Action / Route Handler / 邮件的文案，只在服务端用 */
 export type ServerDict = typeof zhServer;
 
 /** 管理后台，只在 /admin 下发 */

@@ -13,6 +13,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
       BETA_MODE: ${BETA_MODE:-}
+      SITE_ORIGIN: ${SITE_ORIGIN:-https://wematch.v2ai.org}
     volumes:
       - we-match-data:/app/data
       - we-match-backups:/app/backups

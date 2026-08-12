@@ -6,6 +6,7 @@ import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
 import { statusLabel, typeLabel, typeShort } from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
+import { badge } from "@/lib/ui";
 
 export async function TypeBadge({ type }: { type: Need["type"] }) {
   const t = await getDict();
@@ -34,7 +35,7 @@ export async function StatusBadge({
     ? t.need.statusExpired
     : statusLabel(t, need.status);
   return (
-    <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+    <span className={badge}>
       {label}
     </span>
   );

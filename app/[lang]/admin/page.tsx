@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { count, desc, eq, gt, like } from "drizzle-orm";
+import { count, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   analyticsEvents,
@@ -50,6 +50,9 @@ const ADMIN_VIEWS = [
 ] as const;
 
 type AdminView = (typeof ADMIN_VIEWS)[number];
+type SortDirection = "asc" | "desc";
+type SortOption = { value: string; label: string };
+type SortValue = Date | number | string | null | undefined;
 
 function viewLabel(t: AdminDict, view: AdminView) {
   const map: Record<AdminView, string> = {
@@ -65,7 +68,7 @@ function viewLabel(t: AdminDict, view: AdminView) {
   return map[view];
 }
 
-// 未配置真实短信通道时验证码只落在 verification_codes 表和服务端日志里，
+// 未配置真实邮件通道时验证码只落在 verification_codes 表和服务端日志里，
 // 这里把表内的最近记录直接摆出来，免去登服务器翻日志
 const CODE_LIST_LIMIT = 100;
 
@@ -133,15 +136,76 @@ const tableActionButtonCls =
 const thCls =
   "whitespace-nowrap px-3 py-1.5 text-left text-3xs font-semibold tracking-[0.08em] text-gray";
 const tdCls = "px-3 py-1 align-middle text-xs";
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
-function adminHref(view: AdminView, page = 1, email = "") {
+function matchesQuery(query: string, values: unknown[]) {
+  if (!query) return true;
+  const haystack = values
+    .filter((value) => value !== null && value !== undefined)
+    .map((value) =>
+      typeof value === "object" ? JSON.stringify(value) : String(value),
+    )
+    .join(" ")
+    .toLocaleLowerCase();
+  return haystack.includes(query.toLocaleLowerCase());
+}
+
+function sortRows<T>(
+  rows: T[],
+  valueOf: (row: T) => SortValue,
+  direction: SortDirection,
+  locale: string,
+) {
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...rows].sort((left, right) => {
+    const leftValue = valueOf(left);
+    const rightValue = valueOf(right);
+    const leftMissing = leftValue === null || leftValue === undefined;
+    const rightMissing = rightValue === null || rightValue === undefined;
+    if (leftMissing && rightMissing) return 0;
+    if (leftMissing) return 1;
+    if (rightMissing) return -1;
+    const normalizedLeft =
+      leftValue instanceof Date ? leftValue.getTime() : leftValue;
+    const normalizedRight =
+      rightValue instanceof Date ? rightValue.getTime() : rightValue;
+    if (
+      typeof normalizedLeft === "number" &&
+      typeof normalizedRight === "number"
+    ) {
+      return (normalizedLeft - normalizedRight) * multiplier;
+    }
+    return (
+      String(normalizedLeft).localeCompare(String(normalizedRight), locale, {
+        numeric: true,
+        sensitivity: "base",
+      }) * multiplier
+    );
+  });
+}
+
+function adminHref(
+  view: AdminView,
+  {
+    page = 1,
+    query = "",
+    sort = "",
+    direction = "desc",
+  }: {
+    page?: number;
+    query?: string;
+    sort?: string;
+    direction?: SortDirection;
+  } = {},
+) {
   const params = new URLSearchParams();
   if (view !== "overview") params.set("view", view);
   if (page > 1) params.set("page", String(page));
-  if (email) params.set("email", email);
-  const query = params.toString();
-  return query ? `/admin?${query}` : "/admin";
+  if (query) params.set("q", query);
+  if (sort) params.set("sort", sort);
+  if (direction === "asc") params.set("dir", direction);
+  const search = params.toString();
+  return search ? `/admin?${search}` : "/admin";
 }
 
 function Section({
@@ -193,18 +257,117 @@ function DesktopTable({
   );
 }
 
+function TableControls({
+  t,
+  action,
+  view,
+  query,
+  sort,
+  defaultSort,
+  direction,
+  options,
+}: {
+  t: AdminDict;
+  action: string;
+  view: AdminView;
+  query: string;
+  sort: string;
+  defaultSort: string;
+  direction: SortDirection;
+  options: SortOption[];
+}) {
+  const controlCls =
+    "h-8 rounded-sm border border-line bg-panel px-2 text-xs focus:border-ink focus:outline-none";
+  const buttonCls =
+    "inline-flex h-8 shrink-0 items-center rounded-sm border border-ink bg-ink px-3 text-xs font-semibold text-panel transition-opacity duration-100 hover:opacity-80 active:translate-y-px";
+  const hasCustomSort = sort !== defaultSort || direction !== "desc";
+
+  return (
+    <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <form action={action} className="flex min-w-0 items-center gap-2 md:flex-1">
+        <input type="hidden" name="view" value={view} />
+        <input type="hidden" name="sort" value={sort} />
+        <input type="hidden" name="dir" value={direction} />
+        <input
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder={t.searchPlaceholder}
+          aria-label={t.searchLabel}
+          className={`${controlCls} min-w-0 flex-1 md:max-w-80`}
+        />
+        <button type="submit" className={buttonCls}>
+          {t.searchTable}
+        </button>
+        {query && (
+          <LocaleLink
+            href={adminHref(view, { sort, direction })}
+            className="shrink-0 text-xs text-gray hover:text-ink"
+          >
+            {t.clearSearch}
+          </LocaleLink>
+        )}
+      </form>
+
+      <form
+        action={action}
+        className="flex flex-wrap items-center gap-2 md:justify-end"
+      >
+        <input type="hidden" name="view" value={view} />
+        {query && <input type="hidden" name="q" value={query} />}
+        <select
+          name="sort"
+          defaultValue={sort}
+          aria-label={t.sortFieldLabel}
+          className={controlCls}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          name="dir"
+          defaultValue={direction}
+          aria-label={t.sortDirectionLabel}
+          className={controlCls}
+        >
+          <option value="desc">{t.sortDescending}</option>
+          <option value="asc">{t.sortAscending}</option>
+        </select>
+        <button type="submit" className={buttonCls}>
+          {t.sortTable}
+        </button>
+        {hasCustomSort && (
+          <LocaleLink
+            href={adminHref(view, { query })}
+            className="shrink-0 text-xs text-gray hover:text-ink"
+          >
+            {t.resetSort}
+          </LocaleLink>
+        )}
+      </form>
+    </div>
+  );
+}
+
 function Pagination({
   t,
   view,
   page,
   pageCount,
-  email = "",
+  query,
+  sort,
+  direction,
 }: {
   t: AdminDict;
   view: AdminView;
   page: number;
   pageCount: number;
-  email?: string;
+  query: string;
+  sort: string;
+  direction: SortDirection;
 }) {
   if (pageCount <= 1) return null;
 
@@ -219,7 +382,15 @@ function Pagination({
       className="mt-4 flex items-center justify-between gap-3"
     >
       {page > 1 ? (
-        <LocaleLink href={adminHref(view, page - 1, email)} className={linkCls}>
+        <LocaleLink
+          href={adminHref(view, {
+            page: page - 1,
+            query,
+            sort,
+            direction,
+          })}
+          className={linkCls}
+        >
           {t.prevPage}
         </LocaleLink>
       ) : (
@@ -229,7 +400,15 @@ function Pagination({
         {page} / {pageCount}
       </span>
       {page < pageCount ? (
-        <LocaleLink href={adminHref(view, page + 1, email)} className={linkCls}>
+        <LocaleLink
+          href={adminHref(view, {
+            page: page + 1,
+            query,
+            sort,
+            direction,
+          })}
+          className={linkCls}
+        >
           {t.nextPage}
         </LocaleLink>
       ) : (
@@ -298,15 +477,91 @@ export default async function AdminPage({
   const activeView: AdminView = ADMIN_VIEWS.includes(rawView as AdminView)
     ? (rawView as AdminView)
     : "overview";
+  const sortOptionsByView: Record<AdminView, SortOption[]> = {
+    overview: [],
+    reports: [
+      { value: "submittedAt", label: t.colSubmittedAt },
+      { value: "status", label: t.colStatus },
+      { value: "reason", label: t.colReason },
+      { value: "reporter", label: t.colReporter },
+      { value: "target", label: t.colTarget },
+    ],
+    users: [
+      { value: "registeredAt", label: t.colRegisteredAt },
+      { value: "nickname", label: t.colNickname },
+      { value: "email", label: t.colEmail },
+      { value: "needs", label: t.colNeeds },
+      { value: "orgs", label: t.colOrgs },
+      { value: "status", label: t.colStatus },
+    ],
+    needs: [
+      { value: "updatedAt", label: t.colUpdatedAt },
+      { value: "title", label: t.colTitle },
+      { value: "author", label: t.colAuthor },
+      { value: "type", label: t.colType },
+      { value: "scope", label: t.colScope },
+      { value: "status", label: t.colStatus },
+    ],
+    orgs: [
+      { value: "createdAt", label: t.colCreatedAt },
+      { value: "name", label: t.colName },
+      { value: "owner", label: t.colOwner },
+      { value: "members", label: t.colMemberCount },
+      { value: "type", label: t.colType },
+    ],
+    requests: [
+      { value: "appliedAt", label: t.colAppliedAt },
+      { value: "org", label: t.colOrgs },
+      { value: "applicant", label: t.colApplicant },
+      { value: "status", label: t.colStatus },
+      { value: "via", label: t.colVia },
+    ],
+    codes: [
+      { value: "requestedAt", label: t.colRequestedAt },
+      { value: "email", label: t.colEmail },
+      { value: "user", label: t.colUser },
+      { value: "status", label: t.colStatus },
+      { value: "expiresAt", label: t.colExpiresAt },
+      { value: "fails", label: t.colFailCount },
+    ],
+    audit: [
+      { value: "time", label: t.colTime },
+      { value: "actor", label: t.colActor },
+      { value: "action", label: t.colAction },
+      { value: "target", label: t.colTarget },
+    ],
+  };
+  const defaultSortByView: Record<AdminView, string> = {
+    overview: "",
+    reports: "submittedAt",
+    users: "registeredAt",
+    needs: "updatedAt",
+    orgs: "createdAt",
+    requests: "appliedAt",
+    codes: "requestedAt",
+    audit: "time",
+  };
+  const rawQuery = Array.isArray(rawParams.q)
+    ? rawParams.q[0]
+    : rawParams.q;
   const rawEmail = Array.isArray(rawParams.email)
     ? rawParams.email[0]
     : rawParams.email;
-  // 去掉 like 的通配符再查，避免 % 和 _ 被当成模式
-  const emailQuery = (rawEmail ?? "")
+  const query = (rawQuery ?? (activeView === "codes" ? rawEmail : "") ?? "")
     .trim()
-    .toLowerCase()
-    .replace(/[%_\\]/g, "")
-    .slice(0, 254);
+    .slice(0, 100);
+  const rawSort = Array.isArray(rawParams.sort)
+    ? rawParams.sort[0]
+    : rawParams.sort;
+  const sortOptions = sortOptionsByView[activeView];
+  const defaultSort = defaultSortByView[activeView];
+  const sort = sortOptions.some((option) => option.value === rawSort)
+    ? rawSort!
+    : defaultSort;
+  const rawDirection = Array.isArray(rawParams.dir)
+    ? rawParams.dir[0]
+    : rawParams.dir;
+  const direction: SortDirection = rawDirection === "asc" ? "asc" : "desc";
 
   const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
   const allNeeds = await db
@@ -340,11 +595,6 @@ export default async function AdminPage({
       db
         .select()
         .from(verificationCodes)
-        .where(
-          emailQuery
-            ? like(verificationCodes.email, `%${emailQuery}%`)
-            : undefined,
-        )
         .orderBy(desc(verificationCodes.createdAt))
         .limit(CODE_LIST_LIMIT),
     ]);
@@ -401,6 +651,257 @@ export default async function AdminPage({
   const activeCodeCount = recentCodes.filter(
     (record) => codeState(record) === "active",
   ).length;
+  const userDisplayStatus = (user: (typeof allUsers)[number]) =>
+    user.id === viewer.id
+      ? t.userStatusAdmin
+      : user.status === "active"
+        ? t.userStatusActive
+        : user.status === "deleted"
+          ? t.userStatusDeleted
+          : t.userStatusSuspended;
+  const needDisplayStatus = (need: (typeof allNeeds)[number]["need"]) =>
+    need.moderationStatus === "hidden"
+      ? t.needHidden
+      : isExpired(need)
+        ? t.needExpired
+        : statusLabel(ui, need.status);
+  const filteredReports = sortRows(
+    allReports.filter((report) => {
+      const reporter = report.reporterId
+        ? userById.get(report.reporterId)
+        : null;
+      return matchesQuery(query, [
+        report.id,
+        report.targetType,
+        report.targetId,
+        report.reason,
+        reportReasonLabel(t, report.reason),
+        reporter?.nickname,
+        reporter?.loginEmail,
+        report.details,
+        report.status,
+        reportStatusLabel(t, report.status),
+      ]);
+    }),
+    (report) => {
+      switch (sort) {
+        case "status":
+          return reportStatusLabel(t, report.status);
+        case "reason":
+          return reportReasonLabel(t, report.reason);
+        case "reporter":
+          return report.reporterId
+            ? userById.get(report.reporterId)?.nickname
+            : t.reportAnonymous;
+        case "target":
+          return `${report.targetType}-${report.targetId}`;
+        default:
+          return report.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredUsers = sortRows(
+    allUsers.filter((user) =>
+      matchesQuery(query, [
+        user.id,
+        user.nickname,
+        user.loginEmail,
+        user.city,
+        user.tags,
+        user.status,
+        userDisplayStatus(user),
+      ]),
+    ),
+    (user) => {
+      switch (sort) {
+        case "nickname":
+          return user.nickname;
+        case "email":
+          return user.loginEmail;
+        case "needs":
+          return needCountByUser.get(user.id) ?? 0;
+        case "orgs":
+          return orgCountByUser.get(user.id) ?? 0;
+        case "status":
+          return userDisplayStatus(user);
+        default:
+          return user.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredNeeds = sortRows(
+    allNeeds.filter(({ need, author, org }) =>
+      matchesQuery(query, [
+        need.id,
+        need.type,
+        typeLabel(ui, need.type),
+        need.title,
+        need.description,
+        author.nickname,
+        author.loginEmail,
+        org?.name ?? t.needScopePlaza,
+        need.status,
+        need.moderationStatus,
+        needDisplayStatus(need),
+        need.tags,
+      ]),
+    ),
+    ({ need, author, org }) => {
+      switch (sort) {
+        case "title":
+          return need.title;
+        case "author":
+          return author.nickname;
+        case "type":
+          return typeLabel(ui, need.type);
+        case "scope":
+          return org?.name ?? t.needScopePlaza;
+        case "status":
+          return needDisplayStatus(need);
+        default:
+          return need.updatedAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredOrgs = sortRows(
+    allOrgs.filter(({ org, owner }) =>
+      matchesQuery(query, [
+        org.id,
+        org.name,
+        org.description,
+        org.visibility,
+        orgVisibilityLabel(ui, org.visibility),
+        owner.nickname,
+        owner.loginEmail,
+        org.inviteCode,
+      ]),
+    ),
+    ({ org, owner }) => {
+      switch (sort) {
+        case "name":
+          return org.name;
+        case "owner":
+          return owner.nickname;
+        case "members":
+          return memberCountByOrg.get(org.id) ?? 0;
+        case "type":
+          return orgVisibilityLabel(ui, org.visibility);
+        default:
+          return org.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredRequests = sortRows(
+    allRequests.filter(({ req, applicant, org }) =>
+      matchesQuery(query, [
+        req.id,
+        org.name,
+        applicant.nickname,
+        applicant.loginEmail,
+        req.via,
+        requestViaLabel(ui, req.via),
+        req.status,
+        requestStatusLabel(t, req.status),
+      ]),
+    ),
+    ({ req, applicant, org }) => {
+      switch (sort) {
+        case "org":
+          return org.name;
+        case "applicant":
+          return applicant.nickname;
+        case "status":
+          return requestStatusLabel(t, req.status);
+        case "via":
+          return requestViaLabel(ui, req.via);
+        default:
+          return req.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredCodes = sortRows(
+    recentCodes.filter((record) => {
+      const state = codeState(record);
+      const owner = userByEmail.get(record.email);
+      return matchesQuery(query, [
+        record.id,
+        record.email,
+        owner?.nickname,
+        record.code,
+        state,
+        codeStateLabel(t, state),
+        record.ip,
+        record.failCount,
+      ]);
+    }),
+    (record) => {
+      const owner = userByEmail.get(record.email);
+      switch (sort) {
+        case "email":
+          return record.email;
+        case "user":
+          return owner?.nickname ?? t.codeUnregistered;
+        case "status":
+          return codeStateLabel(t, codeState(record));
+        case "expiresAt":
+          return record.expiresAt;
+        case "fails":
+          return record.failCount;
+        default:
+          return record.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredAudit = sortRows(
+    recentAudit.filter((log) => {
+      const actor = log.actorId ? userById.get(log.actorId) : null;
+      return matchesQuery(query, [
+        log.id,
+        actor?.nickname ?? t.auditSystem,
+        actor?.loginEmail,
+        log.action,
+        log.targetType,
+        log.targetId,
+        log.metadata,
+      ]);
+    }),
+    (log) => {
+      const actor = log.actorId ? userById.get(log.actorId) : null;
+      switch (sort) {
+        case "actor":
+          return actor?.nickname ?? t.auditSystem;
+        case "action":
+          return log.action;
+        case "target":
+          return `${log.targetType}-${log.targetId ?? ""}`;
+        default:
+          return log.createdAt;
+      }
+    },
+    direction,
+    locale,
+  );
+  const filteredPendingReportCount = filteredReports.filter(
+    (report) => report.status === "pending",
+  ).length;
+  const filteredPendingRequestCount = filteredRequests.filter(
+    ({ req }) => req.status === "pending",
+  ).length;
+  const filteredActiveCodeCount = filteredCodes.filter(
+    (record) => codeState(record) === "active",
+  ).length;
   const viewCounts: Partial<Record<AdminView, number>> = {
     reports: pendingReportCount,
     users: allUsers.length,
@@ -412,13 +913,13 @@ export default async function AdminPage({
   };
   const itemCountByView: Record<AdminView, number> = {
     overview: 0,
-    reports: allReports.length,
-    users: allUsers.length,
-    needs: allNeeds.length,
-    orgs: allOrgs.length,
-    requests: allRequests.length,
-    codes: recentCodes.length,
-    audit: recentAudit.length,
+    reports: filteredReports.length,
+    users: filteredUsers.length,
+    needs: filteredNeeds.length,
+    orgs: filteredOrgs.length,
+    requests: filteredRequests.length,
+    codes: filteredCodes.length,
+    audit: filteredAudit.length,
   };
   const rawPage = Array.isArray(rawParams.page)
     ? rawParams.page[0]
@@ -432,13 +933,20 @@ export default async function AdminPage({
     ? Math.min(Math.max(parsedPage, 1), pageCount)
     : 1;
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleReports = allReports.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleUsers = allUsers.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleNeeds = allNeeds.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleOrgs = allOrgs.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleRequests = allRequests.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleCodes = recentCodes.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleAudit = recentAudit.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleReports = filteredReports.slice(
+    pageStart,
+    pageStart + PAGE_SIZE,
+  );
+  const visibleUsers = filteredUsers.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleNeeds = filteredNeeds.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleOrgs = filteredOrgs.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRequests = filteredRequests.slice(
+    pageStart,
+    pageStart + PAGE_SIZE,
+  );
+  const visibleCodes = filteredCodes.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleAudit = filteredAudit.slice(pageStart, pageStart + PAGE_SIZE);
+  const rowNumber = (index: number) => pageStart + index + 1;
 
   return (
     <div>
@@ -529,15 +1037,28 @@ export default async function AdminPage({
 
       {activeView === "reports" && (
         <Section
-          title={fmt(t.reportsTitle, { n: allReports.length })}
-          description={fmt(t.reportsDesc, { n: pendingReportCount })}
+          title={fmt(t.reportsTitle, { n: filteredReports.length })}
+          description={fmt(t.reportsDesc, {
+            n: filteredPendingReportCount,
+          })}
         >
-          {allReports.length === 0 ? (
-            <EmptyList>{t.reportsEmpty}</EmptyList>
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="reports"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredReports.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.reportsEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colTarget,
                   t.colReason,
@@ -548,7 +1069,7 @@ export default async function AdminPage({
                   t.colActions,
                 ]}
               >
-                {visibleReports.map((report) => {
+                {visibleReports.map((report, index) => {
                   const reporter = report.reporterId
                     ? userById.get(report.reporterId)
                     : null;
@@ -561,6 +1082,9 @@ export default async function AdminPage({
                       key={report.id}
                       className="border-b border-line last:border-b-0"
                     >
+                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                        {rowNumber(index)}
+                      </td>
                       <td className={`${tdCls} font-mono`}>{report.id}</td>
                       <td className={tdCls}>
                         <LocaleLink
@@ -626,7 +1150,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleReports.map((report) => {
+                {visibleReports.map((report, index) => {
                   const reporter = report.reporterId
                     ? userById.get(report.reporterId)
                     : null;
@@ -643,7 +1167,7 @@ export default async function AdminPage({
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="text-3xs font-mono text-gray">
-                            REPORT #{report.id}
+                            {t.colNumber} {rowNumber(index)} · REPORT #{report.id}
                           </div>
                           <LocaleLink
                             href={targetHref}
@@ -703,6 +1227,9 @@ export default async function AdminPage({
                 view="reports"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -711,15 +1238,26 @@ export default async function AdminPage({
 
       {activeView === "users" && (
         <Section
-          title={fmt(t.usersTitle, { n: allUsers.length })}
+          title={fmt(t.usersTitle, { n: filteredUsers.length })}
           description={t.usersDesc}
         >
-          {allUsers.length === 0 ? (
-            <EmptyList>{t.usersEmpty}</EmptyList>
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="users"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredUsers.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.usersEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colNickname,
                   t.colEmail,
@@ -732,11 +1270,14 @@ export default async function AdminPage({
                   t.colActions,
                 ]}
               >
-                {visibleUsers.map((user) => (
+                {visibleUsers.map((user, index) => (
                   <tr
                     key={user.id}
                     className="border-b border-line last:border-b-0"
                   >
+                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      {rowNumber(index)}
+                    </td>
                     <td className={`${tdCls} font-mono`}>{user.id}</td>
                     <td className={tdCls}>
                       <LocaleLink
@@ -808,7 +1349,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleUsers.map((user) => (
+                {visibleUsers.map((user, index) => (
                   <article
                     key={user.id}
                     className="overflow-hidden rounded-md border border-line bg-panel"
@@ -817,7 +1358,7 @@ export default async function AdminPage({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-3xs font-mono text-gray">
-                          USER #{user.id}
+                          {t.colNumber} {rowNumber(index)} · USER #{user.id}
                         </div>
                         <LocaleLink
                           href={`/u/${user.id}`}
@@ -878,6 +1419,9 @@ export default async function AdminPage({
                 view="users"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -886,15 +1430,26 @@ export default async function AdminPage({
 
       {activeView === "needs" && (
         <Section
-          title={fmt(t.needsTitle, { n: allNeeds.length })}
+          title={fmt(t.needsTitle, { n: filteredNeeds.length })}
           description={t.needsDesc}
         >
-          {allNeeds.length === 0 ? (
-            <EmptyList>{t.needsEmpty}</EmptyList>
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="needs"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredNeeds.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.needsEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colType,
                   t.colTitle,
@@ -906,11 +1461,14 @@ export default async function AdminPage({
                   t.colActions,
                 ]}
               >
-                {visibleNeeds.map(({ need, author, org }) => (
+                {visibleNeeds.map(({ need, author, org }, index) => (
                   <tr
                     key={need.id}
                     className="border-b border-line last:border-b-0"
                   >
+                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      {rowNumber(index)}
+                    </td>
                     <td className={`${tdCls} font-mono`}>{need.id}</td>
                     <td className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
                       {typeLabel(ui, need.type)}
@@ -973,7 +1531,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleNeeds.map(({ need, author, org }) => (
+                {visibleNeeds.map(({ need, author, org }, index) => (
                   <article
                     key={need.id}
                     className="overflow-hidden rounded-md border border-line bg-panel"
@@ -982,7 +1540,7 @@ export default async function AdminPage({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-3xs font-mono text-gray">
-                          {typeLabel(ui, need.type)} #{need.id}
+                          {t.colNumber} {rowNumber(index)} · {typeLabel(ui, need.type)} #{need.id}
                         </div>
                         <LocaleLink
                           href={`/needs/${need.id}`}
@@ -1042,6 +1600,9 @@ export default async function AdminPage({
                 view="needs"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -1050,15 +1611,26 @@ export default async function AdminPage({
 
       {activeView === "orgs" && (
         <Section
-          title={fmt(t.orgsTitle, { n: allOrgs.length })}
+          title={fmt(t.orgsTitle, { n: filteredOrgs.length })}
           description={t.orgsDesc}
         >
-          {allOrgs.length === 0 ? (
-            <EmptyList>{t.orgsEmpty}</EmptyList>
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="orgs"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredOrgs.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.orgsEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colName,
                   t.colType,
@@ -1068,11 +1640,14 @@ export default async function AdminPage({
                   t.colCreatedAt,
                 ]}
               >
-                {visibleOrgs.map(({ org, owner }) => (
+                {visibleOrgs.map(({ org, owner }, index) => (
                   <tr
                     key={org.id}
                     className="border-b border-line last:border-b-0"
                   >
+                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      {rowNumber(index)}
+                    </td>
                     <td className={`${tdCls} font-mono`}>{org.id}</td>
                     <td className={tdCls}>
                       <LocaleLink
@@ -1102,7 +1677,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleOrgs.map(({ org, owner }) => (
+                {visibleOrgs.map(({ org, owner }, index) => (
                   <article
                     key={org.id}
                     className="rounded-md border border-line bg-panel p-4"
@@ -1110,7 +1685,7 @@ export default async function AdminPage({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-3xs font-mono text-gray">
-                        ORG #{org.id}
+                        {t.colNumber} {rowNumber(index)} · ORG #{org.id}
                       </div>
                       <LocaleLink
                         href={`/orgs/${org.id}`}
@@ -1141,6 +1716,9 @@ export default async function AdminPage({
                 view="orgs"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -1149,15 +1727,28 @@ export default async function AdminPage({
 
       {activeView === "requests" && (
         <Section
-          title={fmt(t.requestsTitle, { n: allRequests.length })}
-          description={fmt(t.requestsDesc, { n: pendingRequestCount })}
+          title={fmt(t.requestsTitle, { n: filteredRequests.length })}
+          description={fmt(t.requestsDesc, {
+            n: filteredPendingRequestCount,
+          })}
         >
-          {allRequests.length === 0 ? (
-            <EmptyList>{t.requestsEmpty}</EmptyList>
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="requests"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredRequests.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.requestsEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colOrgs,
                   t.colApplicant,
@@ -1167,11 +1758,14 @@ export default async function AdminPage({
                   t.colHandledAt,
                 ]}
               >
-                {visibleRequests.map(({ req, applicant, org }) => (
+                {visibleRequests.map(({ req, applicant, org }, index) => (
                   <tr
                     key={req.id}
                     className="border-b border-line last:border-b-0"
                   >
+                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      {rowNumber(index)}
+                    </td>
                     <td className={`${tdCls} font-mono`}>{req.id}</td>
                     <td className={tdCls}>
                       <LocaleLink
@@ -1201,7 +1795,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleRequests.map(({ req, applicant, org }) => (
+                {visibleRequests.map(({ req, applicant, org }, index) => (
                   <article
                     key={req.id}
                     className="rounded-md border border-line bg-panel p-4"
@@ -1209,7 +1803,7 @@ export default async function AdminPage({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-3xs font-mono text-gray">
-                        REQUEST #{req.id}
+                        {t.colNumber} {rowNumber(index)} · REQUEST #{req.id}
                       </div>
                       <LocaleLink
                         href={`/orgs/${org.id}`}
@@ -1238,6 +1832,9 @@ export default async function AdminPage({
                 view="requests"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -1246,53 +1843,34 @@ export default async function AdminPage({
 
       {activeView === "codes" && (
         <Section
-          title={fmt(t.codesTitle, { n: recentCodes.length })}
-          description={`${
-            emailQuery
-              ? fmt(t.codesDescFiltered, { email: emailQuery })
-              : fmt(t.codesDescRecent, { n: CODE_LIST_LIMIT })
-          }${fmt(t.codesDescSuffix, { n: activeCodeCount })}`}
+          title={fmt(t.codesTitle, { n: filteredCodes.length })}
+          description={`${fmt(t.codesDescRecent, {
+            n: CODE_LIST_LIMIT,
+          })}${fmt(t.codesDescSuffix, { n: filteredActiveCodeCount })}`}
         >
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <form action="/admin" className="flex flex-1 items-center gap-2">
-              <input type="hidden" name="view" value="codes" />
-              <input
-                type="search"
-                name="email"
-                inputMode="numeric"
-                defaultValue={emailQuery}
-                placeholder={t.codesFilterPlaceholder}
-                aria-label={t.codesFilterLabel}
-                className="h-8 min-w-0 flex-1 rounded-sm border border-line bg-panel px-3 font-mono text-xs placeholder:font-sans placeholder:text-gray focus:border-ink focus:outline-none md:max-w-64"
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <TableControls
+                t={t}
+                action={localePath(locale, "/admin")}
+                view="codes"
+                query={query}
+                sort={sort}
+                defaultSort={defaultSort}
+                direction={direction}
+                options={sortOptions}
               />
-              <button
-                type="submit"
-                className="inline-flex h-8 shrink-0 items-center rounded-sm border border-line bg-panel px-3 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px"
-              >
-                {t.codesFilter}
-              </button>
-              {emailQuery && (
-                <LocaleLink
-                  href={adminHref("codes")}
-                  className="shrink-0 text-xs text-gray hover:text-ink"
-                >
-                  {t.codesClear}
-                </LocaleLink>
-              )}
-            </form>
+            </div>
             <CodeAutoRefresh />
           </div>
 
-          {recentCodes.length === 0 ? (
-            <EmptyList>
-              {emailQuery
-                ? fmt(t.codesEmptyFiltered, { email: emailQuery })
-                : t.codesEmpty}
-            </EmptyList>
+          {filteredCodes.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.codesEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colEmail,
                   t.colUser,
                   t.colCode,
@@ -1303,7 +1881,7 @@ export default async function AdminPage({
                   t.colRequestedAt,
                 ]}
               >
-                {visibleCodes.map((record) => {
+                {visibleCodes.map((record, index) => {
                   const state = codeState(record);
                   const owner = userByEmail.get(record.email);
                   return (
@@ -1311,6 +1889,9 @@ export default async function AdminPage({
                       key={record.id}
                       className="border-b border-line last:border-b-0"
                     >
+                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                        {rowNumber(index)}
+                      </td>
                       <td className={`${tdCls} whitespace-nowrap font-mono`}>
                         {record.email}
                       </td>
@@ -1356,7 +1937,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <ItemGrid>
-                {visibleCodes.map((record) => {
+                {visibleCodes.map((record, index) => {
                   const state = codeState(record);
                   const owner = userByEmail.get(record.email);
                   return (
@@ -1366,6 +1947,9 @@ export default async function AdminPage({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
+                          <div className="text-3xs font-mono text-gray">
+                            {t.colNumber} {rowNumber(index)}
+                          </div>
                           <div className="font-mono text-sm font-semibold">
                             {record.email}
                           </div>
@@ -1403,7 +1987,9 @@ export default async function AdminPage({
                 view="codes"
                 page={currentPage}
                 pageCount={pageCount}
-                email={emailQuery}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}
@@ -1411,13 +1997,27 @@ export default async function AdminPage({
       )}
 
       {activeView === "audit" && (
-        <Section title={t.auditTitle} description={t.auditDesc}>
-          {recentAudit.length === 0 ? (
-            <EmptyList>{t.auditEmpty}</EmptyList>
+        <Section
+          title={fmt(t.auditTitle, { n: filteredAudit.length })}
+          description={t.auditDesc}
+        >
+          <TableControls
+            t={t}
+            action={localePath(locale, "/admin")}
+            view="audit"
+            query={query}
+            sort={sort}
+            defaultSort={defaultSort}
+            direction={direction}
+            options={sortOptions}
+          />
+          {filteredAudit.length === 0 ? (
+            <EmptyList>{query ? t.noMatchingRows : t.auditEmpty}</EmptyList>
           ) : (
             <>
               <DesktopTable
                 headers={[
+                  t.colNumber,
                   t.colId,
                   t.colActor,
                   t.colAction,
@@ -1426,13 +2026,16 @@ export default async function AdminPage({
                   t.colTime,
                 ]}
               >
-                {visibleAudit.map((log) => {
+                {visibleAudit.map((log, index) => {
                   const actor = log.actorId ? userById.get(log.actorId) : null;
                   return (
                     <tr
                       key={log.id}
                       className="border-b border-line last:border-b-0"
                     >
+                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                        {rowNumber(index)}
+                      </td>
                       <td className={`${tdCls} font-mono`}>{log.id}</td>
                       <td className={`${tdCls} whitespace-nowrap`}>
                         {actor?.nickname ?? t.auditSystem}
@@ -1460,7 +2063,7 @@ export default async function AdminPage({
               </DesktopTable>
 
               <div className="overflow-hidden rounded-md border border-line bg-panel md:hidden">
-                {visibleAudit.map((log) => {
+                {visibleAudit.map((log, index) => {
                   const actor = log.actorId ? userById.get(log.actorId) : null;
                   return (
                     <article
@@ -1469,6 +2072,9 @@ export default async function AdminPage({
                     >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
+                        <div className="text-3xs font-mono text-gray">
+                          {t.colNumber} {rowNumber(index)}
+                        </div>
                         <div className="break-all font-mono text-xs font-semibold">
                           {log.action}
                         </div>
@@ -1500,6 +2106,9 @@ export default async function AdminPage({
                 view="audit"
                 page={currentPage}
                 pageCount={pageCount}
+                query={query}
+                sort={sort}
+                direction={direction}
               />
             </>
           )}

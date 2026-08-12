@@ -6,6 +6,7 @@ import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
 import { orgRoleEntryLabel, orgVisibilityLabel } from "@/lib/i18n/labels";
 import type { OrgRole } from "@/lib/orgs";
+import { badge, panel } from "@/lib/ui";
 
 export async function OrgOverviewCard({
   org,
@@ -49,7 +50,7 @@ export async function OrgOverviewCard({
   ];
 
   return (
-    <article className="overflow-hidden rounded-md border border-line bg-panel">
+    <article className={`overflow-hidden ${panel}`}>
       <div className="p-4">
         <div className="flex items-center gap-2">
           <LocaleLink
@@ -58,7 +59,7 @@ export async function OrgOverviewCard({
           >
             {org.name}
           </LocaleLink>
-          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+          <span className={badge}>
             {orgVisibilityLabel(t, org.visibility)}
           </span>
           <LocaleLink

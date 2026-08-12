@@ -6,6 +6,7 @@ import { CopyButton } from "@/components/copy-button";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/fmt";
 import { relativeTime } from "@/lib/i18n/labels";
+import { panel, sectionLabel } from "@/lib/ui";
 
 export async function AgentAccessContent({
   apiKeys,
@@ -22,14 +23,14 @@ export async function AgentAccessContent({
       <p className="text-sm text-gray">{t.agent.intro}</p>
 
       <div className="mt-6 flex items-baseline justify-between">
-        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
+        <h2 className={sectionLabel}>
           {t.agent.apiKeyHeading}
         </h2>
         <span className="font-mono text-2xs text-gray">
           {apiKeys.length} / {API_KEY_LIMITS.perUser}
         </span>
       </div>
-      <div className="mt-2 rounded-md border border-line bg-panel">
+      <div className={`mt-2 ${panel}`}>
         {apiKeys.map((key, index) => (
           <ApiKeyRow
             key={key.id}
@@ -55,10 +56,10 @@ export async function AgentAccessContent({
       </div>
 
       <section className="mt-6">
-        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
+        <h2 className={sectionLabel}>
           {t.agent.installHeading}
         </h2>
-        <div className="mt-2 rounded-md border border-line bg-panel p-4 text-sm">
+        <div className={`mt-2 ${panel} p-4 text-sm`}>
           <p>{t.agent.installBody}</p>
           <div className="mt-2 flex items-center gap-1 rounded-sm bg-bg-3 px-2 py-1.5">
             <code className="min-w-0 flex-1 break-all font-mono text-2xs">

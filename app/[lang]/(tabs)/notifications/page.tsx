@@ -14,6 +14,7 @@ import { pageTitle } from "@/lib/i18n/metadata";
 import { localePath } from "@/lib/i18n/routing";
 import { relativeTime } from "@/lib/i18n/labels";
 import { notificationText } from "@/lib/notifications";
+import { panel, statusDot, statusDotOff, textBtn } from "@/lib/ui";
 
 export const generateMetadata = pageTitle((t) => t.notifications.metaTitle);
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function NotificationsPage() {
         <PageHeader title={t.notifications.metaTitle} />
         {unread > 0 && (
           <form action={markAllNotificationsReadAction}>
-            <button className="text-2xs text-gray underline">
+            <button className={`${textBtn} underline`}>
               {t.notifications.markAllRead}
             </button>
           </form>
@@ -49,7 +50,7 @@ export default async function NotificationsPage() {
         <EmptyState>{t.notifications.empty}</EmptyState>
       ) : (
         <>
-        <div className="mt-4 rounded-md border border-line bg-panel">
+        <div className={`mt-4 ${panel}`}>
           {list.map((item, index) => {
             const text = notificationText(serverDict, item);
             return (
@@ -62,9 +63,7 @@ export default async function NotificationsPage() {
               <input type="hidden" name="href" value={item.href ?? ""} />
               <button className="flex w-full items-start gap-3 p-4 text-left hover:bg-bg-3">
                 <span
-                  className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
-                    item.readAt ? "bg-line" : "bg-accent"
-                  }`}
+                  className={`${item.readAt ? statusDotOff : statusDot} mt-1.5`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">

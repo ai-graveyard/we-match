@@ -11,6 +11,14 @@ import {
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
 import { connectionStatusLabel } from "@/lib/i18n/labels";
+import {
+  badge,
+  fieldError,
+  panel,
+  primaryBtn,
+  secondaryBtn,
+  sectionLabel,
+} from "@/lib/ui";
 
 export type ConnectionStatus =
   | "pending"
@@ -37,11 +45,11 @@ export function InterestForm({ needId, label }: { needId: number; label: string 
     {},
   );
   return (
-    <form action={action} className="rounded-md border border-line bg-panel p-3">
+    <form action={action} className={`${panel} p-3`}>
       <input type="hidden" name="needId" value={needId} />
       <label
         htmlFor={`connection-message-${needId}`}
-        className="text-2xs font-semibold tracking-[0.08em] text-gray"
+        className={sectionLabel}
       >
         {t.contact.interestMessageLabel}
       </label>
@@ -53,12 +61,12 @@ export function InterestForm({ needId, label }: { needId: number; label: string 
         placeholder={t.contact.interestMessagePlaceholder}
         className="mt-1 w-full resize-none rounded-sm border border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-gray focus:border-ink"
       />
-      {state.error && <p className="mt-2 text-xs text-accent">{state.error}</p>}
+      {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
       <button
         type="submit"
         disabled={pending || !!state.ok}
-        className="mt-3 flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px disabled:opacity-60"
+        className={`${primaryBtn} mt-3 w-full`}
       >
         {pending ? t.common.submitting : label}
       </button>
@@ -81,12 +89,12 @@ export function ConnectionPanel({
 
   return (
     <section className="mt-4">
-      <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
+      <h2 className={sectionLabel}>
         {isOwner
           ? fmt(t.connection.ownerHeading, { n: rows.length })
           : t.connection.viewerHeading}
       </h2>
-      <div className="mt-2 rounded-md border border-line bg-panel">
+      <div className={`mt-2 ${panel}`}>
         {rows.map((row, index) => {
           const myConfirmed = isOwner ? row.ownerConfirmed : row.initiatorConfirmed;
           const otherConfirmed = isOwner
@@ -99,7 +107,7 @@ export function ConnectionPanel({
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{row.initiatorName}</span>
-                <span className="ml-auto rounded-sm bg-bg-3 px-1.5 py-0.5 font-mono text-3xs text-gray">
+                <span className={`${badge} ml-auto`}>
                   {connectionStatusLabel(t, row.status)}
                 </span>
               </div>
@@ -114,14 +122,14 @@ export function ConnectionPanel({
                   <form action={handleConnectionAction}>
                     <input type="hidden" name="connectionId" value={row.id} />
                     <input type="hidden" name="decision" value="reject" />
-                    <button className="h-11 w-full rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px">
+                    <button className={`${secondaryBtn} w-full`}>
                       {t.connection.reject}
                     </button>
                   </form>
                   <form action={handleConnectionAction}>
                     <input type="hidden" name="connectionId" value={row.id} />
                     <input type="hidden" name="decision" value="accept" />
-                    <button className="h-11 w-full rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px">
+                    <button className={`${primaryBtn} w-full`}>
                       {t.connection.accept}
                     </button>
                   </form>
@@ -149,7 +157,7 @@ export function ConnectionPanel({
                   {!myConfirmed && (
                     <form action={confirmConnectionCompletedAction} className="mt-2">
                       <input type="hidden" name="connectionId" value={row.id} />
-                      <button className="h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px">
+                      <button className={secondaryBtn}>
                         {t.connection.confirmDone}
                       </button>
                     </form>

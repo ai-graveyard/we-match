@@ -70,6 +70,7 @@ pnpm db:seed
 | `RESEND_API_KEY` | Resend API Key（`MAIL_PROVIDER=resend` 时必填） |
 | `MAIL_FROM` | 发信人，域名须已在 Resend 验证过，如 `We Match <noreply@wematch.v2ai.org>` |
 | `BETA_MODE` | 内测模式，验证码固定 `888888`。不填时按「没配 Resend = 还在内测」自动判定；`1` 强制开，`0` 强制关。**开着等于任何人可以登录成任何人**，正式对外前必须关掉 |
+| `SITE_ORIGIN` | 对外站点 origin。生产环境建议固定配置，防止 Agent 安装指令和告知邮件受 Host 头影响 |
 
 示例：
 

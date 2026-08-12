@@ -8,11 +8,13 @@ import {
 } from "@/lib/card";
 import { CopyButton } from "@/components/copy-button";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
+import { MaskedEmail } from "@/components/masked-email";
 import { ShareCard } from "@/components/share-card";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
+import { panel, sectionLabel, tag as tagCls } from "@/lib/ui";
 
 function VisibilityLabel({
   t,
@@ -56,7 +58,7 @@ export async function MeCardOverview({
 
   return (
     <>
-      <section className="rounded-md border border-line bg-panel p-4">
+      <section className={`${panel} p-4`}>
         <div className="flex items-start gap-3">
           <DefaultUserAvatar className="size-12" iconSize={22} />
           <div className="min-w-0 flex-1">
@@ -75,6 +77,11 @@ export async function MeCardOverview({
                 </>
               )}
             </div>
+            <MaskedEmail
+              email={user.loginEmail}
+              showLabel={t.card.showEmail}
+              hideLabel={t.card.hideEmail}
+            />
             {user.bio && <p className="mt-1 text-sm">{user.bio}</p>}
           </div>
           <ShareCard
@@ -94,7 +101,7 @@ export async function MeCardOverview({
             {user.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
+                className={tagCls()}
               >
                 {tag}
               </span>
@@ -121,9 +128,9 @@ export async function MeCardOverview({
       {groups.map((group) => (
         <section
           key={group.title}
-          className="mt-4 rounded-md border border-line bg-panel"
+          className={`mt-4 ${panel}`}
         >
-          <h2 className="border-b border-line px-4 py-2 text-2xs font-semibold tracking-[0.08em] text-gray">
+          <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
             {group.title}
           </h2>
           {group.items.map((item, index) => (

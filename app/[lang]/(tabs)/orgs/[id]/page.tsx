@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ChevronRight, Search, Users, X } from "lucide-react";
+import { ChevronRight, Users, X } from "lucide-react";
 import { and, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { joinRequests, orgMembers, orgs, users } from "@/lib/db/schema";
@@ -21,6 +21,7 @@ import {
   type PendingRequest,
 } from "@/components/org-admin";
 import { PageHeader } from "@/components/page-header";
+import { SearchField } from "@/components/search-field";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
@@ -29,9 +30,15 @@ import { orgVisibilityLabel } from "@/lib/i18n/labels";
 import { uiDict } from "@/lib/i18n/dict";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
 import { BRAND_NAME } from "@/lib/brand";
-
-const sectionTitleCls =
-  "text-2xs font-semibold tracking-[0.08em] text-gray";
+import {
+  badge,
+  chip,
+  chipOff,
+  panel,
+  primaryBtn,
+  sectionLabel,
+  tag as tagCls,
+} from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -120,7 +127,7 @@ export default async function OrgDetailPage({
     return (
       <div>
         <PageHeader title={t.org.metaDetail} mobileOnly className="mb-4" />
-        <section className="rounded-md border border-line bg-panel p-4">
+        <section className={`${panel} p-4`}>
           <div className="flex items-center gap-2">
             <h1 className="min-w-0 truncate text-xl font-semibold">
               {org.name}
@@ -139,7 +146,7 @@ export default async function OrgDetailPage({
           {!viewer ? (
             <LocaleLink
               href={`/login?next=/orgs/${oid}`}
-              className="flex h-11 items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
+              className={`${primaryBtn} w-full`}
             >
               {t.org.detailLoginToApply}
             </LocaleLink>
@@ -201,10 +208,10 @@ export default async function OrgDetailPage({
   return (
     <div>
       <PageHeader title={t.org.metaDetail} mobileOnly className="mb-4" />
-      <section className="rounded-md border border-line bg-panel p-4">
+      <section className={`${panel} p-4`}>
         <div className="flex items-center gap-2">
           <h1 className="min-w-0 truncate text-xl font-semibold">{org.name}</h1>
-          <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+          <span className={badge}>
             {orgVisibilityLabel(t, org.visibility)}
           </span>
           <LocaleLink
@@ -226,20 +233,20 @@ export default async function OrgDetailPage({
       >
         <LocaleLink
           href={`/?org=${oid}`}
-          className="shrink-0 rounded-sm border border-line px-2.5 py-1 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+          className={`${chip} ${chipOff} shrink-0`}
         >
           {t.org.detailNavNeeds}
         </LocaleLink>
         <a
           href="#members"
-          className="shrink-0 rounded-sm border border-line px-2.5 py-1 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+          className={`${chip} ${chipOff} shrink-0`}
         >
           {fmt(t.org.detailNavMembers, { n: memberCount?.n ?? 0 })}
         </a>
         {isOrgAdmin && (
           <a
             href="#requests"
-            className="shrink-0 rounded-sm border border-line px-2.5 py-1 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+            className={`${chip} ${chipOff} shrink-0`}
           >
             {fmt(t.org.detailNavPending, { n: requests.length })}
           </a>
@@ -248,13 +255,13 @@ export default async function OrgDetailPage({
           <>
             <a
               href="#invite"
-              className="shrink-0 rounded-sm border border-line px-2.5 py-1 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+              className={`${chip} ${chipOff} shrink-0`}
             >
               {t.org.detailNavInvite}
             </a>
             <a
               href="#settings"
-              className="shrink-0 rounded-sm border border-line px-2.5 py-1 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+              className={`${chip} ${chipOff} shrink-0`}
             >
               {t.org.detailNavSettings}
             </a>
@@ -264,7 +271,7 @@ export default async function OrgDetailPage({
 
       <section id="members" className="mt-4 scroll-mt-4">
         <div className="flex items-baseline justify-between">
-          <h2 className={sectionTitleCls}>
+          <h2 className={sectionLabel}>
             {fmt(t.org.membersHeading, { n: members.length })}
           </h2>
           <div className="flex items-center gap-3">
@@ -277,33 +284,27 @@ export default async function OrgDetailPage({
             {membership.role !== "owner" && <LeaveOrgButton orgId={oid} />}
           </div>
         </div>
-        <form action={memberBase} className="relative mt-2">
-          {mtag && <input type="hidden" name="mtag" value={mtag} />}
-          <Search
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray"
-            aria-hidden
-          />
-          <input
-            type="search"
-            name="mq"
-            defaultValue={mq ?? ""}
-            placeholder={t.org.memberSearchPlaceholder}
-            className="h-10 w-full rounded-sm border border-line bg-panel pl-8 pr-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
-          />
-        </form>
+        <SearchField
+          action={memberBase}
+          name="mq"
+          defaultValue={mq}
+          placeholder={t.org.memberSearchPlaceholder}
+          label={t.plaza.searchLabel}
+          className="mt-2 w-full"
+          hidden={mtag ? <input type="hidden" name="mtag" value={mtag} /> : null}
+        />
         {mtag && (
           <div className="mt-2">
             <LocaleLink
               href={memberQuery({ mq })}
-              className="inline-flex items-center gap-1 rounded-sm border border-ink px-1.5 py-0.5 font-mono text-2xs"
+              className={`${tagCls(true)} inline-flex items-center gap-1`}
             >
               {mtag}
               <X size={11} aria-hidden />
             </LocaleLink>
           </div>
         )}
-        <div className="mt-2 rounded-md border border-line bg-panel">
+        <div className={`mt-2 ${panel}`}>
           {members.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-gray">
               {t.org.membersEmpty}
@@ -333,12 +334,12 @@ export default async function OrgDetailPage({
                       {member.nickname}
                     </LocaleLink>
                     {role === "owner" && (
-                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+                      <span className={badge}>
                         {t.org.roleOwner}
                       </span>
                     )}
                     {role === "admin" && (
-                      <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+                      <span className={badge}>
                         {t.org.roleAdmin}
                       </span>
                     )}
@@ -349,7 +350,7 @@ export default async function OrgDetailPage({
                         <LocaleLink
                           key={tag}
                           href={memberQuery({ mq, mtag: tag })}
-                          className="rounded-sm border border-line px-1 py-px font-mono text-3xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+                          className={`${tagCls()} transition-colors duration-100 hover:border-ink hover:text-ink`}
                         >
                           {tag}
                         </LocaleLink>
@@ -385,9 +386,9 @@ export default async function OrgDetailPage({
       {isOrgAdmin && (
         <section
           id="requests"
-          className="mt-4 scroll-mt-4 rounded-md border border-line bg-panel p-4"
+          className={`mt-4 scroll-mt-4 ${panel} p-4`}
         >
-          <h2 className={`${sectionTitleCls} mb-2`}>
+          <h2 className={`${sectionLabel} mb-2`}>
             {fmt(t.org.requestsHeading, { n: requests.length })}
           </h2>
           <RequestList requests={requests} />
@@ -398,16 +399,16 @@ export default async function OrgDetailPage({
         <>
           <section
             id="invite"
-            className="mt-4 scroll-mt-4 rounded-md border border-line bg-panel p-4"
+            className={`mt-4 scroll-mt-4 ${panel} p-4`}
           >
-            <h2 className={`${sectionTitleCls} mb-2`}>{t.org.inviteHeading}</h2>
+            <h2 className={`${sectionLabel} mb-2`}>{t.org.inviteHeading}</h2>
             <InviteCodePanel orgId={oid} code={org.inviteCode} />
           </section>
           <section
             id="settings"
-            className="mt-4 scroll-mt-4 rounded-md border border-line bg-panel p-4"
+            className={`mt-4 scroll-mt-4 ${panel} p-4`}
           >
-            <h2 className={`${sectionTitleCls} mb-3`}>
+            <h2 className={`${sectionLabel} mb-3`}>
               {t.org.settingsHeading}
             </h2>
             <OrgSettingsForm

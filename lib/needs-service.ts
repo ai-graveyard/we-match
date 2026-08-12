@@ -125,12 +125,31 @@ export function resolvePreferredContact(
   return available[0]?.key ?? null;
 }
 
+function sameIdempotentCreation(
+  existing: Need,
+  patch: NeedPatch,
+  orgId: number | null,
+  preferredContact: ContactFieldKey | null,
+): boolean {
+  return (
+    existing.type === patch.type &&
+    existing.title === patch.title &&
+    existing.description === (patch.description ?? null) &&
+    JSON.stringify(existing.tags) === JSON.stringify(patch.tags ?? []) &&
+    existing.orgId === orgId &&
+    existing.preferredContact === preferredContact &&
+    (existing.expiresAt?.getTime() ?? null) ===
+      (patch.expiresAt?.getTime() ?? null)
+  );
+}
+
 export async function createNeed(
   user: User,
   patch: NeedPatch,
   orgId: number | null,
   t: ServerDict,
-): Promise<{ error: string } | { need: Need }> {
+  options: { idempotencyKey?: string | null } = {},
+): Promise<{ error: string } | { need: Need; replayed: boolean }> {
   if (orgId != null) {
     if (!Number.isInteger(orgId) || orgId <= 0)
       return { error: t.need.badScope };
@@ -155,29 +174,61 @@ export async function createNeed(
 
   const dayStart = new Date();
   dayStart.setHours(0, 0, 0, 0);
-  const [todayCount] = await db
-    .select({ n: count() })
-    .from(needs)
-    .where(and(eq(needs.userId, user.id), gte(needs.createdAt, dayStart)));
-  if ((todayCount?.n ?? 0) >= NEED_LIMITS.dailyPublish) {
-    return {
-      error: fmt(t.need.dailyLimit, { max: NEED_LIMITS.dailyPublish }),
-    };
-  }
+  // 幂等判定、每日额度和插入共用一个写事务：同一用户的多个 Agent
+  // 即使并发发布，也不能重复创建或一起穿透每日上限。
+  const inserted = db.transaction(
+    (tx) => {
+      if (options.idempotencyKey) {
+        const existing = tx
+          .select()
+          .from(needs)
+          .where(
+            and(
+              eq(needs.userId, user.id),
+              eq(needs.idempotencyKey, options.idempotencyKey),
+            ),
+          )
+          .limit(1)
+          .all()[0];
+        if (existing) {
+        return sameIdempotentCreation(existing, patch, orgId, preferredContact)
+          ? { need: existing, replayed: true }
+          : { error: t.need.idempotencyConflict };
+        }
+      }
 
-  const [need] = await db
-    .insert(needs)
-    .values({
-      userId: user.id,
-      orgId,
-      type: patch.type!,
-      title: patch.title!,
-      description: patch.description ?? null,
-      tags: patch.tags ?? [],
-      preferredContact,
-      expiresAt: patch.expiresAt ?? null,
-    })
-    .returning();
+      const todayCount = tx
+        .select({ n: count() })
+        .from(needs)
+        .where(and(eq(needs.userId, user.id), gte(needs.createdAt, dayStart)))
+        .all()[0];
+      if ((todayCount?.n ?? 0) >= NEED_LIMITS.dailyPublish) {
+        return {
+          error: fmt(t.need.dailyLimit, { max: NEED_LIMITS.dailyPublish }),
+        };
+      }
+
+      const need = tx
+        .insert(needs)
+        .values({
+          userId: user.id,
+          orgId,
+          type: patch.type!,
+          title: patch.title!,
+          description: patch.description ?? null,
+          tags: patch.tags ?? [],
+          preferredContact,
+          expiresAt: patch.expiresAt ?? null,
+          idempotencyKey: options.idempotencyKey ?? null,
+        })
+        .returning()
+        .all()[0];
+      return { need, replayed: false };
+    },
+    { behavior: "immediate" },
+  );
+  if ("error" in inserted || inserted.replayed) return inserted;
+  const { need } = inserted;
   await track({
     name: "need_created",
     userId: user.id,
@@ -214,7 +265,7 @@ export async function createNeed(
       });
     }
   }
-  return { need };
+  return { need, replayed: false };
 }
 
 export async function getOwnNeed(

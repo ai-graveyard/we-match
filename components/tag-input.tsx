@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
+import { input as inputCls, panel, tag as tagCls } from "@/lib/ui";
 
 // 标签输入：Enter/逗号添加，联想已有标签优先复用（与需求标签共用词库）
 export function TagInput({
@@ -40,7 +41,7 @@ export function TagInput({
           {value.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray"
+              className={`${tagCls()} inline-flex items-center gap-1`}
             >
               {tag}
               <button
@@ -57,7 +58,7 @@ export function TagInput({
       )}
       <div className="relative">
         <input
-          className="h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink"
+          className={inputCls}
           value={draft}
           placeholder={
             value.length >= maxCount
@@ -78,7 +79,7 @@ export function TagInput({
           }}
         />
         {focused && matched.length > 0 && (
-          <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-sm border border-line bg-panel">
+          <div className={`absolute inset-x-0 top-full z-20 mt-1 ${panel}`}>
             {matched.map((s) => (
               <button
                 key={s}

@@ -29,6 +29,7 @@ import { intentLabel, relativeTime } from "@/lib/i18n/labels";
 import { uiDict } from "@/lib/i18n/dict";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
 import { BRAND_NAME } from "@/lib/brand";
+import { panel, sectionLabel, tag as tagCls } from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -169,7 +170,7 @@ export default async function NeedDetailPage({
   return (
     <div>
       <PageHeader title={t.need.metaDetail} mobileOnly className="mb-4" />
-      <section className="rounded-md border border-line bg-panel p-4">
+      <section className={`${panel} p-4`}>
         <div className="flex items-center gap-2">
           <TypeBadge type={need.type} />
           <StatusBadge need={need} />
@@ -202,7 +203,7 @@ export default async function NeedDetailPage({
               <LocaleLink
                 key={tag}
                 href={`/?tag=${encodeURIComponent(tag)}`}
-                className="rounded-sm border border-line px-1.5 py-0.5 font-mono text-2xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink"
+                className={`${tagCls()} transition-colors duration-100 hover:border-ink hover:text-ink`}
               >
                 {tag}
               </LocaleLink>
@@ -255,12 +256,12 @@ export default async function NeedDetailPage({
       )}
 
       <section className="mt-4">
-        <h2 className="text-2xs font-semibold tracking-[0.08em] text-gray">
+        <h2 className={sectionLabel}>
           {t.need.detailPublisher}
         </h2>
         <LocaleLink
           href={`/u/${author.id}`}
-          className="mt-2 flex items-center gap-3 rounded-md border border-line bg-panel p-4 transition-colors duration-100 hover:bg-bg-3"
+          className={`mt-2 flex items-center gap-3 ${panel} p-4 transition-colors duration-100 hover:bg-bg-3`}
         >
           <DefaultUserAvatar className="size-11" iconSize={20} />
           <div className="min-w-0">

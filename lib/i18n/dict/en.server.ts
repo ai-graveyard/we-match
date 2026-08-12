@@ -86,6 +86,8 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
       "No contact is available for this scope — edit your card first",
     staleHandsBlockRenewal:
       "Raised hands have been waiting on you for over 3 days. Respond to them under Me → Raises before renewing or reopening this post.",
+    idempotencyConflict:
+      "This Idempotency-Key was already used for a different post — use a new key for a new post",
   },
 
   org: {
@@ -145,6 +147,7 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     rateLimited:
       "Too many requests ({max} per key per minute), please try again later",
     bodyNotObject: "Request body must be a JSON object",
+    unknownFields: "Request contains unsupported fields: {fields}",
     orgParamNotId: "org must be a group id",
     orgNotFoundOrNotMember: "Group not found, or you are not a member",
     badStatusFilter: "status must be one of open / done / closed",
@@ -154,6 +157,10 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     needNotYours: "Post not found, or it is not yours",
     scopeImmutable:
       "Scope cannot change after posting — close it and post again",
+    badSince: "since must be an ISO 8601 timestamp",
+    badCursor: "cursor is invalid or expired — remove it and try again",
+    badIdempotencyKey:
+      "Idempotency-Key may contain letters, numbers, dots, underscores, colons, or hyphens and must be at most 128 characters",
   },
 
   apiKey: {
@@ -203,16 +210,20 @@ curl -s -X POST {origin}/api/v1/auth/token \\
 The \`key\` in the response is the credential; \`isNew: true\` means the account was just created.
 Only ask for a verification code inside a registration the user started. Use it and discard it.
 
-## 3. Write the environment variables
+## 3. Store the credential safely
 
-Write them into the user's shell config (for example \`~/.zshrc\`):
+Prefer the agent platform's Secret or Credential Store. If none exists, use a dedicated user-only file; never put the key in a project directory or append it directly to the global \`~/.zshrc\`:
 
 \`\`\`bash
+install -d -m 700 ~/.config/we-match
+umask 077
+touch ~/.config/we-match/env
+chmod 600 ~/.config/we-match/env
 export WEMATCH_API_KEY=<the user's key>
 export WEMATCH_BASE_URL={origin}
 \`\`\`
 
-The key has full read and write access. Once configured, do not echo the key in later output.
+Write the two \`export\` lines above to \`~/.config/we-match/env\` and load it only before running the We Match agent. The key has full read and write access. Do not echo it in later output, command logs, or error reports.
 
 ## 4. Verify
 

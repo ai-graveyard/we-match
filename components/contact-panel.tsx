@@ -14,6 +14,13 @@ import {
   intentLabel,
 } from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
+import {
+  iconBtnLine,
+  panel,
+  primaryBtn,
+  secondaryBtn,
+  sectionLabel,
+} from "@/lib/ui";
 
 export type ContactChannel = {
   key: ContactFieldKey;
@@ -58,11 +65,7 @@ function ChannelAction({
   onCopy: (value: string, key: string) => void;
 }) {
   const href = channelHref(t, channel, needTitle, message);
-  const className = `flex h-11 w-full items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold tracking-[0.06em] active:translate-y-px ${
-    primary
-      ? "bg-accent text-panel"
-      : "border border-ink bg-panel text-ink transition-colors duration-100 hover:bg-ink hover:text-panel"
-  }`;
+  const className = `${primary ? primaryBtn : secondaryBtn} w-full`;
   const content = (
     <>
       {copied === channel.key ? (
@@ -169,7 +172,7 @@ export function ContactPanel({
     return (
       <Link
         href={loginHref}
-        className="flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
+        className={`${primaryBtn} w-full`}
       >
         {fmt(t.contact.loginTo, { intent })}
       </Link>
@@ -184,7 +187,7 @@ export function ContactPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-full items-center justify-center rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel active:translate-y-px"
+        className={`${primaryBtn} w-full`}
         aria-haspopup="dialog"
       >
         {actionLabel}
@@ -216,7 +219,7 @@ export function ContactPanel({
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex size-11 shrink-0 items-center justify-center rounded-sm border border-line bg-panel text-gray active:bg-bg-3"
+                className={iconBtnLine}
                 aria-label={t.contact.dialogCloseLabel}
               >
                 <X size={16} aria-hidden />
@@ -233,7 +236,7 @@ export function ContactPanel({
             )}
 
             {!canExpressInterest && !connected && (
-              <div className="mt-4 rounded-md border border-line bg-panel p-3">
+              <div className={`mt-4 ${panel} p-3`}>
                 <p className="text-sm">
                   {fmt(t.contact.waitingTitle, { name: author })}
                 </p>
@@ -246,17 +249,15 @@ export function ContactPanel({
             {channels.length > 0 && (
               <>
                 {!connected && (
-                  <h3 className="mt-4 text-2xs font-semibold tracking-[0.08em] text-gray">
+                  <h3 className={`${sectionLabel} mt-4 block`}>
                     {t.contact.alsoDirect}
                   </h3>
                 )}
                 <div
-                  className={`rounded-md border border-line bg-panel p-3 ${
-                    connected ? "mt-4" : "mt-2"
-                  }`}
+                  className={`${panel} p-3 ${connected ? "mt-4" : "mt-2"}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-2xs font-semibold tracking-[0.08em] text-gray">
+                    <span className={sectionLabel}>
                       {cardFieldLabel(t, orderedChannels[0].key)}
                     </span>
                     <span className="font-mono text-3xs text-gray">
@@ -299,7 +300,7 @@ export function ContactPanel({
                 <div className="mt-4">
                   <label
                     htmlFor="contact-message"
-                    className="text-2xs font-semibold tracking-[0.08em] text-gray"
+                    className={sectionLabel}
                   >
                     {t.contact.openerLabel}
                   </label>
@@ -313,7 +314,7 @@ export function ContactPanel({
                   <button
                     type="button"
                     onClick={() => handleCopy(message, "message")}
-                    className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+                    className={`${secondaryBtn} mt-2 w-full`}
                   >
                     {copied === "message" ? (
                       <Check size={13} aria-hidden />

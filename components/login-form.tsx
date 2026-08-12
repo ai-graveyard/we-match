@@ -9,6 +9,12 @@ import {
 import { CodeBoxes } from "@/components/code-boxes";
 import { EmailInput, looksLikeEmail } from "@/components/email-input";
 import { useDict } from "@/lib/i18n/client";
+import {
+  fieldError,
+  primaryBtn,
+  secondaryBtn,
+  statusDot,
+} from "@/lib/ui";
 
 const RESEND_SECONDS = 60;
 const CODE_LENGTH = 6;
@@ -61,7 +67,7 @@ export function LoginForm({ next }: { next: string }) {
           formAction={sendAction}
           formNoValidate
           disabled={sendPending || countdown > 0 || !emailReady}
-          className="h-11 shrink-0 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray"
+          className={`${secondaryBtn} shrink-0 disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray`}
         >
           {countdown > 0 ? (
             <span className="font-mono">{countdown}s</span>
@@ -90,7 +96,7 @@ export function LoginForm({ next }: { next: string }) {
           className="rounded-sm border border-line bg-panel p-3"
         >
           <p className="flex items-center gap-2 text-sm font-semibold">
-            <i className="size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+            <i className={statusDot} aria-hidden />
             {sendState.notice.title}
           </p>
           <p className="mt-1 text-xs leading-5 text-gray">
@@ -98,11 +104,11 @@ export function LoginForm({ next }: { next: string }) {
           </p>
         </div>
       )}
-      {error && <p className="text-xs text-ink">{error}</p>}
+      {error && <p className={fieldError}>{error}</p>}
       <button
         type="submit"
         disabled={loginPending || !emailReady || code.length < CODE_LENGTH}
-        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className={primaryBtn}
       >
         {loginPending ? t.login.submitting : t.login.submit}
       </button>

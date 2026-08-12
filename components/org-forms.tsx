@@ -11,14 +11,20 @@ import { INVITE_CODE_LENGTH, ORG_LIMITS } from "@/lib/orgs";
 import { CodeBoxes, sanitizeCode } from "@/components/code-boxes";
 import { useDict } from "@/lib/i18n/client";
 import { orgVisibilityLabel } from "@/lib/i18n/labels";
+import {
+  fieldError,
+  input as inputCls,
+  panel,
+  primaryBtn,
+  secondaryBtn,
+  sectionLabel as labelCls,
+  segmentGroup,
+  segmentItem,
+  textarea as textareaCls,
+} from "@/lib/ui";
 
-const inputCls =
-  "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
-const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
-const primaryBtnCls =
-  "h-11 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
-
-function VisibilityPicker({
+/** 组织可见性三选一。创建页和设置页共用，两边各写一份必然漂移 */
+export function VisibilityPicker({
   value,
   onChange,
 }: {
@@ -28,15 +34,13 @@ function VisibilityPicker({
   const t = useDict();
   return (
     <div>
-      <div className="inline-flex overflow-hidden rounded-sm border border-line">
+      <div className={segmentGroup}>
         {(["private", "public"] as const).map((opt, i) => (
           <button
             key={opt}
             type="button"
             onClick={() => onChange(opt)}
-            className={`px-3 py-1.5 text-xs transition-colors duration-100 ${
-              i > 0 ? "border-l border-line" : ""
-            } ${value === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
+            className={segmentItem(value === opt, i === 0)}
           >
             {orgVisibilityLabel(t, opt)}
           </button>
@@ -63,7 +67,7 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
   );
 
   return (
-    <form action={formAction} className="rounded-md border border-line bg-panel p-4">
+    <form action={formAction} className={`${panel} p-4`}>
       <label htmlFor="invite-code" className={`${labelCls} mb-2 block`}>
         {t.org.codeFormLabel}
       </label>
@@ -79,11 +83,11 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
       <button
         type="submit"
         disabled={pending || code.length < INVITE_CODE_LENGTH}
-        className={`${primaryBtnCls} mt-3 w-full`}
+        className={`${primaryBtn} mt-3 w-full`}
       >
         {pending ? t.common.submitting : t.org.codeFormSubmit}
       </button>
-      {state.error && <p className="mt-2 text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
     </form>
   );
@@ -99,10 +103,10 @@ export function ApplyPlazaButton({ orgId }: { orgId: number }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="orgId" value={orgId} />
-      <button type="submit" disabled={pending} className={`${primaryBtnCls} w-full`}>
+      <button type="submit" disabled={pending} className={`${primaryBtn} w-full`}>
         {pending ? t.common.submitting : t.org.applyJoin}
       </button>
-      {state.error && <p className="mt-2 text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
     </form>
   );
@@ -153,7 +157,7 @@ export function OrgSettingsForm({
           id="edit-org-desc"
           name="description"
           rows={3}
-          className={`${inputCls} h-auto resize-y py-2`}
+          className={textareaCls}
           maxLength={ORG_LIMITS.description}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -163,13 +167,9 @@ export function OrgSettingsForm({
         <span className={`${labelCls} mb-1 block`}>{t.org.formType}</span>
         <VisibilityPicker value={visibility} onChange={setVisibility} />
       </div>
-      {state.error && <p className="text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={fieldError}>{state.error}</p>}
       {state.ok && <p className="text-xs text-gray">{state.ok}</p>}
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-11 rounded-sm border border-ink bg-panel text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
-      >
+      <button type="submit" disabled={pending} className={secondaryBtn}>
         {pending ? t.common.saving : t.org.formSaveProfile}
       </button>
     </form>

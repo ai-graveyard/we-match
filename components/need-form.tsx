@@ -23,6 +23,19 @@ import {
   expiryLabel,
   intentLabel,
 } from "@/lib/i18n/labels";
+import {
+  chip,
+  chipOff,
+  chipOn,
+  fieldError,
+  input as sharedInput,
+  panel,
+  primaryBtn,
+  sectionLabel,
+  segmentGroup,
+  segmentItem,
+  textarea as textareaCls,
+} from "@/lib/ui";
 
 export type NeedFormInitial = {
   id?: number;
@@ -90,9 +103,7 @@ export function NeedForm({
     setDeadline(toLocalInput(expiryFromPreset(preset).toISOString()));
   };
 
-  const labelCls = "text-2xs font-semibold tracking-[0.08em] text-gray";
-  const inputCls =
-    "w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+  const labelCls = sectionLabel;
   const eligibleContacts = contactOptions.filter(
     (option) => scope !== "plaza" || option.visibility === "authenticated",
   );
@@ -104,21 +115,19 @@ export function NeedForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-4 rounded-md border border-line bg-panel p-4"
+      className={`flex flex-col gap-4 ${panel} p-4`}
     >
       {editing && <input type="hidden" name="id" value={initial.id} />}
 
       <div>
         <span className={`${labelCls} mb-1 block`}>{t.need.formType}</span>
-        <div className="inline-flex overflow-hidden rounded-sm border border-line">
+        <div className={segmentGroup}>
           {(["need", "offer"] as const).map((opt, i) => (
             <button
               key={opt}
               type="button"
               onClick={() => setType(opt)}
-              className={`px-3 py-1.5 text-xs transition-colors duration-100 ${
-                i > 0 ? "border-l border-line" : ""
-              } ${type === opt ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink"}`}
+              className={segmentItem(type === opt, i === 0)}
             >
               {intentLabel(t, opt)}
             </button>
@@ -134,7 +143,7 @@ export function NeedForm({
         <input
           id="title"
           name="title"
-          className={`${inputCls} h-11`}
+          className={sharedInput}
           maxLength={NEED_LIMITS.title}
           required
           value={title}
@@ -150,7 +159,7 @@ export function NeedForm({
           id="description"
           name="description"
           rows={5}
-          className={`${inputCls} resize-y py-2`}
+          className={textareaCls}
           maxLength={NEED_LIMITS.description}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -176,10 +185,8 @@ export function NeedForm({
               key={option.value}
               type="button"
               onClick={() => chooseExpiry(option.value)}
-              className={`rounded-sm border px-2.5 py-1 text-xs transition-colors duration-100 ${
-                expiryPreset === option.value
-                  ? "border-ink bg-ink font-semibold text-panel"
-                  : "border-line text-gray hover:text-ink"
+              className={`${chip} ${
+                expiryPreset === option.value ? chipOn : chipOff
               }`}
             >
               {expiryLabel(t, option.value)}
@@ -192,7 +199,7 @@ export function NeedForm({
           <input
             type="datetime-local"
             aria-label={t.need.formDeadlineCustom}
-            className={`${inputCls} mt-2 h-11 font-mono text-xs`}
+            className={`${sharedInput} mt-2 font-mono text-xs`}
             required
             value={deadline}
             onChange={(event) => {
@@ -234,11 +241,7 @@ export function NeedForm({
                     key={opt.id}
                     type="button"
                     onClick={() => setScope(opt.id)}
-                    className={`rounded-sm border px-2.5 py-1 text-xs transition-colors duration-100 ${
-                      scope === opt.id
-                        ? "border-ink bg-ink font-semibold text-panel"
-                        : "border-line text-gray hover:text-ink"
-                    }`}
+                    className={`${chip} ${scope === opt.id ? chipOn : chipOff}`}
                   >
                     {opt.name}
                   </button>
@@ -267,10 +270,8 @@ export function NeedForm({
                   key={option.key}
                   type="button"
                   onClick={() => setPreferredContact(option.key)}
-                  className={`rounded-sm border px-2.5 py-1 text-xs transition-colors duration-100 ${
-                    selectedContact === option.key
-                      ? "border-ink bg-ink font-semibold text-panel"
-                      : "border-line text-gray hover:text-ink"
+                  className={`${chip} ${
+                    selectedContact === option.key ? chipOn : chipOff
                   }`}
                 >
                   {cardFieldLabel(t, option.key)}
@@ -301,11 +302,11 @@ export function NeedForm({
         />
       </div>
 
-      {state.error && <p className="text-xs text-ink">{state.error}</p>}
+      {state.error && <p className={fieldError}>{state.error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="h-11 rounded-sm bg-accent text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60"
+        className={primaryBtn}
       >
         {pending
           ? t.common.submitting

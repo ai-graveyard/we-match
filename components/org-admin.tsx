@@ -17,9 +17,15 @@ import { useDict, useLocale } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
 import { relativeTime, requestViaLabel } from "@/lib/i18n/labels";
 import { localePath } from "@/lib/i18n/routing";
+import {
+  badge,
+  fieldError,
+  panel,
+  secondaryBtn,
+  textBtn,
+} from "@/lib/ui";
 
-const smallBtnCls =
-  "inline-flex h-11 items-center justify-center gap-1 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+const smallBtnCls = secondaryBtn;
 
 // 邀请码面板：查看、复制码/链接、两步确认重置
 export function InviteCodePanel({
@@ -57,7 +63,7 @@ export function InviteCodePanel({
             </form>
             <button
               type="button"
-              className="text-2xs text-gray hover:text-ink"
+              className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
@@ -66,7 +72,7 @@ export function InviteCodePanel({
         ) : (
           <button
             type="button"
-            className="flex items-center gap-1 text-2xs text-gray hover:text-ink"
+            className={textBtn}
             onClick={() => setConfirming(true)}
           >
             <RotateCw size={11} aria-hidden />
@@ -99,8 +105,8 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
 
   return (
     <div>
-      {state.error && <p className="mb-2 text-xs text-ink">{state.error}</p>}
-      <div className="rounded-sm border border-line">
+      {state.error && <p className={`mb-2 ${fieldError}`}>{state.error}</p>}
+      <div className={panel}>
         {requests.map((req, i) => (
           <div
             key={req.id}
@@ -114,7 +120,7 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
             >
               {req.applicant.nickname}
             </a>
-            <span className="shrink-0 rounded-sm bg-bg-3 px-1.5 py-px font-mono text-3xs text-gray">
+            <span className={badge}>
               {requestViaLabel(t, req.via)}
             </span>
             <span className="shrink-0 font-mono text-3xs text-gray">
@@ -175,7 +181,7 @@ export function RemoveMemberButton({
         </form>
         <button
           type="button"
-          className="text-2xs text-gray"
+          className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
@@ -187,7 +193,7 @@ export function RemoveMemberButton({
     <button
       type="button"
       aria-label={fmt(t.org.memberRemoveLabel, { name: nickname })}
-      className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
+      className={textBtn}
       onClick={() => setConfirming(true)}
     >
       <UserMinus size={12} aria-hidden />
@@ -217,7 +223,7 @@ export function PromoteAdminButton({
   if (limitReached) {
     return (
       <span
-        className="text-2xs text-gray"
+        className={textBtn}
         title={fmt(t.org.adminFullHint, { max: ORG_LIMITS.maxAdmins })}
       >
         {t.org.adminFull}
@@ -242,14 +248,14 @@ export function PromoteAdminButton({
           </form>
           <button
             type="button"
-            className="text-2xs text-gray"
+            className={textBtn}
             onClick={() => setConfirming(false)}
           >
             {t.common.cancel}
           </button>
         </span>
         {state.error && (
-          <span className="max-w-48 text-right text-3xs text-ink">
+          <span className={`${fieldError} max-w-48 text-right`}>
             {state.error}
           </span>
         )}
@@ -261,7 +267,7 @@ export function PromoteAdminButton({
     <button
       type="button"
       aria-label={fmt(t.org.memberPromoteLabel, { name: nickname })}
-      className="flex items-center gap-1 text-2xs text-gray transition-colors duration-100 hover:text-ink"
+      className={textBtn}
       onClick={() => setConfirming(true)}
     >
       <ShieldCheck size={12} aria-hidden />
@@ -284,7 +290,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
         </form>
         <button
           type="button"
-          className="text-2xs text-gray"
+          className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
@@ -295,7 +301,7 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
   return (
     <button
       type="button"
-      className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
+      className={textBtn}
       onClick={() => setConfirming(true)}
     >
       {t.org.leave}
@@ -313,14 +319,14 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
           <input type="hidden" name="orgId" value={orgId} />
           <button
             type="submit"
-            className="h-11 rounded-sm border border-ink bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px"
+            className={smallBtnCls}
           >
             {t.org.dissolveConfirm}
           </button>
         </form>
         <button
           type="button"
-          className="text-2xs text-gray"
+          className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
@@ -331,7 +337,7 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
   return (
     <button
       type="button"
-      className="text-2xs text-gray transition-colors duration-100 hover:text-ink"
+      className={textBtn}
       onClick={() => setConfirming(true)}
     >
       {t.org.dissolve}

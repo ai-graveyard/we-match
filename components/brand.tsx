@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ASPECT,
   M_PATH,
@@ -11,19 +11,6 @@ import {
   W_OVER_PATH,
   W_PATH,
 } from "@/components/logo";
-
-/* 悬停旋转参数：巡航速度与 loading 螺纹一致（一个波长 / 1.6s）；
-   加减速度取「约 1.2s 从静止到巡航」，先慢慢加速、移开后慢慢减速 */
-const PERIOD = 106;
-const CRUISE = PERIOD / 1.6;
-const ACCEL = 55;
-/* 归位快慢：1 表示补完剩余相位的时间正好等于巡航走这段距离，越小越快。
-   但它同时决定归位那一下的峰值速度——settle 走的是 ease-in-out，速度从 0
-   冲到中点再回落，峰值恒为 2 * CRUISE / SETTLE_PACE，与补的距离无关。
-   调小虽然缩短拖尾，峰值却会飙上去：0.6 时峰值有 3.3 倍巡航，减速停稳后
-   又猛冲一下才停，看着就不像在减速了。取 1.6 让峰值压到 1.25 倍巡航，
-   代价是归位只向前补（见下方 Math.ceil），最长要补近一整个波长，拖尾偏长 */
-const SETTLE_PACE = 1.6;
 
 /* 字标与标识的尺寸配比固定成两档，避免在页面上随手缩放，见 docs/DESIGN.md「品牌标识」 */
 const SIZES = {
@@ -39,84 +26,27 @@ export function Brand({
   className?: string;
 }) {
   const { mark, text } = SIZES[size];
-  const g = useRef<SVGGElement | null>(null);
-  const raf = useRef(0);
-  const last = useRef(0);
-  const phase = useRef(0);
-  const speed = useRef(0);
-  const mode = useRef<"idle" | "accel" | "cruise" | "decel" | "settle">(
-    "idle",
-  );
-  const settle = useRef({ from: 0, dist: 0, elapsed: 0, dur: 1 });
+  /* 鼠标是否还在标识上。只读不渲染，所以用 ref：animationiteration 回调里
+     要拿到最新值，走 state 会读到闭包里的旧值 */
+  const hovering = useRef(false);
   const [spinning, setSpinning] = useState(false);
 
-  useEffect(() => () => cancelAnimationFrame(raf.current), []);
-
-  function step(now: number) {
-    const t = now / 1000;
-    const dt = Math.min(t - last.current, 0.05);
-    last.current = t;
-    if (mode.current === "accel") {
-      speed.current = Math.min(speed.current + ACCEL * dt, CRUISE);
-      if (speed.current === CRUISE) mode.current = "cruise";
-      phase.current += speed.current * dt;
-    } else if (mode.current === "cruise") {
-      phase.current += CRUISE * dt;
-    } else if (mode.current === "decel") {
-      speed.current -= ACCEL * dt;
-      if (speed.current <= 0) {
-        /* 停稳后只向前补到下一个标准相位，避免就近归位时反向倒退 */
-        const target = Math.ceil(phase.current / PERIOD) * PERIOD;
-        settle.current = {
-          from: phase.current,
-          dist: target - phase.current,
-          elapsed: 0,
-          dur: Math.max(
-            0.35,
-            (Math.abs(target - phase.current) * SETTLE_PACE) / CRUISE,
-          ),
-        };
-        speed.current = 0;
-        mode.current = "settle";
-      } else {
-        phase.current += speed.current * dt;
-      }
-    } else if (mode.current === "settle") {
-      /* 跟加减速一样按 dt 累加，而不是拿绝对时间算进度：标签页切走时 rAF 会停，
-         用绝对时间的话切回来 t 已经跳了几秒，归位会瞬移到位；dt 上面 clamp 过 */
-      const s = settle.current;
-      s.elapsed += dt;
-      const p = Math.min(s.elapsed / s.dur, 1);
-      const e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p);
-      phase.current = s.from + s.dist * e;
-      if (p === 1) {
-        phase.current = 0;
-        mode.current = "idle";
-        setSpinning(false);
-        return;
-      }
-    } else {
+  /* 悬停就播 loading 那条螺纹动画（匀速、无限循环、横移一个波长后与自身重合），
+     移开不立刻掐断，而是等这一圈跑完——循环边界正好是相位对齐点，
+     此刻换回静态标识不会跳。整套动效交给 CSS，这边只留一个开关，
+     不再手算相位和加减速：先前那版要靠 rAF 逐帧积分、还要在停下时补一段
+     归位，快速划过标识时相位补偿容易出岔子 */
+  function enter() {
+    hovering.current = true;
+    /* 关掉动效的偏好，以及触屏——触屏上 mouseenter 会触发但 mouseleave 常常不来，
+       放进去就一直转下去了 */
+    if (
+      window.matchMedia("(prefers-reduced-motion: reduce), (hover: none)")
+        .matches
+    ) {
       return;
     }
-    if (g.current) {
-      g.current.style.transform = `translateX(${-(phase.current % PERIOD)}px)`;
-    }
-    raf.current = requestAnimationFrame(step);
-  }
-
-  function enter() {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    cancelAnimationFrame(raf.current);
-    mode.current = "accel";
-    last.current = performance.now() / 1000;
     setSpinning(true);
-    raf.current = requestAnimationFrame(step);
-  }
-
-  function leave() {
-    if (mode.current === "accel" || mode.current === "cruise") {
-      mode.current = "decel";
-    }
   }
 
   return (
@@ -128,7 +58,9 @@ export function Brand({
           「与字标间距 8px」（见 docs/DESIGN.md「品牌标识」）都保持不变 */}
       <svg
         onMouseEnter={enter}
-        onMouseLeave={leave}
+        onMouseLeave={() => {
+          hovering.current = false;
+        }}
         width={mark * ASPECT}
         height={mark}
         viewBox={VIEW_BOX}
@@ -137,7 +69,12 @@ export function Brand({
         className="-m-1 box-content p-1"
       >
         {spinning ? (
-          <g ref={g}>
+          <g
+            className="animate-logo-thread"
+            onAnimationIteration={() => {
+              if (!hovering.current) setSpinning(false);
+            }}
+          >
             <path
               d={THREAD_W}
               stroke="currentColor"

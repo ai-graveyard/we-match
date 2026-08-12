@@ -75,6 +75,7 @@ export const zhServer = {
     noContactForScope: "当前可见范围下没有可用的联系方式，请先编辑名片",
     staleHandsBlockRenewal:
       "有举手等你回应超过 3 天了，先到「我的 → 举手」处理完，才能续期或重新开放",
+    idempotencyConflict: "这个 Idempotency-Key 已用于另一条不同的需求，请为新需求换一个 Key",
   },
 
   org: {
@@ -129,6 +130,7 @@ export const zhServer = {
     rateLimited: "请求过于频繁（每 Key 每分钟 {max} 次），请稍后再试",
     authRateLimited: "注册登录请求过于频繁（每 IP 每小时 {max} 次），请稍后再试",
     bodyNotObject: "请求体需为 JSON 对象",
+    unknownFields: "请求包含不支持的字段：{fields}",
     orgParamNotId: "org 参数需为组织 id",
     orgNotFoundOrNotMember: "组织不存在或你不是成员",
     badStatusFilter: "status 只能是 open / done / closed",
@@ -137,6 +139,9 @@ export const zhServer = {
     needNotFound: "需求不存在",
     needNotYours: "需求不存在或不属于你",
     scopeImmutable: "可见范围发布后不可修改，请关闭后重新发布",
+    badSince: "since 需为 ISO 8601 时间",
+    badCursor: "cursor 无效或已过期，请移除后重试",
+    badIdempotencyKey: "Idempotency-Key 只能包含字母、数字、点、下划线、冒号或短横线，最长 128 字符",
   },
 
   apiKey: {
@@ -187,16 +192,20 @@ curl -s -X POST {origin}/api/v1/auth/token \\
 响应里的 \`key\` 就是凭证，\`isNew: true\` 表示这是刚注册的新账号。
 只在用户自己发起注册时索要验证码，用完即弃，不要留存。
 
-## 3. 写入环境变量
+## 3. 安全保存凭证
 
-帮用户写入 shell 配置（如 \`~/.zshrc\`）：
+优先写入 Agent 平台自己的 Secret / Credential Store。没有安全存储时，再写入仅用户可读的独立文件；不要放进项目目录，也不要直接追加到全局 \`~/.zshrc\`：
 
 \`\`\`bash
+install -d -m 700 ~/.config/we-match
+umask 077
+touch ~/.config/we-match/env
+chmod 600 ~/.config/we-match/env
 export WEMATCH_API_KEY=<用户的 Key>
 export WEMATCH_BASE_URL={origin}
 \`\`\`
 
-Key 拥有完整读写权限。配置完成后不要在后续输出中主动回显 Key 明文。
+将上面两个 \`export\` 写入 \`~/.config/we-match/env\`，只在运行 We Match Agent 前加载。Key 拥有完整读写权限；配置完成后不要在后续输出、命令日志或错误报告中主动回显 Key 明文。
 
 ## 4. 验证
 

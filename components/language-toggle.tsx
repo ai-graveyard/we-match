@@ -7,6 +7,7 @@ import { Languages } from "lucide-react";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { useDict, useLocale } from "@/lib/i18n/client";
 import { localePath, stripLocale } from "@/lib/i18n/routing";
+import { miniSwitch, miniSwitchItem, settingsRow } from "@/lib/ui";
 
 // 切语言就是换 URL 前缀，停在当前这一页、保留筛选参数。
 // cookie 由 proxy 在下一次请求时对齐，这里不用自己写。
@@ -53,7 +54,7 @@ function LanguageToggleRowInner() {
   const hrefFor = useSwitchHref();
 
   return (
-    <div className="flex min-h-16 w-full items-center gap-4 px-4 py-3">
+    <div className={settingsRow}>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{t.language.title}</span>
         <span className="mt-0.5 block text-xs text-gray">
@@ -61,7 +62,7 @@ function LanguageToggleRowInner() {
         </span>
       </span>
       <span
-        className="grid shrink-0 grid-cols-2 rounded-sm border border-line bg-bg-2 p-0.5"
+        className={miniSwitch}
         role="group"
         aria-label={t.language.toggleLabel}
       >
@@ -70,7 +71,7 @@ function LanguageToggleRowInner() {
             <span
               key={item}
               aria-current="true"
-              className="flex h-6 items-center justify-center rounded-[5px] bg-ink px-2 font-mono text-3xs text-panel"
+              className={`${miniSwitchItem} bg-ink text-panel`}
             >
               {LOCALE_LABELS[item]}
             </span>
@@ -79,7 +80,7 @@ function LanguageToggleRowInner() {
               key={item}
               href={hrefFor(item)}
               prefetch={false}
-              className="flex h-6 items-center justify-center rounded-[5px] px-2 font-mono text-3xs text-gray transition-colors duration-100 hover:text-ink"
+              className={`${miniSwitchItem} text-gray transition-colors duration-100 hover:text-ink`}
             >
               {LOCALE_LABELS[item]}
             </Link>

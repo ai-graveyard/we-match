@@ -96,6 +96,8 @@ export const needs = sqliteTable(
     })
       .notNull()
       .default("visible"),
+    // Agent POST 重试去重。仅 API 写入；网页创建保持 NULL。
+    idempotencyKey: text("idempotency_key"),
     // NULL = 永久有效；非空时由用户指定截止时间
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
@@ -105,7 +107,11 @@ export const needs = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index("needs_org_idx").on(t.orgId), index("needs_user_idx").on(t.userId)],
+  (t) => [
+    index("needs_org_idx").on(t.orgId),
+    index("needs_user_idx").on(t.userId),
+    uniqueIndex("needs_user_idempotency_uidx").on(t.userId, t.idempotencyKey),
+  ],
 );
 
 export const orgs = sqliteTable("orgs", {

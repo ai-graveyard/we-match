@@ -184,55 +184,67 @@ export async function verifyCode(
   if (!/^\d{6}$/.test(code)) {
     return { error: t.auth.badCode };
   }
-  const [record] = await db
-    .select()
-    .from(verificationCodes)
-    .where(
-      and(
-        eq(verificationCodes.email, email),
-        gt(verificationCodes.expiresAt, new Date()),
-      ),
-    )
-    .orderBy(desc(verificationCodes.createdAt))
-    .limit(1);
-  if (!record || record.failCount >= CODE_MAX_FAILS) {
-    return { error: t.auth.codeExpired };
-  }
-  const ok = crypto.timingSafeEqual(Buffer.from(record.code), Buffer.from(code));
-  if (!ok) {
-    await db
-      .update(verificationCodes)
-      .set({ failCount: record.failCount + 1 })
-      .where(eq(verificationCodes.id, record.id));
-    return { error: t.auth.codeWrong };
-  }
-  await db.delete(verificationCodes).where(eq(verificationCodes.email, email));
+  // BEGIN IMMEDIATE 在读验证码前就取得写锁：同一验证码的并发请求只能有
+  // 一个进入校验与删除链路，避免“同时读到有效 → 同时签发”的重放窗口。
+  return db.transaction(
+    (tx) => {
+      const record = tx
+        .select()
+        .from(verificationCodes)
+        .where(
+          and(
+            eq(verificationCodes.email, email),
+            gt(verificationCodes.expiresAt, new Date()),
+          ),
+        )
+        .orderBy(desc(verificationCodes.createdAt))
+        .limit(1)
+        .all()[0];
+      if (!record || record.failCount >= CODE_MAX_FAILS) {
+        return { error: t.auth.codeExpired };
+      }
+      const ok = crypto.timingSafeEqual(Buffer.from(record.code), Buffer.from(code));
+      if (!ok) {
+        tx.update(verificationCodes)
+          .set({ failCount: record.failCount + 1 })
+          .where(eq(verificationCodes.id, record.id))
+          .run();
+        return { error: t.auth.codeWrong };
+      }
+      tx.delete(verificationCodes)
+        .where(eq(verificationCodes.email, email))
+        .run();
 
-  let [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.loginEmail, email))
-    .limit(1);
-  const isNew = !user;
-  if (user?.status === "deleted") {
-    return { error: t.auth.accountDeleted };
-  }
-  if (user?.status === "suspended") {
-    return { error: t.auth.accountSuspended };
-  }
-  if (!user) {
-    // 注册即生成默认昵称，保证任何场景都有可显示的名字
-    [user] = await db
-      .insert(users)
-      .values({
-        loginEmail: email,
-        nickname: fmt(t.auth.defaultNickname, {
-          suffix: defaultNicknameSuffix(email),
-        }),
-      })
-      .returning();
-  }
-  return { user, isNew };
+      let user = tx
+        .select()
+        .from(users)
+        .where(eq(users.loginEmail, email))
+        .limit(1)
+        .all()[0];
+      const isNew = !user;
+      if (user?.status === "deleted") {
+        return { error: t.auth.accountDeleted };
+      }
+      if (user?.status === "suspended") {
+        return { error: t.auth.accountSuspended };
+      }
+      if (!user) {
+        // 注册即生成默认昵称，保证任何场景都有可显示的名字
+        user = tx
+          .insert(users)
+          .values({
+            loginEmail: email,
+            nickname: fmt(t.auth.defaultNickname, {
+              suffix: defaultNicknameSuffix(email),
+            }),
+          })
+          .returning()
+          .all()[0];
+      }
+      return { user, isNew };
+    },
+    { behavior: "immediate" },
+  );
 }
 
 export async function startSession(userId: number) {
