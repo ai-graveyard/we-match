@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { needs, orgMembers, orgs, users } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
@@ -44,10 +44,25 @@ export async function generateMetadata({
     .select({ need: needs, author: users })
     .from(needs)
     .innerJoin(users, eq(needs.userId, users.id))
-    .where(eq(needs.id, nid))
+    .where(and(eq(needs.id, nid), isNull(needs.deletedAt)))
     .limit(1);
   // 组织内需求不做对外分享卡，只给通用标题
-  if (!row || row.need.orgId != null) return { title: t.need.metaDetail };
+  if (
+    !row ||
+    row.need.orgId != null ||
+    row.need.moderationStatus !== "visible" ||
+    row.author.status !== "active"
+  ) {
+    return { title: t.need.metaDetail };
+  }
+  const viewer = await getSessionUser();
+  if (
+    viewer &&
+    viewer.id !== row.author.id &&
+    (await isBlockedEitherWay(viewer.id, row.author.id))
+  ) {
+    return { title: t.need.metaDetail };
+  }
   const title = fmt(t.share.copyNeedTitle, {
     type: intentLabel(t, row.need.type),
     title: row.need.title,
@@ -80,7 +95,7 @@ export default async function NeedDetailPage({
     .select({ need: needs, author: users })
     .from(needs)
     .innerJoin(users, eq(needs.userId, users.id))
-    .where(eq(needs.id, nid))
+    .where(and(eq(needs.id, nid), isNull(needs.deletedAt)))
     .limit(1);
   if (!row) notFound();
   const { need, author } = row;

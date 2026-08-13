@@ -61,6 +61,7 @@ export async function GET(request: Request) {
 
   const conds: SQL[] = [
     orgId != null ? eq(needs.orgId, orgId) : isNull(needs.orgId),
+    isNull(needs.deletedAt),
     eq(needs.moderationStatus, "visible"),
     eq(users.status, "active"),
   ];

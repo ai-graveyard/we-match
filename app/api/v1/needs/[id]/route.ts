@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { needs, orgs, users } from "@/lib/db/schema";
 import {
@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: Context) {
     .select({ need: needs, author: users })
     .from(needs)
     .innerJoin(users, eq(needs.userId, users.id))
-    .where(eq(needs.id, id))
+    .where(and(eq(needs.id, id), isNull(needs.deletedAt)))
     .limit(1);
   if (!row) return apiError(404, "not_found", (await getRequestDict()).api.needNotFound);
 

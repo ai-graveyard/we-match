@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { blocks, contactReveals, needs, users } from "@/lib/db/schema";
+import { blocks, connections, contactReveals, needs, users } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
+import { isBlockedEitherWay } from "@/lib/activity";
 import { sharesOrg } from "@/lib/queries";
 import {
   countConnectedContacts,
@@ -56,7 +57,15 @@ export async function generateMetadata({
   const uid = Number(id);
   if (!Number.isInteger(uid) || uid <= 0) return { title: t.card.metaDetail };
   const [owner] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
-  if (!owner) return { title: t.card.metaDetail };
+  if (!owner || owner.status !== "active") return { title: t.card.metaDetail };
+  const viewer = await getSessionUser();
+  if (
+    viewer &&
+    viewer.id !== owner.id &&
+    (await isBlockedEitherWay(viewer.id, owner.id))
+  ) {
+    return { title: t.card.metaDetail };
+  }
   const card = visibleCard(owner, { loggedIn: false, sharesOrg: false });
   const title = fmt(t.share.copyUserTitle, { name: card.nickname });
   const description =
@@ -123,11 +132,14 @@ export default async function UserCardPage({
             title: needs.title,
           })
           .from(contactReveals)
+          .innerJoin(connections, eq(connections.id, contactReveals.connectionId))
           .innerJoin(needs, eq(needs.id, contactReveals.needId))
           .where(
             and(
               eq(contactReveals.fromUserId, owner.id),
               eq(contactReveals.toUserId, viewer.id),
+              inArray(connections.status, ["accepted", "completed"]),
+              isNull(needs.deletedAt),
             ),
           )
       : [];
@@ -364,6 +376,7 @@ async function PlazaNeeds({
       and(
         eq(needs.userId, userId),
         isNull(needs.orgId),
+        isNull(needs.deletedAt),
         eq(needs.status, "open"),
         eq(needs.moderationStatus, "visible"),
         or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),

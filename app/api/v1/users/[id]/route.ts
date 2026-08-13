@@ -43,6 +43,7 @@ export async function GET(request: Request, { params }: Context) {
         eq(needs.userId, target.id),
         isNull(needs.orgId),
         eq(needs.status, "open"),
+        isNull(needs.deletedAt),
         eq(needs.moderationStatus, "visible"),
         or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
       ),

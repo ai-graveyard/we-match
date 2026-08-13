@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { connections, contactReveals, needs, type Need, type User } from "@/lib/db/schema";
+import { auditLogs, connections, needs, type Need, type User } from "@/lib/db/schema";
 import { getMembership } from "@/lib/queries";
 import {
   CONTACT_FIELDS,
@@ -187,6 +187,7 @@ export async function createNeed(
       )
       .limit(1);
     if (existing) {
+      if (existing.deletedAt != null) return { error: t.need.idempotencyConflict };
       return sameIdempotentCreation(existing, patch, orgId, preferredContact)
         ? { need: existing, replayed: true }
         : { error: t.need.idempotencyConflict };
@@ -217,9 +218,12 @@ export async function createNeed(
           .limit(1)
           .all()[0];
         if (existing) {
-        return sameIdempotentCreation(existing, patch, orgId, preferredContact)
-          ? { need: existing, replayed: true }
-          : { error: t.need.idempotencyConflict };
+          if (existing.deletedAt != null) {
+            return { error: t.need.idempotencyConflict };
+          }
+          return sameIdempotentCreation(existing, patch, orgId, preferredContact)
+            ? { need: existing, replayed: true }
+            : { error: t.need.idempotencyConflict };
         }
       }
 
@@ -275,6 +279,7 @@ export async function createNeed(
           orgId == null ? isNull(needs.orgId) : eq(needs.orgId, orgId),
           eq(needs.status, "open"),
           eq(needs.moderationStatus, "visible"),
+          isNull(needs.deletedAt),
           or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
           or(...tagConditions),
         ),
@@ -299,7 +304,11 @@ export async function getOwnNeed(
   id: number,
 ): Promise<Need | null> {
   if (!Number.isInteger(id) || id <= 0) return null;
-  const [need] = await db.select().from(needs).where(eq(needs.id, id)).limit(1);
+  const [need] = await db
+    .select()
+    .from(needs)
+    .where(and(eq(needs.id, id), isNull(needs.deletedAt)))
+    .limit(1);
   if (!need || need.userId !== userId) return null;
   return need;
 }
@@ -321,6 +330,7 @@ export async function hasStaleIncomingHands(
     .where(
       and(
         eq(needs.userId, userId),
+        isNull(needs.deletedAt),
         eq(connections.status, "pending"),
         lt(connections.createdAt, cutoff),
       ),
@@ -357,14 +367,27 @@ export async function applyNeedPatch(
   return { need: updated };
 }
 
-// 揭示 → 举手 → 需求，按外键依赖顺序删；三步同一事务，避免中途失败留孤儿，
-// 也避免删除过程中并发接受插入新的 connection/reveal 触发外键错误。
+// 删除只撤下内容，不删除连接与揭示台账。配额和滥用调查都依赖这些不可变证据。
 export async function deleteNeed(need: Need): Promise<void> {
   db.transaction(
     (tx) => {
-      tx.delete(contactReveals).where(eq(contactReveals.needId, need.id)).run();
-      tx.delete(connections).where(eq(connections.needId, need.id)).run();
-      tx.delete(needs).where(eq(needs.id, need.id)).run();
+      const now = new Date();
+      const deleted = tx
+        .update(needs)
+        .set({ status: "closed", deletedAt: now, updatedAt: now })
+        .where(and(eq(needs.id, need.id), isNull(needs.deletedAt)))
+        .returning({ id: needs.id })
+        .all();
+      if (deleted.length === 0) return;
+      tx.insert(auditLogs)
+        .values({
+          actorId: need.userId,
+          action: "need_deleted",
+          targetType: "need",
+          targetId: need.id,
+          metadata: { scope: need.orgId == null ? "plaza" : "org" },
+        })
+        .run();
     },
     { behavior: "immediate" },
   );

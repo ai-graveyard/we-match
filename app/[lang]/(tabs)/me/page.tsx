@@ -76,7 +76,7 @@ export default async function MePage({
   const myNeeds = await db
     .select()
     .from(needs)
-    .where(eq(needs.userId, user.id))
+    .where(and(eq(needs.userId, user.id), isNull(needs.deletedAt)))
     .orderBy(desc(needs.updatedAt));
 
   const myOrgs = await getUserOrgs(user.id);

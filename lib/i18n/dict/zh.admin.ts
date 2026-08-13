@@ -103,7 +103,7 @@ export const zhAdmin = {
   requestStatusRejected: "已拒绝",
 
   codesTitle: "验证码 · {n}",
-  codesDescRecent: "最近 {n} 条",
+  codesDescRecent: "全部 {n} 条",
   codesDescSuffix:
     "登录验证码，其中 {n} 条仍然有效。登录成功后该邮箱的验证码会被立即删除，所以这里主要是还没用掉的。",
   codesEmpty: "暂无验证码记录",

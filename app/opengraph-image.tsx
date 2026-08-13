@@ -57,7 +57,7 @@ export default function OpengraphImage() {
               color: "#808080",
             }}
           >
-            LET THE RIGHT PEOPLE MEET
+            YOU NEED IT. I CAN OFFER IT.
           </div>
         </div>
         <div

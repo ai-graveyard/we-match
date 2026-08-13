@@ -10,6 +10,7 @@ import {
   inArray,
   isNull,
   ne,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -17,6 +18,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/lib/db";
 import {
   connections,
+  blocks,
   joinRequests,
   needs,
   orgMembers,
@@ -24,6 +26,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { INVITE_CODE_CHARSET, INVITE_CODE_LENGTH } from "@/lib/orgs";
+import { fieldVisibility } from "@/lib/card";
 
 // 读模型：页面与 API 共用的查询。写路径见各 lib/*-service.ts。
 // 命名约定：lib/X.ts = 常量 + 纯函数/校验，lib/X-service.ts = 有 IO 的写路径。
@@ -94,6 +97,7 @@ export async function getOrgOverviewStats(
       .where(
         and(
           eq(needs.orgId, orgId),
+          isNull(needs.deletedAt),
           eq(needs.status, "open"),
           or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
         ),
@@ -160,7 +164,13 @@ export async function getIncomingPendingHands(userId: number) {
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
     .innerJoin(users, eq(connections.initiatorId, users.id))
-    .where(and(eq(needs.userId, userId), eq(connections.status, "pending")))
+    .where(
+      and(
+        eq(needs.userId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "pending"),
+      ),
+    )
     .orderBy(asc(connections.createdAt));
 }
 
@@ -181,6 +191,7 @@ export async function getOutgoingHands(userId: number) {
     .where(
       and(
         eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
         inArray(connections.status, ["pending", "accepted"]),
       ),
     )
@@ -225,7 +236,7 @@ export async function getReceivedConnections(
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
     .innerJoin(users, eq(connections.initiatorId, users.id))
-    .where(eq(needs.userId, userId))
+    .where(and(eq(needs.userId, userId), isNull(needs.deletedAt)))
     .orderBy(pendingFirst, desc(connections.updatedAt));
 }
 
@@ -249,7 +260,7 @@ export async function getInitiatedConnections(
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
     .innerJoin(users, eq(needs.userId, users.id))
-    .where(eq(connections.initiatorId, userId))
+    .where(and(eq(connections.initiatorId, userId), isNull(needs.deletedAt)))
     .orderBy(pendingFirst, desc(connections.updatedAt));
 }
 
@@ -278,17 +289,61 @@ export async function closeUserOrgNeeds(userId: number, orgId: number) {
 }
 
 // 标签词库：名片标签 + 需求标签的并集，按使用频次排序（联想复用，避免同义词分裂）
-export async function getAllTags(): Promise<string[]> {
+export async function getAllTags(viewerId: number): Promise<string[]> {
+  const [memberships, blockRows] = await Promise.all([
+    db
+      .select({ orgId: orgMembers.orgId })
+      .from(orgMembers)
+      .where(eq(orgMembers.userId, viewerId)),
+    db
+      .select({ blockerId: blocks.blockerId, blockedId: blocks.blockedId })
+      .from(blocks)
+      .where(
+        or(eq(blocks.blockerId, viewerId), eq(blocks.blockedId, viewerId)),
+      ),
+  ]);
+  const orgIds = memberships.map((row) => row.orgId);
+  const blockedUserIds = blockRows.map((row) =>
+    row.blockerId === viewerId ? row.blockedId : row.blockerId,
+  );
   const userRows = await db
-    .select({ tags: users.tags })
+    .select({ id: users.id, tags: users.tags, visibility: users.fieldVisibility })
     .from(users)
-    .where(ne(users.tags, []));
+    .where(
+      and(
+        eq(users.status, "active"),
+        ne(users.tags, []),
+        blockedUserIds.length > 0
+          ? notInArray(users.id, blockedUserIds)
+          : undefined,
+      ),
+    );
   const needRows = await db
     .select({ tags: needs.tags })
     .from(needs)
-    .where(ne(needs.tags, []));
+    .innerJoin(users, eq(needs.userId, users.id))
+    .where(
+      and(
+        ne(needs.tags, []),
+        isNull(needs.deletedAt),
+        eq(needs.moderationStatus, "visible"),
+        eq(needs.status, "open"),
+        eq(users.status, "active"),
+        blockedUserIds.length > 0
+          ? notInArray(users.id, blockedUserIds)
+          : undefined,
+        or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
+        orgIds.length > 0
+          ? or(isNull(needs.orgId), inArray(needs.orgId, orgIds))
+          : isNull(needs.orgId),
+      ),
+    );
   const freq = new Map<string, number>();
-  for (const row of [...userRows, ...needRows]) {
+  const visibleUserRows = userRows.filter(
+    (row) =>
+      row.id === viewerId || fieldVisibility(row.visibility, "tags") === "public",
+  );
+  for (const row of [...visibleUserRows, ...needRows]) {
     for (const tag of row.tags) {
       freq.set(tag, (freq.get(tag) ?? 0) + 1);
     }

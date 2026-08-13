@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   connections,
   contactReveals,
+  blocks,
   needs,
   orgMembers,
   orgs,
@@ -18,7 +19,7 @@ import {
   handleConnection,
   revealedFieldsTo,
 } from "@/lib/connections-service";
-import { deleteNeed } from "@/lib/needs-service";
+import { deleteNeed, getOwnNeed } from "@/lib/needs-service";
 import {
   getInitiatedConnections,
   getReceivedConnections,
@@ -213,6 +214,40 @@ describe("举手状态迁移", () => {
       }),
     ).toBe(false);
   });
+
+  test("取消连接或任一方拉黑后不再展示已揭示字段", async () => {
+    const owner = await createUser();
+    const raiser = await createUser();
+    const need = await createNeed(owner.id, { preferredContact: "email" });
+    await expressInterest(raiser, { needId: need.id, message: "", contact: "email" }, t);
+    const row = await getConnection(need.id, raiser.id);
+    await handleConnection(owner, { connectionId: row!.id, decision: "accept" }, t);
+    expect([...(await revealedFieldsTo(owner.id, raiser.id))]).toEqual(["email"]);
+
+    await cancelConnection(raiser, row!.id);
+    expect([...(await revealedFieldsTo(owner.id, raiser.id))]).toEqual([]);
+
+    await db
+      .update(connections)
+      .set({ status: "accepted" })
+      .where(eq(connections.id, row!.id));
+    await db.insert(blocks).values({ blockerId: owner.id, blockedId: raiser.id });
+    expect([...(await revealedFieldsTo(owner.id, raiser.id))]).toEqual([]);
+  });
+
+  test("需求关闭后不能接受遗留 pending 举手", async () => {
+    const owner = await createUser();
+    const raiser = await createUser();
+    const need = await createNeed(owner.id, { preferredContact: "email" });
+    await expressInterest(raiser, { needId: need.id, message: "", contact: "email" }, t);
+    const row = await getConnection(need.id, raiser.id);
+    await db.update(needs).set({ status: "closed" }).where(eq(needs.id, need.id));
+
+    expect(
+      await handleConnection(owner, { connectionId: row!.id, decision: "accept" }, t),
+    ).toEqual({ error: t.connection.notOpen });
+    expect(await countReveals(need.id)).toBe(0);
+  });
 });
 
 async function countReveals(needId: number) {
@@ -276,7 +311,27 @@ describe("并发与原子性", () => {
     expect(await countReveals(need.id)).toBe(2);
   });
 
-  test("删除需求级联清掉举手与揭示", async () => {
+  test("双方并发确认不会互相覆盖，最终 completed", async () => {
+    const owner = await createUser();
+    const raiser = await createUser();
+    const need = await createNeed(owner.id, { preferredContact: "email" });
+    await expressInterest(raiser, { needId: need.id, message: "", contact: "email" }, t);
+    const row = await getConnection(need.id, raiser.id);
+    await handleConnection(owner, { connectionId: row!.id, decision: "accept" }, t);
+
+    const results = await Promise.all([
+      confirmConnectionCompleted(owner, row!.id),
+      confirmConnectionCompleted(raiser, row!.id),
+    ]);
+    expect(results).toContainEqual({ ok: true, completed: false });
+    expect(results).toContainEqual({ ok: true, completed: true });
+    const completed = await getConnection(need.id, raiser.id);
+    expect(completed?.status).toBe("completed");
+    expect(completed?.ownerConfirmedAt).not.toBeNull();
+    expect(completed?.initiatorConfirmedAt).not.toBeNull();
+  });
+
+  test("删除需求只撤下内容，保留举手与揭示审计台账", async () => {
     const owner = await createUser();
     const raiser = await createUser();
     const need = await createNeed(owner.id, { preferredContact: "email" });
@@ -287,10 +342,13 @@ describe("并发与原子性", () => {
     expect(await countReveals(need.id)).toBe(2);
 
     await deleteNeed(need);
-    expect(await countConnections(need.id)).toBe(0);
-    expect(await countReveals(need.id)).toBe(0);
-    const [gone] = await db.select().from(needs).where(eq(needs.id, need.id)).limit(1);
-    expect(gone).toBeUndefined();
+    expect(await countConnections(need.id)).toBe(1);
+    expect(await countReveals(need.id)).toBe(2);
+    const [archived] = await db.select().from(needs).where(eq(needs.id, need.id)).limit(1);
+    expect(archived?.deletedAt).toBeInstanceOf(Date);
+    expect(archived?.status).toBe("closed");
+    expect(await getOwnNeed(owner.id, need.id)).toBeNull();
+    expect([...(await revealedFieldsTo(owner.id, raiser.id))]).toEqual([]);
   });
 });
 

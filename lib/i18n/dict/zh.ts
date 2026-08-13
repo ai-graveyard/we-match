@@ -4,8 +4,8 @@
 
 export const zh = {
   brand: {
-    slogan: "让合适的人先碰面",
-    metaDescription: "让合适的人先碰面。发布「我需要」或「我提供」，找到能互相帮上忙的人。",
+    slogan: "你有所需，我有所供。",
+    metaDescription: "你有所需，我有所供。发布「我需要」或「我提供」，找到能互相帮上忙的人。",
     homeLabel: "We Match 首页",
   },
 

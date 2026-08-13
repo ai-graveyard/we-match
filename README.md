@@ -1,6 +1,6 @@
 # We Match
 
-**让合适的人碰面。**
+**你有所需，我有所供。**
 
 极简供需匹配工具：每人一张名片，可发布「我需要 / 我提供」到公开广场或组织；靠浏览、筛选、搜索找到人，再用对方开放的渠道线下联系。
 
@@ -91,7 +91,7 @@ export ADMIN_EMAILS="you@example.com"
 | `pnpm lint` | ESLint |
 | `pnpm db:generate` | 根据 schema 生成 Drizzle 迁移 |
 | `pnpm db:seed` | 写入演示种子数据 |
-| `pnpm db:backup` | 在线备份 SQLite 到 `./backups`（保留最近 14 份） |
+| `pnpm db:backup` | 非 Docker 部署：在线备份 `DATABASE_PATH`（默认 `./data/we-match.db`）到 `./backups` |
 | `pnpm build:skill` | 仅构建官方 Agent Skill |
 
 ## Agent 接入
@@ -123,7 +123,7 @@ docker compose up -d --build
 | `make build` | 构建镜像 |
 | `make start` / `make stop` / `make restart` | 起停服务 |
 | `make logs` | 跟踪日志 |
-| `make backup` | 在线备份 SQLite 数据库 |
+| `make backup` | 在运行中的应用容器内备份 `/app/data` 到备份卷 |
 | `make deploy` | `git pull` + 备份数据库 + 重新构建 + 重启 + 清理，服务器上用这条 |
 
 ### CI/CD
@@ -163,7 +163,7 @@ SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 单文件 SQLite 是全部数据，务必每日备份并同步异地：
 
 ```bash
-0 4 * * * cd /path/to/we-match && node scripts/backup-db.mjs
+0 4 * * * cd /path/to/we-match && make backup
 ```
 
 ### 上线前检查

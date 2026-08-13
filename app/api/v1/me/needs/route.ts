@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { needs, orgs } from "@/lib/db/schema";
 import { authenticate } from "@/lib/api/auth";
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     .select({ need: needs, orgName: orgs.name })
     .from(needs)
     .leftJoin(orgs, eq(needs.orgId, orgs.id))
-    .where(eq(needs.userId, auth.user.id))
+    .where(and(eq(needs.userId, auth.user.id), isNull(needs.deletedAt)))
     .orderBy(desc(needs.updatedAt));
 
   return Response.json({

@@ -1,9 +1,8 @@
 import "server-only";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, count, eq, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
-  connections,
-  contactReveals,
+  auditLogs,
   joinRequests,
   needs,
   orgMembers,
@@ -71,6 +70,49 @@ async function checkCanApply(
   return null;
 }
 
+function insertJoinRequestAtomic(
+  userId: number,
+  orgId: number,
+  via: "code" | "plaza",
+  t: ServerDict,
+): string | null {
+  return db.transaction(
+    (tx) => {
+      const membership = tx
+        .select({ userId: orgMembers.userId })
+        .from(orgMembers)
+        .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)))
+        .limit(1)
+        .all()[0];
+      if (membership) return t.org.alreadyMember;
+      const joined = tx
+        .select({ n: count() })
+        .from(orgMembers)
+        .where(eq(orgMembers.userId, userId))
+        .all()[0];
+      if ((joined?.n ?? 0) >= ORG_LIMITS.maxJoined) {
+        return fmt(t.org.joinLimit, { max: ORG_LIMITS.maxJoined });
+      }
+      const pending = tx
+        .select({ id: joinRequests.id })
+        .from(joinRequests)
+        .where(
+          and(
+            eq(joinRequests.orgId, orgId),
+            eq(joinRequests.userId, userId),
+            eq(joinRequests.status, "pending"),
+          ),
+        )
+        .limit(1)
+        .all()[0];
+      if (pending) return t.org.alreadyApplied;
+      tx.insert(joinRequests).values({ orgId, userId, via }).run();
+      return null;
+    },
+    { behavior: "immediate" },
+  );
+}
+
 async function requireOwner(userId: number, orgId: number) {
   const [org] = await db.select().from(orgs).where(eq(orgs.id, orgId)).limit(1);
   if (!org || org.ownerId !== userId) return null;
@@ -106,20 +148,36 @@ export async function createOrg(
   if (!quota.ok) return { error: quota.message };
 
   const inviteCode = await generateUniqueInviteCode();
-  const [org] = await db
-    .insert(orgs)
-    .values({
-      name,
-      description,
-      visibility: input.visibility,
-      ownerId: user.id,
-      inviteCode,
-    })
-    .returning({ id: orgs.id });
-  await db
-    .insert(orgMembers)
-    .values({ orgId: org.id, userId: user.id, role: "owner" });
-  return { orgId: org.id };
+  return db.transaction(
+    (tx): { error: string } | { orgId: number } => {
+      const joined = tx
+        .select({ n: count() })
+        .from(orgMembers)
+        .where(eq(orgMembers.userId, user.id))
+        .all()[0];
+      if ((joined?.n ?? 0) >= ORG_LIMITS.maxJoined) {
+        return {
+          error: fmt(t.org.joinLimitWithCreate, { max: ORG_LIMITS.maxJoined }),
+        };
+      }
+      const org = tx
+        .insert(orgs)
+        .values({
+          name,
+          description,
+          visibility: input.visibility,
+          ownerId: user.id,
+          inviteCode,
+        })
+        .returning({ id: orgs.id })
+        .all()[0];
+      tx.insert(orgMembers)
+        .values({ orgId: org.id, userId: user.id, role: "owner" })
+        .run();
+      return { orgId: org.id };
+    },
+    { behavior: "immediate" },
+  );
 }
 
 export async function applyByCode(
@@ -146,9 +204,8 @@ export async function applyByCode(
   }
   const err = await checkCanApply(user, org.id, t);
   if (err) return { error: err };
-  await db
-    .insert(joinRequests)
-    .values({ orgId: org.id, userId: user.id, via: "code" });
+  const writeError = insertJoinRequestAtomic(user.id, org.id, "code", t);
+  if (writeError) return { error: writeError };
   await notifyOrgAdmins(org.id, {
     type: "org_join_requested",
     name: user.nickname,
@@ -179,9 +236,8 @@ export async function applyPlaza(
   if (!org || org.visibility !== "public") return { error: t.org.notFound };
   const err = await checkCanApply(user, orgId, t);
   if (err) return { error: err };
-  await db
-    .insert(joinRequests)
-    .values({ orgId, userId: user.id, via: "plaza" });
+  const writeError = insertJoinRequestAtomic(user.id, orgId, "plaza", t);
+  if (writeError) return { error: writeError };
   await notifyOrgAdmins(orgId, {
     type: "org_join_requested",
     name: user.nickname,
@@ -205,41 +261,102 @@ export async function handleJoinRequest(
   const { requestId, decision } = input;
   if (!Number.isInteger(requestId) || !["approve", "reject"].includes(decision))
     return { error: t.common.badParams };
-  const [request] = await db
-    .select()
-    .from(joinRequests)
-    .where(eq(joinRequests.id, requestId))
-    .limit(1);
-  if (!request || request.status !== "pending") return { error: t.org.requestGone };
-  const ctx = await requireOrgAdmin(user.id, request.orgId);
-  if (!ctx) return { error: t.org.adminOnly };
+  const result = db.transaction(
+    (
+      tx,
+    ):
+      | { error: string }
+      | {
+          request: typeof joinRequests.$inferSelect;
+          orgName: string;
+          alreadyMember: boolean;
+        } => {
+      const request = tx
+        .select()
+        .from(joinRequests)
+        .where(eq(joinRequests.id, requestId))
+        .limit(1)
+        .all()[0];
+      if (!request || request.status !== "pending") {
+        return { error: t.org.requestGone };
+      }
+      const org = tx
+        .select()
+        .from(orgs)
+        .where(eq(orgs.id, request.orgId))
+        .limit(1)
+        .all()[0];
+      const membership = tx
+        .select()
+        .from(orgMembers)
+        .where(
+          and(eq(orgMembers.orgId, request.orgId), eq(orgMembers.userId, user.id)),
+        )
+        .limit(1)
+        .all()[0];
+      if (!org || !membership || !isOrgAdminRole(membership.role)) {
+        return { error: t.org.adminOnly };
+      }
 
-  if (decision === "approve") {
-    if (await getMembership(request.orgId, request.userId)) {
-      await db
-        .update(joinRequests)
-        .set({ status: "approved", handledAt: new Date() })
-        .where(eq(joinRequests.id, requestId));
-      return { ok: t.org.targetAlreadyMember };
-    }
-    if ((await countUserOrgs(request.userId)) >= ORG_LIMITS.maxJoined) {
-      return {
-        error: fmt(t.org.targetJoinLimit, { max: ORG_LIMITS.maxJoined }),
-      };
-    }
-    await db
-      .insert(orgMembers)
-      .values({ orgId: request.orgId, userId: request.userId, role: "member" });
-    await db
-      .update(joinRequests)
-      .set({ status: "approved", handledAt: new Date() })
-      .where(eq(joinRequests.id, requestId));
-  } else {
-    await db
-      .update(joinRequests)
-      .set({ status: "rejected", handledAt: new Date() })
-      .where(eq(joinRequests.id, requestId));
-  }
+      const now = new Date();
+      if (decision === "approve") {
+        const existing = tx
+          .select({ userId: orgMembers.userId })
+          .from(orgMembers)
+          .where(
+            and(
+              eq(orgMembers.orgId, request.orgId),
+              eq(orgMembers.userId, request.userId),
+            ),
+          )
+          .limit(1)
+          .all()[0];
+        if (existing) {
+          tx.update(joinRequests)
+            .set({ status: "approved", handledAt: now })
+            .where(
+              and(
+                eq(joinRequests.id, requestId),
+                eq(joinRequests.status, "pending"),
+              ),
+            )
+            .run();
+          return {
+            request,
+            orgName: org.name,
+            alreadyMember: true,
+          };
+        }
+        const joined = tx
+          .select({ n: count() })
+          .from(orgMembers)
+          .where(eq(orgMembers.userId, request.userId))
+          .all()[0];
+        if ((joined?.n ?? 0) >= ORG_LIMITS.maxJoined) {
+          return {
+            error: fmt(t.org.targetJoinLimit, { max: ORG_LIMITS.maxJoined }),
+          };
+        }
+        tx.insert(orgMembers)
+          .values({ orgId: request.orgId, userId: request.userId, role: "member" })
+          .run();
+      }
+      tx.update(joinRequests)
+        .set({
+          status: decision === "approve" ? "approved" : "rejected",
+          handledAt: now,
+        })
+        .where(
+          and(eq(joinRequests.id, requestId), eq(joinRequests.status, "pending")),
+        )
+        .run();
+      return { request, orgName: org.name, alreadyMember: false };
+    },
+    { behavior: "immediate" },
+  );
+  if ("error" in result) return { error: result.error };
+  if (result.alreadyMember) return { ok: t.org.targetAlreadyMember };
+  const { request, orgName } = result;
   await Promise.all([
     notify({
       userId: request.userId,
@@ -247,10 +364,10 @@ export async function handleJoinRequest(
         decision === "approve"
           ? {
               type: "org_join_approved",
-              org: ctx.org.name,
+              org: orgName,
               orgId: request.orgId,
             }
-          : { type: "org_join_rejected", org: ctx.org.name },
+          : { type: "org_join_rejected", org: orgName },
       href: decision === "approve" ? `/orgs/${request.orgId}` : "/me?section=organization",
     }),
     track({
@@ -393,25 +510,26 @@ export async function dissolveOrg(
 ): Promise<{ ok: true } | null> {
   if (!Number.isInteger(orgId)) return null;
   if (!(await requireOwner(user.id, orgId))) return null;
-  // 组织内需求下可能挂着举手与联系方式揭示（connections/contact_reveals 都有
-  // 指向 needs 的外键）。必须先按外键依赖顺序清掉这些子图，否则直接删 needs
-  // 会外键失败。整个解散放进单个 IMMEDIATE 事务，任一步失败都回滚。
+  // 组织解散后撤下需求，但保留连接与联系方式揭示台账，避免配额和调查证据丢失。
+  // needs.org_id 没有外键，允许保留原组织 ID 作为历史关联。
   db.transaction(
     (tx) => {
-      const orgNeedIds = tx
-        .select({ id: needs.id })
-        .from(needs)
+      const now = new Date();
+      const archivedNeeds = tx
+        .update(needs)
+        .set({ status: "closed", deletedAt: now, updatedAt: now })
         .where(eq(needs.orgId, orgId))
-        .all()
-        .map((row) => row.id);
-      if (orgNeedIds.length > 0) {
-        tx
-          .delete(contactReveals)
-          .where(inArray(contactReveals.needId, orgNeedIds))
-          .run();
-        tx.delete(connections).where(inArray(connections.needId, orgNeedIds)).run();
-        tx.delete(needs).where(inArray(needs.id, orgNeedIds)).run();
-      }
+        .returning({ id: needs.id })
+        .all();
+      tx.insert(auditLogs)
+        .values({
+          actorId: user.id,
+          action: "org_dissolved",
+          targetType: "org",
+          targetId: orgId,
+          metadata: { archivedNeedCount: archivedNeeds.length },
+        })
+        .run();
       tx.delete(orgMembers).where(eq(orgMembers.orgId, orgId)).run();
       tx.delete(joinRequests).where(eq(joinRequests.orgId, orgId)).run();
       tx.delete(orgs).where(and(eq(orgs.id, orgId), eq(orgs.ownerId, user.id))).run();

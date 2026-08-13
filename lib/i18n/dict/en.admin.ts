@@ -103,7 +103,7 @@ export const enAdmin: AdminDict = {
   requestStatusRejected: "Declined",
 
   codesTitle: "Codes · {n}",
-  codesDescRecent: "The {n} most recent sign-in codes",
+  codesDescRecent: "All {n} sign-in codes",
   codesDescSuffix:
     ", {n} of them still valid. An address's codes are deleted the moment it signs in, so these are mostly unused ones.",
   codesEmpty: "No codes",

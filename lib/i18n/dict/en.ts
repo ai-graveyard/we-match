@@ -2,9 +2,9 @@ import type { UiDict } from "@/lib/i18n/dict/types";
 
 export const en: UiDict = {
   brand: {
-    slogan: "Meet the right people first",
+    slogan: "You need it. I can offer it.",
     metaDescription:
-      "Meet the right people first. Post what you need or what you can offer, and find people who can actually help.",
+      "You need it. I can offer it. Post what you need or what you can offer, and find people who can actually help.",
     homeLabel: "We Match home",
   },
 

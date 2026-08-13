@@ -18,7 +18,7 @@ export default async function CardEditPage({
   const user = await getSessionUser();
   if (!user) redirect(localePath(locale, "/login?next=/me/card"));
   const params = await searchParams;
-  const suggestions = await getAllTags();
+  const suggestions = await getAllTags(user.id);
 
   const formUser: CardFormUser = {
     nickname: user.nickname,

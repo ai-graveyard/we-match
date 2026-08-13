@@ -90,6 +90,7 @@ export default async function PlazaPage({
 
   const conds: SQL[] = [
     activeOrg ? eq(needs.orgId, activeOrg.id) : isNull(needs.orgId),
+    isNull(needs.deletedAt),
     eq(needs.moderationStatus, "visible"),
     eq(users.status, "active"),
   ];

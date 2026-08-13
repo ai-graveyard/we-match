@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { needs, orgMembers, orgs } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
@@ -40,7 +40,7 @@ export default async function NeedNewPage({
     const [need] = await db
       .select()
       .from(needs)
-      .where(eq(needs.id, editId))
+      .where(and(eq(needs.id, editId), isNull(needs.deletedAt)))
       .limit(1);
     if (!need || need.userId !== user.id) notFound();
     initial = {
@@ -60,7 +60,7 @@ export default async function NeedNewPage({
     .from(orgMembers)
     .innerJoin(orgs, eq(orgMembers.orgId, orgs.id))
     .where(eq(orgMembers.userId, user.id));
-  const suggestions = await getAllTags();
+  const suggestions = await getAllTags(user.id);
   const contactOptions = CONTACT_FIELDS.flatMap((field) => {
     if (!user[field.key]) return [];
     const visibility = fieldVisibility(user.fieldVisibility, field.key);

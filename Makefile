@@ -24,9 +24,10 @@ restart: stop start
 logs:
 	docker compose logs -f
 
-# SQLite 在线备份。deploy 前先跑一次，任一步失败 make 立即中止（不带 - 前缀）。
+# SQLite 在线备份。脚本必须在运行中的应用容器里执行，才能读取 /app/data 的
+# named volume；宿主机仓库下的 ./data 不是生产数据库。
 backup:
-	node scripts/backup-db.mjs
+	docker compose exec -T we-match node scripts/backup-db.mjs /app/backups
 
 # 顺序：拉代码 → 备份数据库 → 构建 → 重启 → 清理。备份在重启前，保证有回滚点。
 deploy:

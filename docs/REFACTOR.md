@@ -16,7 +16,7 @@
 | 数据一致性 | 举手接受 + 双向揭示、需求删除、组织解散均在 SQLite `IMMEDIATE` 事务内原子完成；接受/拒绝用 `status='pending'` 条件更新防并发双处理；组织解散按 `contact_reveals → connections → needs → members → join_requests → org` 外键顺序清理子图 |
 | 技术栈 | Next.js 16 App Router + React 19 + SQLite/better-sqlite3 + Drizzle + Tailwind 4；自研 auth 与 i18n；单实例自部署，不适配 Vercel serverless |
 | 代码规模 | 写路径全部在 `lib/*-service.ts`（card / needs / api-keys / connections / orgs / safety）；`app/actions` 为薄适配层 |
-| 测试 | Vitest：可见性、举手状态机、并发举手/双接受/揭示原子性/删除与解散级联、连接中心查询（隔离/置顶/stale）、额度（含赚回、降额与 shadow/enforce 双模式）、举报与拉黑、组织、续期锁、广场排序、API 硬化、固定码 |
+| 测试 | Vitest：可见性、举手状态机、并发举手/双接受/双确认/揭示原子性、删除与解散的审计保留、连接中心查询（隔离/置顶/stale）、额度（含赚回、降额与 shadow/enforce 双模式）、举报与拉黑、组织、续期锁、广场排序、API 硬化、固定码 |
 | CI | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)：`check`（`pnpm lint` + `pnpm test` + `pnpm build`）+ 门禁后的 `deploy`（`make deploy` 含备份，部署后打 `/api/health` smoke check） |
 
 **核心张力已随 M6 解除**：联系方式默认 `connected`，接受后写入 `contact_reveals`，发布/举手/接受走 `lib/quota.ts`。关键写路径已收敛到原子事务，连接管理有了独立闭环页。文档与代码此刻没有已知缺口——下一次动土前先更新本表，别让它变成考古材料。

@@ -672,6 +672,7 @@ export async function countOpenNeeds(userId: number, now = Date.now()) {
     .where(
       and(
         eq(needs.userId, userId),
+        isNull(needs.deletedAt),
         eq(needs.status, "open"),
         or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date(now))),
       ),
@@ -684,7 +685,13 @@ export async function countIncomingPending(userId: number) {
     .select({ n: count() })
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
-    .where(and(eq(needs.userId, userId), eq(connections.status, "pending")));
+    .where(
+      and(
+        eq(needs.userId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "pending"),
+      ),
+    );
   return row?.n ?? 0;
 }
 
@@ -693,9 +700,11 @@ export async function countFreshPendingHands(userId: number, now = Date.now()) {
   const [row] = await db
     .select({ n: count() })
     .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
     .where(
       and(
         eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
         eq(connections.status, "pending"),
         gte(connections.createdAt, cutoff),
       ),
@@ -720,14 +729,25 @@ async function countAcceptedOpen(userId: number) {
   const [asInitiator] = await db
     .select({ n: count() })
     .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
     .where(
-      and(eq(connections.initiatorId, userId), eq(connections.status, "accepted")),
+      and(
+        eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "accepted"),
+      ),
     );
   const [asOwner] = await db
     .select({ n: count() })
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
-    .where(and(eq(needs.userId, userId), eq(connections.status, "accepted")));
+    .where(
+      and(
+        eq(needs.userId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "accepted"),
+      ),
+    );
   return (asInitiator?.n ?? 0) + (asOwner?.n ?? 0);
 }
 
@@ -743,9 +763,11 @@ async function countRaisesToday(userId: number, now: number) {
   const [row] = await db
     .select({ n: count() })
     .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
     .where(
       and(
         eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
         gte(connections.lastRaisedAt, dayStart(now)),
       ),
     );
@@ -811,6 +833,7 @@ export async function countStaleIncomingPending(
     .where(
       and(
         eq(needs.userId, userId),
+        isNull(needs.deletedAt),
         eq(connections.status, "pending"),
         lt(connections.createdAt, cutoff),
       ),
@@ -985,9 +1008,11 @@ export function countFreshPendingHandsTx(
   const row = tx
     .select({ n: count() })
     .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
     .where(
       and(
         eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
         eq(connections.status, "pending"),
         gte(connections.createdAt, cutoff),
       ),
@@ -1000,15 +1025,26 @@ export function countAcceptedOpenTx(tx: SqliteTx, userId: number): number {
   const asInitiator = tx
     .select({ n: count() })
     .from(connections)
+    .innerJoin(needs, eq(connections.needId, needs.id))
     .where(
-      and(eq(connections.initiatorId, userId), eq(connections.status, "accepted")),
+      and(
+        eq(connections.initiatorId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "accepted"),
+      ),
     )
     .all()[0];
   const asOwner = tx
     .select({ n: count() })
     .from(connections)
     .innerJoin(needs, eq(connections.needId, needs.id))
-    .where(and(eq(needs.userId, userId), eq(connections.status, "accepted")))
+    .where(
+      and(
+        eq(needs.userId, userId),
+        isNull(needs.deletedAt),
+        eq(connections.status, "accepted"),
+      ),
+    )
     .all()[0];
   return (asInitiator?.n ?? 0) + (asOwner?.n ?? 0);
 }

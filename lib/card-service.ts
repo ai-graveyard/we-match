@@ -173,6 +173,7 @@ export async function applyCardPatch(
       .where(
         and(
           eq(needs.userId, user.id),
+          isNull(needs.deletedAt),
           eq(needs.status, "open"),
           isNull(needs.orgId),
         ),
@@ -189,6 +190,7 @@ export async function applyCardPatch(
       .where(
         and(
           eq(needs.userId, user.id),
+          isNull(needs.deletedAt),
           eq(needs.status, "open"),
           isNotNull(needs.orgId),
         ),

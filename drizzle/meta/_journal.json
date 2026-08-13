@@ -78,6 +78,13 @@
       "when": 1786630000000,
       "tag": "0010_quota-p3p4",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786665600000,
+      "tag": "0011_need-soft-delete",
+      "breakpoints": true
     }
   ]
 }

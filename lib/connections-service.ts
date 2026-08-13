@@ -1,9 +1,10 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   connections,
   contactReveals,
+  blocks,
   needs,
   orgMembers,
   users,
@@ -42,13 +43,18 @@ export async function revealedFieldsTo(
   fromUserId: number,
   toUserId: number,
 ): Promise<Set<ContactFieldKey>> {
+  if (await isBlockedEitherWay(fromUserId, toUserId)) return new Set();
   const rows = await db
     .select({ field: contactReveals.field })
     .from(contactReveals)
+    .innerJoin(connections, eq(contactReveals.connectionId, connections.id))
+    .innerJoin(needs, eq(contactReveals.needId, needs.id))
     .where(
       and(
         eq(contactReveals.fromUserId, fromUserId),
         eq(contactReveals.toUserId, toUserId),
+        inArray(connections.status, ["accepted", "completed"]),
+        isNull(needs.deletedAt),
       ),
     );
   return new Set(rows.map((row) => row.field));
@@ -102,6 +108,7 @@ export async function expressInterest(
   const [need] = await db.select().from(needs).where(eq(needs.id, needId)).limit(1);
   if (
     !need ||
+    need.deletedAt != null ||
     need.userId === user.id ||
     need.status !== "open" ||
     need.moderationStatus !== "visible" ||
@@ -137,6 +144,54 @@ export async function expressInterest(
   const now = new Date();
   const written = db.transaction(
     (tx): { error: string } | { ok: true } => {
+      const currentNeed = tx
+        .select()
+        .from(needs)
+        .where(eq(needs.id, needId))
+        .limit(1)
+        .all()[0];
+      if (
+        !currentNeed ||
+        currentNeed.deletedAt != null ||
+        currentNeed.userId === user.id ||
+        currentNeed.status !== "open" ||
+        currentNeed.moderationStatus !== "visible" ||
+        isExpired(currentNeed)
+      ) {
+        return { error: t.connection.notOpen };
+      }
+      const block = tx
+        .select({ blockerId: blocks.blockerId })
+        .from(blocks)
+        .where(
+          or(
+            and(
+              eq(blocks.blockerId, user.id),
+              eq(blocks.blockedId, currentNeed.userId),
+            ),
+            and(
+              eq(blocks.blockerId, currentNeed.userId),
+              eq(blocks.blockedId, user.id),
+            ),
+          ),
+        )
+        .limit(1)
+        .all()[0];
+      if (block) return { error: t.connection.blocked };
+      if (currentNeed.orgId != null) {
+        const membership = tx
+          .select({ userId: orgMembers.userId })
+          .from(orgMembers)
+          .where(
+            and(
+              eq(orgMembers.orgId, currentNeed.orgId),
+              eq(orgMembers.userId, user.id),
+            ),
+          )
+          .limit(1)
+          .all()[0];
+        if (!membership) return { error: t.connection.needNotFound };
+      }
       const existing = tx
         .select()
         .from(connections)
@@ -175,14 +230,14 @@ export async function expressInterest(
           error: fmt(t.quota.acceptedStock, { max: QUOTAS.stock.acceptedOpen }),
         };
       }
-      if (countNeedAcceptsTx(tx, need.id) >= QUOTAS.target.acceptPerNeed) {
+      if (countNeedAcceptsTx(tx, currentNeed.id) >= QUOTAS.target.acceptPerNeed) {
         return { error: t.quota.needAcceptCap };
       }
-      if (isHarvestingNeedTx(tx, need.id)) {
+      if (isHarvestingNeedTx(tx, currentNeed.id)) {
         return { error: t.quota.needClosedToRaises };
       }
       if (
-        countRaisesToUserTodayTx(tx, user.id, need.userId) >=
+        countRaisesToUserTodayTx(tx, user.id, currentNeed.userId) >=
         QUOTAS.target.sameUserPerDay
       ) {
         return { error: t.quota.sameUserDaily };
@@ -299,18 +354,36 @@ export async function handleConnection(
 
   if (decision === "accept") {
     if (!t) return null;
+    if (
+      row.need.deletedAt != null ||
+      row.need.status !== "open" ||
+      row.need.moderationStatus !== "visible" ||
+      row.initiator.status !== "active" ||
+      isExpired(row.need)
+    ) {
+      return { error: t.connection.notOpen };
+    }
+    if (await isBlockedEitherWay(user.id, row.connection.initiatorId)) {
+      return { error: t.connection.blocked };
+    }
+    if (row.need.orgId != null) {
+      const [membership] = await db
+        .select({ userId: orgMembers.userId })
+        .from(orgMembers)
+        .where(
+          and(
+            eq(orgMembers.orgId, row.need.orgId),
+            eq(orgMembers.userId, row.connection.initiatorId),
+          ),
+        )
+        .limit(1);
+      if (!membership) return { error: t.connection.needNotFound };
+    }
     const quota = await checkQuota(user, "connection.accept", t, {
       needId: row.need.id,
     });
     if (!quota.ok) return { error: quota.message };
 
-    const ownerField =
-      row.need.preferredContact ??
-      resolveInitiatorContact(user, undefined);
-    const initiatorField =
-      row.connection.initiatorContact ??
-      resolveInitiatorContact(row.initiator, undefined);
-    if (!ownerField || !initiatorField) return { error: t.connection.contactUnavailable };
     const { limit: acceptMax, penalty: acceptPenalty } = await effectiveDailyLimit(
       user,
       "connection.accept",
@@ -321,7 +394,69 @@ export async function handleConnection(
     // 保证同一条举手被并发接受时只落一次。
     const result = db.transaction(
       (tx): { error: string } | { ok: true } | null => {
-        if (countNeedAcceptsTx(tx, row.need.id) >= QUOTAS.target.acceptPerNeed) {
+        const current = tx
+          .select({ connection: connections, need: needs, initiator: users })
+          .from(connections)
+          .innerJoin(needs, eq(connections.needId, needs.id))
+          .innerJoin(users, eq(connections.initiatorId, users.id))
+          .where(eq(connections.id, connectionId))
+          .limit(1)
+          .all()[0];
+        if (!current || current.connection.status !== "pending") return null;
+        if (
+          current.need.userId !== user.id ||
+          current.need.deletedAt != null ||
+          current.need.status !== "open" ||
+          current.need.moderationStatus !== "visible" ||
+          current.initiator.status !== "active" ||
+          isExpired(current.need)
+        ) {
+          return { error: t.connection.notOpen };
+        }
+        const blocked = tx
+          .select({ blockerId: blocks.blockerId })
+          .from(blocks)
+          .where(
+            or(
+              and(
+                eq(blocks.blockerId, user.id),
+                eq(blocks.blockedId, current.connection.initiatorId),
+              ),
+              and(
+                eq(blocks.blockerId, current.connection.initiatorId),
+                eq(blocks.blockedId, user.id),
+              ),
+            ),
+          )
+          .limit(1)
+          .all()[0];
+        if (blocked) return { error: t.connection.blocked };
+        if (current.need.orgId != null) {
+          const member = tx
+            .select({ userId: orgMembers.userId })
+            .from(orgMembers)
+            .where(
+              and(
+                eq(orgMembers.orgId, current.need.orgId),
+                eq(orgMembers.userId, current.connection.initiatorId),
+              ),
+            )
+            .limit(1)
+            .all()[0];
+          if (!member) return { error: t.connection.needNotFound };
+        }
+        const ownerField = resolveInitiatorContact(
+          user,
+          current.need.preferredContact ?? undefined,
+        );
+        const initiatorField = resolveInitiatorContact(
+          current.initiator,
+          current.connection.initiatorContact ?? undefined,
+        );
+        if (!ownerField || !initiatorField) {
+          return { error: t.connection.contactUnavailable };
+        }
+        if (countNeedAcceptsTx(tx, current.need.id) >= QUOTAS.target.acceptPerNeed) {
           return { error: t.quota.needAcceptCap };
         }
         if (
@@ -359,9 +494,9 @@ export async function handleConnection(
         if (updated.length === 0) return null;
         writeRevealsTx(tx, {
           connectionId,
-          needId: row.need.id,
+          needId: current.need.id,
           ownerId: user.id,
-          initiatorId: row.connection.initiatorId,
+          initiatorId: current.connection.initiatorId,
           ownerField,
           initiatorField,
         });
@@ -447,47 +582,92 @@ export async function confirmConnectionCompleted(
   connectionId: number,
 ): Promise<{ ok: true; completed: boolean } | null> {
   if (!Number.isInteger(connectionId)) return null;
-  const row = await getConnectionContext(connectionId);
-  if (!row || row.connection.status !== "accepted") return null;
-  const isOwner = row.need.userId === user.id;
-  const isInitiator = row.connection.initiatorId === user.id;
-  if (!isOwner && !isInitiator) return null;
+  const result = db.transaction(
+    (tx) => {
+      const row = tx
+        .select({ connection: connections, need: needs })
+        .from(connections)
+        .innerJoin(needs, eq(connections.needId, needs.id))
+        .where(eq(connections.id, connectionId))
+        .limit(1)
+        .all()[0];
+      if (
+        !row ||
+        row.need.deletedAt != null ||
+        row.connection.status !== "accepted"
+      ) return null;
+      const isOwner = row.need.userId === user.id;
+      const isInitiator = row.connection.initiatorId === user.id;
+      if (!isOwner && !isInitiator) return null;
 
-  const now = new Date();
-  const ownerConfirmedAt = isOwner ? now : row.connection.ownerConfirmedAt;
-  const initiatorConfirmedAt = isInitiator
-    ? now
-    : row.connection.initiatorConfirmedAt;
-  const completed = !!ownerConfirmedAt && !!initiatorConfirmedAt;
-  await db
-    .update(connections)
-    .set({
-      ownerConfirmedAt,
-      initiatorConfirmedAt,
-      status: completed ? "completed" : "accepted",
-      completedAt: completed ? now : null,
-      updatedAt: now,
-    })
-    .where(eq(connections.id, connectionId));
+      const alreadyConfirmed = isOwner
+        ? row.connection.ownerConfirmedAt != null
+        : row.connection.initiatorConfirmedAt != null;
+      if (alreadyConfirmed) {
+        return {
+          completed: false,
+          changed: false,
+          otherUserId: isOwner ? row.connection.initiatorId : row.need.userId,
+          needId: row.need.id,
+          needTitle: row.need.title,
+        };
+      }
 
-  const otherUserId = isOwner ? row.connection.initiatorId : row.need.userId;
+      const now = new Date();
+      tx.update(connections)
+        .set(
+          isOwner
+            ? { ownerConfirmedAt: now, updatedAt: now }
+            : { initiatorConfirmedAt: now, updatedAt: now },
+        )
+        .where(and(eq(connections.id, connectionId), eq(connections.status, "accepted")))
+        .run();
+      const updated = tx
+        .select({
+          ownerConfirmedAt: connections.ownerConfirmedAt,
+          initiatorConfirmedAt: connections.initiatorConfirmedAt,
+        })
+        .from(connections)
+        .where(eq(connections.id, connectionId))
+        .limit(1)
+        .all()[0];
+      const completed = !!updated?.ownerConfirmedAt && !!updated.initiatorConfirmedAt;
+      if (completed) {
+        tx.update(connections)
+          .set({ status: "completed", completedAt: now, updatedAt: now })
+          .where(and(eq(connections.id, connectionId), eq(connections.status, "accepted")))
+          .run();
+      }
+      return {
+        completed,
+        changed: true,
+        otherUserId: isOwner ? row.connection.initiatorId : row.need.userId,
+        needId: row.need.id,
+        needTitle: row.need.title,
+      };
+    },
+    { behavior: "immediate" },
+  );
+  if (!result) return null;
+  if (!result.changed) return { ok: true, completed: result.completed };
+
   await Promise.all([
     notify({
-      userId: otherUserId,
-      payload: completed
+      userId: result.otherUserId,
+      payload: result.completed
         ? {
             type: "connection_completed",
-            need: row.need.title,
-            needId: row.need.id,
+            need: result.needTitle,
+            needId: result.needId,
           }
         : {
             type: "completion_confirmation_requested",
             name: user.nickname,
-            needId: row.need.id,
+            needId: result.needId,
           },
-      href: `/needs/${row.need.id}`,
+      href: `/needs/${result.needId}`,
     }),
-    completed
+    result.completed
       ? track({
           name: "connection_completed",
           userId: user.id,
@@ -496,5 +676,5 @@ export async function confirmConnectionCompleted(
         })
       : Promise.resolve(),
   ]);
-  return { ok: true, completed };
+  return { ok: true, completed: result.completed };
 }

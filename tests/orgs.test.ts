@@ -104,6 +104,43 @@ describe("createOrg", () => {
     );
     expect(result).toEqual({ error: t.org.emptyName });
   });
+
+  test("并发创建组织不会突破本人加入上限，也不会留下孤儿组织", async () => {
+    const owner = await createUser();
+    for (let i = 0; i < ORG_LIMITS.maxJoined - 1; i++) {
+      const [org] = await db
+        .insert(orgs)
+        .values({
+          name: `创建占位${owner.id}-${i}`,
+          ownerId: owner.id,
+          inviteCode: `CREATE${owner.id}X${i}`,
+          createdAt: new Date(Date.now() - 2 * DAY),
+        })
+        .returning({ id: orgs.id });
+      await db
+        .insert(orgMembers)
+        .values({ orgId: org.id, userId: owner.id, role: "owner" });
+    }
+
+    const results = await Promise.all([
+      createOrg(owner, { name: "并发创建甲", description: null, visibility: "private" }, t),
+      createOrg(owner, { name: "并发创建乙", description: null, visibility: "private" }, t),
+    ]);
+    expect(results.filter((result) => "orgId" in result)).toHaveLength(1);
+    expect(results).toContainEqual({
+      error: fmt(t.org.joinLimitWithCreate, { max: ORG_LIMITS.maxJoined }),
+    });
+    const [joined] = await db
+      .select({ n: count() })
+      .from(orgMembers)
+      .where(eq(orgMembers.userId, owner.id));
+    const [owned] = await db
+      .select({ n: count() })
+      .from(orgs)
+      .where(eq(orgs.ownerId, owner.id));
+    expect(joined?.n).toBe(ORG_LIMITS.maxJoined);
+    expect(owned?.n).toBe(ORG_LIMITS.maxJoined);
+  });
 });
 
 describe("组织审批", () => {
@@ -221,10 +258,60 @@ describe("组织审批", () => {
     });
     expect(await getMembership(created.orgId, applicant.id)).toBeNull();
   });
+
+  test("两个管理员并发审批不会让申请人突破组织上限", async () => {
+    const ownerA = await createUser();
+    const ownerB = await createUser();
+    const applicant = await createUser();
+    const targetA = await createOrg(
+      ownerA,
+      { name: "并发甲", description: null, visibility: "public" },
+      t,
+    );
+    const targetB = await createOrg(
+      ownerB,
+      { name: "并发乙", description: null, visibility: "public" },
+      t,
+    );
+    if (!("orgId" in targetA) || !("orgId" in targetB)) {
+      throw new Error("createOrg failed");
+    }
+    for (let i = 0; i < ORG_LIMITS.maxJoined - 1; i++) {
+      const [org] = await db
+        .insert(orgs)
+        .values({
+          name: `已有${applicant.id}-${i}`,
+          ownerId: applicant.id,
+          inviteCode: `HAVE${applicant.id}X${i}`,
+        })
+        .returning({ id: orgs.id });
+      await db
+        .insert(orgMembers)
+        .values({ orgId: org.id, userId: applicant.id, role: "owner" });
+    }
+    await applyPlaza(applicant, targetA.orgId, t);
+    await applyPlaza(applicant, targetB.orgId, t);
+    const requestA = await getPendingRequest(targetA.orgId, applicant.id);
+    const requestB = await getPendingRequest(targetB.orgId, applicant.id);
+
+    const results = await Promise.all([
+      handleJoinRequest(ownerA, { requestId: requestA!.id, decision: "approve" }, t),
+      handleJoinRequest(ownerB, { requestId: requestB!.id, decision: "approve" }, t),
+    ]);
+    expect(results.filter((result) => !("error" in result))).toHaveLength(1);
+    expect(results).toContainEqual({
+      error: fmt(t.org.targetJoinLimit, { max: ORG_LIMITS.maxJoined }),
+    });
+    const [joined] = await db
+      .select({ n: count() })
+      .from(orgMembers)
+      .where(eq(orgMembers.userId, applicant.id));
+    expect(joined?.n).toBe(ORG_LIMITS.maxJoined);
+  });
 });
 
 describe("dissolveOrg 级联", () => {
-  test("解散组织清掉需求及其举手、揭示、成员与申请", async () => {
+  test("解散组织撤下需求并保留举手、揭示台账", async () => {
     const ownerBase = await createUser();
     await db
       .update(users)
@@ -303,12 +390,18 @@ describe("dissolveOrg 级联", () => {
       .where(eq(joinRequests.orgId, orgId));
     const [orgLeft] = await db.select().from(orgs).where(eq(orgs.id, orgId)).limit(1);
 
-    expect(needsLeft?.n).toBe(0);
-    expect(connsLeft?.n).toBe(0);
-    expect(revealsLeft?.n).toBe(0);
+    expect(needsLeft?.n).toBe(1);
+    expect(connsLeft?.n).toBe(1);
+    expect(revealsLeft?.n).toBe(2);
     expect(membersLeft?.n).toBe(0);
     expect(requestsLeft?.n).toBe(0);
     expect(orgLeft).toBeUndefined();
+    const [archivedNeed] = await db
+      .select()
+      .from(needs)
+      .where(eq(needs.id, need.id))
+      .limit(1);
+    expect(archivedNeed?.deletedAt).toBeInstanceOf(Date);
   });
 });
 

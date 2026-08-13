@@ -98,6 +98,9 @@ export const needs = sqliteTable(
     })
       .notNull()
       .default("visible"),
+    // 用户删除采用软删除：页面/API 不再展示，但连接与联系方式揭示台账继续保留，
+    // 供配额计算、滥用调查和审计使用。
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     // Agent POST 重试去重。仅 API 写入；网页创建保持 NULL。
     idempotencyKey: text("idempotency_key"),
     // NULL = 永久有效；非空时由用户指定截止时间
@@ -113,6 +116,7 @@ export const needs = sqliteTable(
     index("needs_org_idx").on(t.orgId),
     index("needs_user_idx").on(t.userId),
     index("needs_user_created_idx").on(t.userId, t.createdAt),
+    index("needs_deleted_idx").on(t.deletedAt),
     uniqueIndex("needs_user_idempotency_uidx").on(t.userId, t.idempotencyKey),
   ],
 );

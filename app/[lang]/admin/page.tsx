@@ -1,5 +1,18 @@
 import { notFound, redirect } from "next/navigation";
-import { count, desc, eq, gt } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQLWrapper,
+} from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   analyticsEvents,
@@ -52,7 +65,6 @@ const ADMIN_VIEWS = [
 type AdminView = (typeof ADMIN_VIEWS)[number];
 type SortDirection = "asc" | "desc";
 type SortOption = { value: string; label: string };
-type SortValue = Date | number | string | null | undefined;
 
 function viewLabel(t: AdminDict, view: AdminView) {
   const map: Record<AdminView, string> = {
@@ -70,8 +82,6 @@ function viewLabel(t: AdminDict, view: AdminView) {
 
 // 未配置真实邮件通道时验证码只落在 verification_codes 表和服务端日志里，
 // 这里把表内的最近记录直接摆出来，免去登服务器翻日志
-const CODE_LIST_LIMIT = 100;
-
 type CodeState = "active" | "expired" | "locked";
 
 function codeStateLabel(t: AdminDict, state: CodeState) {
@@ -137,52 +147,6 @@ const thCls =
   "whitespace-nowrap px-3 py-1.5 text-left text-3xs font-semibold tracking-[0.08em] text-gray";
 const tdCls = "px-3 py-1 align-middle text-xs";
 const PAGE_SIZE = 20;
-
-function matchesQuery(query: string, values: unknown[]) {
-  if (!query) return true;
-  const haystack = values
-    .filter((value) => value !== null && value !== undefined)
-    .map((value) =>
-      typeof value === "object" ? JSON.stringify(value) : String(value),
-    )
-    .join(" ")
-    .toLocaleLowerCase();
-  return haystack.includes(query.toLocaleLowerCase());
-}
-
-function sortRows<T>(
-  rows: T[],
-  valueOf: (row: T) => SortValue,
-  direction: SortDirection,
-  locale: string,
-) {
-  const multiplier = direction === "asc" ? 1 : -1;
-  return [...rows].sort((left, right) => {
-    const leftValue = valueOf(left);
-    const rightValue = valueOf(right);
-    const leftMissing = leftValue === null || leftValue === undefined;
-    const rightMissing = rightValue === null || rightValue === undefined;
-    if (leftMissing && rightMissing) return 0;
-    if (leftMissing) return 1;
-    if (rightMissing) return -1;
-    const normalizedLeft =
-      leftValue instanceof Date ? leftValue.getTime() : leftValue;
-    const normalizedRight =
-      rightValue instanceof Date ? rightValue.getTime() : rightValue;
-    if (
-      typeof normalizedLeft === "number" &&
-      typeof normalizedRight === "number"
-    ) {
-      return (normalizedLeft - normalizedRight) * multiplier;
-    }
-    return (
-      String(normalizedLeft).localeCompare(String(normalizedRight), locale, {
-        numeric: true,
-        sensitivity: "base",
-      }) * multiplier
-    );
-  });
-}
 
 function adminHref(
   view: AdminView,
@@ -563,79 +527,500 @@ export default async function AdminPage({
     : rawParams.dir;
   const direction: SortDirection = rawDirection === "asc" ? "asc" : "desc";
 
-  const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
-  const allNeeds = await db
-    .select({ need: needs, author: users, org: orgs })
-    .from(needs)
-    .innerJoin(users, eq(needs.userId, users.id))
-    .leftJoin(orgs, eq(needs.orgId, orgs.id))
-    .orderBy(desc(needs.updatedAt));
-  const allOrgs = await db
-    .select({ org: orgs, owner: users })
-    .from(orgs)
-    .innerJoin(users, eq(orgs.ownerId, users.id))
-    .orderBy(desc(orgs.createdAt));
-  const memberships = await db.select().from(orgMembers);
-  const allRequests = await db
-    .select({ req: joinRequests, applicant: users, org: orgs })
-    .from(joinRequests)
-    .innerJoin(users, eq(joinRequests.userId, users.id))
-    .innerJoin(orgs, eq(joinRequests.orgId, orgs.id))
-    .orderBy(desc(joinRequests.createdAt));
-  const [activeSessions] = await db
-    .select({ n: count() })
-    .from(sessions)
-    .where(gt(sessions.expiresAt, new Date()));
-  const [allConnections, allReports, recentAudit, funnelEvents, recentCodes] =
-    await Promise.all([
-      db.select().from(connections).orderBy(desc(connections.updatedAt)),
-      db.select().from(reports).orderBy(desc(reports.createdAt)),
-      db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(50),
-      db.select({ name: analyticsEvents.name }).from(analyticsEvents),
-      db
-        .select()
-        .from(verificationCodes)
-        .orderBy(desc(verificationCodes.createdAt))
-        .limit(CODE_LIST_LIMIT),
-    ]);
+  const now = new Date();
+  const nowMs = now.getTime();
+  const [
+    userCountRow,
+    needCountRow,
+    orgCountRow,
+    pendingRequestRow,
+    pendingReportRow,
+    activeCodeRow,
+    auditCountRow,
+  ] = await Promise.all([
+    db.select({ n: count() }).from(users),
+    db.select({ n: count() }).from(needs).where(isNull(needs.deletedAt)),
+    db.select({ n: count() }).from(orgs),
+    db
+      .select({ n: count() })
+      .from(joinRequests)
+      .where(eq(joinRequests.status, "pending")),
+    db
+      .select({ n: count() })
+      .from(reports)
+      .where(eq(reports.status, "pending")),
+    db
+      .select({ n: count() })
+      .from(verificationCodes)
+      .where(
+        and(
+          gt(verificationCodes.expiresAt, now),
+          lt(verificationCodes.failCount, CODE_MAX_FAILS),
+        ),
+      ),
+    db.select({ n: count() }).from(auditLogs),
+  ]);
+  const userCount = userCountRow[0]?.n ?? 0;
+  const needCount = needCountRow[0]?.n ?? 0;
+  const orgCount = orgCountRow[0]?.n ?? 0;
+  const pendingRequestCount = pendingRequestRow[0]?.n ?? 0;
+  const pendingReportCount = pendingReportRow[0]?.n ?? 0;
+  const activeCodeCount = activeCodeRow[0]?.n ?? 0;
+  const auditCount = auditCountRow[0]?.n ?? 0;
 
-  const userById = new Map(allUsers.map((user) => [user.id, user]));
-  const userByEmail = new Map(allUsers.map((user) => [user.loginEmail, user]));
+  const rawPage = Array.isArray(rawParams.page)
+    ? rawParams.page[0]
+    : rawParams.page;
+  const parsedPage = Number.parseInt(rawPage ?? "1", 10);
+  const requestedPage = Number.isFinite(parsedPage) ? Math.max(parsedPage, 1) : 1;
+  const pattern = `%${query.toLocaleLowerCase()}%`;
+  const order = (expression: SQLWrapper) =>
+    direction === "asc" ? asc(expression) : desc(expression);
+
+  let allUsers: (typeof users.$inferSelect)[] = [];
+  let allNeeds: {
+    need: typeof needs.$inferSelect;
+    author: typeof users.$inferSelect;
+    org: typeof orgs.$inferSelect | null;
+  }[] = [];
+  let allOrgs: {
+    org: typeof orgs.$inferSelect;
+    owner: typeof users.$inferSelect;
+  }[] = [];
+  let allRequests: {
+    req: typeof joinRequests.$inferSelect;
+    applicant: typeof users.$inferSelect;
+    org: typeof orgs.$inferSelect;
+  }[] = [];
+  let allReports: (typeof reports.$inferSelect)[] = [];
+  let recentCodes: (typeof verificationCodes.$inferSelect)[] = [];
+  let recentAudit: (typeof auditLogs.$inferSelect)[] = [];
+  const userById = new Map<number, typeof users.$inferSelect>();
+  const userByEmail = new Map<string, typeof users.$inferSelect>();
   const needCountByUser = new Map<number, number>();
-  for (const { need } of allNeeds) {
-    needCountByUser.set(
-      need.userId,
-      (needCountByUser.get(need.userId) ?? 0) + 1,
-    );
-  }
   const orgCountByUser = new Map<number, number>();
   const memberCountByOrg = new Map<number, number>();
-  for (const membership of memberships) {
-    orgCountByUser.set(
-      membership.userId,
-      (orgCountByUser.get(membership.userId) ?? 0) + 1,
+  let activeItemCount = 0;
+  let filteredPendingReportCount = 0;
+  let filteredPendingRequestCount = 0;
+  let filteredActiveCodeCount = 0;
+  let currentPage = 1;
+  let pageStart = 0;
+  const setPage = (total: number) => {
+    activeItemCount = total;
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    currentPage = Math.min(requestedPage, pages);
+    pageStart = (currentPage - 1) * PAGE_SIZE;
+  };
+
+  if (activeView === "reports") {
+    const statusText = sql`CASE ${reports.status}
+      WHEN 'pending' THEN ${t.reportStatusPending}
+      WHEN 'resolved' THEN ${t.reportStatusResolved}
+      ELSE ${t.reportStatusDismissed} END`;
+    const reasonText = sql`CASE ${reports.reason}
+      WHEN 'spam' THEN ${t.reportReasonSpam}
+      WHEN 'fraud' THEN ${t.reportReasonFraud}
+      WHEN 'harassment' THEN ${t.reportReasonHarassment}
+      WHEN 'illegal' THEN ${t.reportReasonIllegal}
+      ELSE ${t.reportReasonOther} END`;
+    const filter = query
+      ? or(
+          sql`CAST(${reports.id} AS TEXT) LIKE ${pattern}`,
+          sql`CAST(${reports.targetId} AS TEXT) LIKE ${pattern}`,
+          sql`lower(${reports.targetType}) LIKE ${pattern}`,
+          sql`lower(${reports.reason}) LIKE ${pattern}`,
+          sql`lower(${reasonText}) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.nickname}, '')) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.loginEmail}, '')) LIKE ${pattern}`,
+          sql`lower(COALESCE(${reports.details}, '')) LIKE ${pattern}`,
+          sql`lower(${reports.status}) LIKE ${pattern}`,
+          sql`lower(${statusText}) LIKE ${pattern}`,
+        )
+      : undefined;
+    const [total, pendingTotal] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(reports)
+        .leftJoin(users, eq(reports.reporterId, users.id))
+        .where(filter),
+      db
+        .select({ n: count() })
+        .from(reports)
+        .leftJoin(users, eq(reports.reporterId, users.id))
+        .where(and(filter, eq(reports.status, "pending"))),
+    ]);
+    filteredPendingReportCount = pendingTotal[0]?.n ?? 0;
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "status"
+        ? statusText
+        : sort === "reason"
+          ? reasonText
+          : sort === "reporter"
+            ? users.nickname
+            : sort === "target"
+              ? sql`${reports.targetType} || '-' || ${reports.targetId}`
+              : reports.createdAt;
+    const rows = await db
+      .select({ report: reports, reporter: users })
+      .from(reports)
+      .leftJoin(users, eq(reports.reporterId, users.id))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(reports.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+    allReports = rows.map((row) => row.report);
+    for (const row of rows) {
+      if (row.reporter) userById.set(row.reporter.id, row.reporter);
+    }
+  } else if (activeView === "users") {
+    const needTotal = sql<number>`(
+      SELECT COUNT(*) FROM ${needs}
+      WHERE ${needs.userId} = ${users.id} AND ${needs.deletedAt} IS NULL
+    )`;
+    const orgTotal = sql<number>`(
+      SELECT COUNT(*) FROM ${orgMembers}
+      WHERE ${orgMembers.userId} = ${users.id}
+    )`;
+    const userStatusText = sql`CASE ${users.status}
+      WHEN 'active' THEN ${t.userStatusActive}
+      WHEN 'deleted' THEN ${t.userStatusDeleted}
+      ELSE ${t.userStatusSuspended} END`;
+    const filter = query
+      ? or(
+          sql`CAST(${users.id} AS TEXT) LIKE ${pattern}`,
+          sql`lower(${users.nickname}) LIKE ${pattern}`,
+          sql`lower(${users.loginEmail}) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.city}, '')) LIKE ${pattern}`,
+          sql`lower(${users.tags}) LIKE ${pattern}`,
+          sql`lower(${users.status}) LIKE ${pattern}`,
+          sql`lower(${userStatusText}) LIKE ${pattern}`,
+        )
+      : undefined;
+    const total = await db.select({ n: count() }).from(users).where(filter);
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "nickname"
+        ? users.nickname
+        : sort === "email"
+          ? users.loginEmail
+          : sort === "needs"
+            ? needTotal
+            : sort === "orgs"
+              ? orgTotal
+              : sort === "status"
+                ? userStatusText
+                : users.createdAt;
+    const rows = await db
+      .select({ user: users, needTotal, orgTotal })
+      .from(users)
+      .where(filter)
+      .orderBy(order(sortExpression), desc(users.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+    allUsers = rows.map((row) => row.user);
+    for (const row of rows) {
+      userById.set(row.user.id, row.user);
+      userByEmail.set(row.user.loginEmail, row.user);
+      needCountByUser.set(row.user.id, row.needTotal);
+      orgCountByUser.set(row.user.id, row.orgTotal);
+    }
+  } else if (activeView === "needs") {
+    const typeText = sql`CASE ${needs.type}
+      WHEN 'need' THEN ${typeLabel(ui, "need")}
+      ELSE ${typeLabel(ui, "offer")} END`;
+    const statusText = sql`CASE
+      WHEN ${needs.moderationStatus} = 'hidden' THEN ${t.needHidden}
+      WHEN ${needs.expiresAt} IS NOT NULL AND ${needs.expiresAt} <= ${nowMs} THEN ${t.needExpired}
+      WHEN ${needs.status} = 'open' THEN ${statusLabel(ui, "open")}
+      WHEN ${needs.status} = 'done' THEN ${statusLabel(ui, "done")}
+      ELSE ${statusLabel(ui, "closed")} END`;
+    const filter = and(
+      isNull(needs.deletedAt),
+      query
+        ? or(
+            sql`CAST(${needs.id} AS TEXT) LIKE ${pattern}`,
+            sql`lower(${needs.type}) LIKE ${pattern}`,
+            sql`lower(${typeText}) LIKE ${pattern}`,
+            sql`lower(${needs.title}) LIKE ${pattern}`,
+            sql`lower(COALESCE(${needs.description}, '')) LIKE ${pattern}`,
+            sql`lower(${users.nickname}) LIKE ${pattern}`,
+            sql`lower(${users.loginEmail}) LIKE ${pattern}`,
+            sql`lower(COALESCE(${orgs.name}, ${t.needScopePlaza})) LIKE ${pattern}`,
+            sql`lower(${needs.status}) LIKE ${pattern}`,
+            sql`lower(${needs.moderationStatus}) LIKE ${pattern}`,
+            sql`lower(${statusText}) LIKE ${pattern}`,
+            sql`lower(${needs.tags}) LIKE ${pattern}`,
+          )
+        : undefined,
     );
-    memberCountByOrg.set(
-      membership.orgId,
-      (memberCountByOrg.get(membership.orgId) ?? 0) + 1,
-    );
+    const total = await db
+      .select({ n: count() })
+      .from(needs)
+      .innerJoin(users, eq(needs.userId, users.id))
+      .leftJoin(orgs, eq(needs.orgId, orgs.id))
+      .where(filter);
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "title"
+        ? needs.title
+        : sort === "author"
+          ? users.nickname
+          : sort === "type"
+            ? typeText
+            : sort === "scope"
+              ? orgs.name
+              : sort === "status"
+                ? statusText
+                : needs.updatedAt;
+    allNeeds = await db
+      .select({ need: needs, author: users, org: orgs })
+      .from(needs)
+      .innerJoin(users, eq(needs.userId, users.id))
+      .leftJoin(orgs, eq(needs.orgId, orgs.id))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(needs.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+  } else if (activeView === "orgs") {
+    const memberTotal = sql<number>`(
+      SELECT COUNT(*) FROM ${orgMembers}
+      WHERE ${orgMembers.orgId} = ${orgs.id}
+    )`;
+    const visibilityText = sql`CASE ${orgs.visibility}
+      WHEN 'public' THEN ${orgVisibilityLabel(ui, "public")}
+      ELSE ${orgVisibilityLabel(ui, "private")} END`;
+    const filter = query
+      ? or(
+          sql`CAST(${orgs.id} AS TEXT) LIKE ${pattern}`,
+          sql`lower(${orgs.name}) LIKE ${pattern}`,
+          sql`lower(COALESCE(${orgs.description}, '')) LIKE ${pattern}`,
+          sql`lower(${orgs.visibility}) LIKE ${pattern}`,
+          sql`lower(${visibilityText}) LIKE ${pattern}`,
+          sql`lower(${users.nickname}) LIKE ${pattern}`,
+          sql`lower(${users.loginEmail}) LIKE ${pattern}`,
+          sql`lower(${orgs.inviteCode}) LIKE ${pattern}`,
+        )
+      : undefined;
+    const total = await db
+      .select({ n: count() })
+      .from(orgs)
+      .innerJoin(users, eq(orgs.ownerId, users.id))
+      .where(filter);
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "name"
+        ? orgs.name
+        : sort === "owner"
+          ? users.nickname
+          : sort === "members"
+            ? memberTotal
+            : sort === "type"
+              ? visibilityText
+              : orgs.createdAt;
+    const rows = await db
+      .select({ org: orgs, owner: users, memberTotal })
+      .from(orgs)
+      .innerJoin(users, eq(orgs.ownerId, users.id))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(orgs.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+    allOrgs = rows.map(({ org, owner }) => ({ org, owner }));
+    for (const row of rows) memberCountByOrg.set(row.org.id, row.memberTotal);
+  } else if (activeView === "requests") {
+    const requestStatusText = sql`CASE ${joinRequests.status}
+      WHEN 'pending' THEN ${requestStatusLabel(t, "pending")}
+      WHEN 'approved' THEN ${requestStatusLabel(t, "approved")}
+      ELSE ${requestStatusLabel(t, "rejected")} END`;
+    const requestViaText = sql`CASE ${joinRequests.via}
+      WHEN 'code' THEN ${requestViaLabel(ui, "code")}
+      ELSE ${requestViaLabel(ui, "plaza")} END`;
+    const filter = query
+      ? or(
+          sql`CAST(${joinRequests.id} AS TEXT) LIKE ${pattern}`,
+          sql`lower(${orgs.name}) LIKE ${pattern}`,
+          sql`lower(${users.nickname}) LIKE ${pattern}`,
+          sql`lower(${users.loginEmail}) LIKE ${pattern}`,
+          sql`lower(${joinRequests.via}) LIKE ${pattern}`,
+          sql`lower(${requestViaText}) LIKE ${pattern}`,
+          sql`lower(${joinRequests.status}) LIKE ${pattern}`,
+          sql`lower(${requestStatusText}) LIKE ${pattern}`,
+        )
+      : undefined;
+    const [total, pendingTotal] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(joinRequests)
+        .innerJoin(users, eq(joinRequests.userId, users.id))
+        .innerJoin(orgs, eq(joinRequests.orgId, orgs.id))
+        .where(filter),
+      db
+        .select({ n: count() })
+        .from(joinRequests)
+        .innerJoin(users, eq(joinRequests.userId, users.id))
+        .innerJoin(orgs, eq(joinRequests.orgId, orgs.id))
+        .where(and(filter, eq(joinRequests.status, "pending"))),
+    ]);
+    filteredPendingRequestCount = pendingTotal[0]?.n ?? 0;
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "org"
+        ? orgs.name
+        : sort === "applicant"
+          ? users.nickname
+          : sort === "status"
+            ? requestStatusText
+            : sort === "via"
+              ? requestViaText
+              : joinRequests.createdAt;
+    allRequests = await db
+      .select({ req: joinRequests, applicant: users, org: orgs })
+      .from(joinRequests)
+      .innerJoin(users, eq(joinRequests.userId, users.id))
+      .innerJoin(orgs, eq(joinRequests.orgId, orgs.id))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(joinRequests.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+  } else if (activeView === "codes") {
+    const stateText = sql`CASE
+      WHEN ${verificationCodes.failCount} >= ${CODE_MAX_FAILS} THEN ${t.codeStateLocked}
+      WHEN ${verificationCodes.expiresAt} > ${nowMs} THEN ${t.codeStateActive}
+      ELSE ${t.codeStateExpired} END`;
+    const filter = query
+      ? or(
+          sql`CAST(${verificationCodes.id} AS TEXT) LIKE ${pattern}`,
+          sql`lower(${verificationCodes.email}) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.nickname}, ${t.codeUnregistered})) LIKE ${pattern}`,
+          sql`${verificationCodes.code} LIKE ${pattern}`,
+          sql`lower(${stateText}) LIKE ${pattern}`,
+          sql`lower(${verificationCodes.ip}) LIKE ${pattern}`,
+          sql`CAST(${verificationCodes.failCount} AS TEXT) LIKE ${pattern}`,
+        )
+      : undefined;
+    const [total, activeTotal] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(verificationCodes)
+        .leftJoin(users, eq(verificationCodes.email, users.loginEmail))
+        .where(filter),
+      db
+        .select({ n: count() })
+        .from(verificationCodes)
+        .leftJoin(users, eq(verificationCodes.email, users.loginEmail))
+        .where(
+          and(
+            filter,
+            gt(verificationCodes.expiresAt, now),
+            lt(verificationCodes.failCount, CODE_MAX_FAILS),
+          ),
+        ),
+    ]);
+    filteredActiveCodeCount = activeTotal[0]?.n ?? 0;
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "email"
+        ? verificationCodes.email
+        : sort === "user"
+          ? users.nickname
+          : sort === "status"
+            ? stateText
+            : sort === "expiresAt"
+              ? verificationCodes.expiresAt
+              : sort === "fails"
+                ? verificationCodes.failCount
+                : verificationCodes.createdAt;
+    const rows = await db
+      .select({ record: verificationCodes, owner: users })
+      .from(verificationCodes)
+      .leftJoin(users, eq(verificationCodes.email, users.loginEmail))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(verificationCodes.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+    recentCodes = rows.map((row) => row.record);
+    for (const row of rows) {
+      if (row.owner) userByEmail.set(row.owner.loginEmail, row.owner);
+    }
+  } else if (activeView === "audit") {
+    const filter = query
+      ? or(
+          sql`CAST(${auditLogs.id} AS TEXT) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.nickname}, ${t.auditSystem})) LIKE ${pattern}`,
+          sql`lower(COALESCE(${users.loginEmail}, '')) LIKE ${pattern}`,
+          sql`lower(${auditLogs.action}) LIKE ${pattern}`,
+          sql`lower(${auditLogs.targetType}) LIKE ${pattern}`,
+          sql`CAST(COALESCE(${auditLogs.targetId}, '') AS TEXT) LIKE ${pattern}`,
+          sql`lower(COALESCE(${auditLogs.metadata}, '')) LIKE ${pattern}`,
+        )
+      : undefined;
+    const total = await db
+      .select({ n: count() })
+      .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.actorId, users.id))
+      .where(filter);
+    setPage(total[0]?.n ?? 0);
+    const sortExpression =
+      sort === "actor"
+        ? users.nickname
+        : sort === "action"
+          ? auditLogs.action
+          : sort === "target"
+            ? sql`${auditLogs.targetType} || '-' || COALESCE(${auditLogs.targetId}, '')`
+            : auditLogs.createdAt;
+    const rows = await db
+      .select({ log: auditLogs, actor: users })
+      .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.actorId, users.id))
+      .where(filter)
+      .orderBy(order(sortExpression), desc(auditLogs.id))
+      .limit(PAGE_SIZE)
+      .offset(pageStart);
+    recentAudit = rows.map((row) => row.log);
+    for (const row of rows) {
+      if (row.actor) userById.set(row.actor.id, row.actor);
+    }
   }
 
-  const pendingRequestCount = allRequests.filter(
-    ({ req }) => req.status === "pending",
-  ).length;
-  const pendingReportCount = allReports.filter(
-    (report) => report.status === "pending",
-  ).length;
-  const completedConnectionCount = allConnections.filter(
-    (connection) => connection.status === "completed",
-  ).length;
+  let activeSessionCount = 0;
+  let completedConnectionCount = 0;
+  let funnelEvents: { name: string; n: number }[] = [];
+  if (activeView === "overview") {
+    const [activeSessions, completedConnections, groupedFunnel] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(sessions)
+        .where(gt(sessions.expiresAt, now)),
+      db
+        .select({ n: count() })
+        .from(connections)
+        .where(eq(connections.status, "completed")),
+      db
+        .select({ name: analyticsEvents.name, n: count() })
+        .from(analyticsEvents)
+        .where(
+          inArray(analyticsEvents.name, [
+            "need_created",
+            "connection_requested",
+            "connection_accepted",
+            "connection_completed",
+          ]),
+        )
+        .groupBy(analyticsEvents.name),
+    ]);
+    activeSessionCount = activeSessions[0]?.n ?? 0;
+    completedConnectionCount = completedConnections[0]?.n ?? 0;
+    funnelEvents = groupedFunnel;
+  }
+
   const stats = [
-    { label: t.statUsers, value: allUsers.length },
-    { label: t.statNeeds, value: allNeeds.length },
-    { label: t.statOrgs, value: allOrgs.length },
+    { label: t.statUsers, value: userCount },
+    { label: t.statNeeds, value: needCount },
+    { label: t.statOrgs, value: orgCount },
     { label: t.statPendingRequests, value: pendingRequestCount },
-    { label: t.statActiveSessions, value: activeSessions?.n ?? 0 },
+    { label: t.statActiveSessions, value: activeSessionCount },
     { label: t.statCompletedConnections, value: completedConnectionCount },
     { label: t.statPendingReports, value: pendingReportCount },
   ];
@@ -646,306 +1031,45 @@ export default async function AdminPage({
     [t.funnelCompleted, "connection_completed"],
   ].map(([label, name]) => ({
     label,
-    value: funnelEvents.filter((event) => event.name === name).length,
+    value: funnelEvents.find((event) => event.name === name)?.n ?? 0,
   }));
-  const activeCodeCount = recentCodes.filter(
-    (record) => codeState(record) === "active",
-  ).length;
-  const userDisplayStatus = (user: (typeof allUsers)[number]) =>
-    user.id === viewer.id
-      ? t.userStatusAdmin
-      : user.status === "active"
-        ? t.userStatusActive
-        : user.status === "deleted"
-          ? t.userStatusDeleted
-          : t.userStatusSuspended;
-  const needDisplayStatus = (need: (typeof allNeeds)[number]["need"]) =>
-    need.moderationStatus === "hidden"
-      ? t.needHidden
-      : isExpired(need)
-        ? t.needExpired
-        : statusLabel(ui, need.status);
-  const filteredReports = sortRows(
-    allReports.filter((report) => {
-      const reporter = report.reporterId
-        ? userById.get(report.reporterId)
-        : null;
-      return matchesQuery(query, [
-        report.id,
-        report.targetType,
-        report.targetId,
-        report.reason,
-        reportReasonLabel(t, report.reason),
-        reporter?.nickname,
-        reporter?.loginEmail,
-        report.details,
-        report.status,
-        reportStatusLabel(t, report.status),
-      ]);
-    }),
-    (report) => {
-      switch (sort) {
-        case "status":
-          return reportStatusLabel(t, report.status);
-        case "reason":
-          return reportReasonLabel(t, report.reason);
-        case "reporter":
-          return report.reporterId
-            ? userById.get(report.reporterId)?.nickname
-            : t.reportAnonymous;
-        case "target":
-          return `${report.targetType}-${report.targetId}`;
-        default:
-          return report.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredUsers = sortRows(
-    allUsers.filter((user) =>
-      matchesQuery(query, [
-        user.id,
-        user.nickname,
-        user.loginEmail,
-        user.city,
-        user.tags,
-        user.status,
-        userDisplayStatus(user),
-      ]),
-    ),
-    (user) => {
-      switch (sort) {
-        case "nickname":
-          return user.nickname;
-        case "email":
-          return user.loginEmail;
-        case "needs":
-          return needCountByUser.get(user.id) ?? 0;
-        case "orgs":
-          return orgCountByUser.get(user.id) ?? 0;
-        case "status":
-          return userDisplayStatus(user);
-        default:
-          return user.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredNeeds = sortRows(
-    allNeeds.filter(({ need, author, org }) =>
-      matchesQuery(query, [
-        need.id,
-        need.type,
-        typeLabel(ui, need.type),
-        need.title,
-        need.description,
-        author.nickname,
-        author.loginEmail,
-        org?.name ?? t.needScopePlaza,
-        need.status,
-        need.moderationStatus,
-        needDisplayStatus(need),
-        need.tags,
-      ]),
-    ),
-    ({ need, author, org }) => {
-      switch (sort) {
-        case "title":
-          return need.title;
-        case "author":
-          return author.nickname;
-        case "type":
-          return typeLabel(ui, need.type);
-        case "scope":
-          return org?.name ?? t.needScopePlaza;
-        case "status":
-          return needDisplayStatus(need);
-        default:
-          return need.updatedAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredOrgs = sortRows(
-    allOrgs.filter(({ org, owner }) =>
-      matchesQuery(query, [
-        org.id,
-        org.name,
-        org.description,
-        org.visibility,
-        orgVisibilityLabel(ui, org.visibility),
-        owner.nickname,
-        owner.loginEmail,
-        org.inviteCode,
-      ]),
-    ),
-    ({ org, owner }) => {
-      switch (sort) {
-        case "name":
-          return org.name;
-        case "owner":
-          return owner.nickname;
-        case "members":
-          return memberCountByOrg.get(org.id) ?? 0;
-        case "type":
-          return orgVisibilityLabel(ui, org.visibility);
-        default:
-          return org.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredRequests = sortRows(
-    allRequests.filter(({ req, applicant, org }) =>
-      matchesQuery(query, [
-        req.id,
-        org.name,
-        applicant.nickname,
-        applicant.loginEmail,
-        req.via,
-        requestViaLabel(ui, req.via),
-        req.status,
-        requestStatusLabel(t, req.status),
-      ]),
-    ),
-    ({ req, applicant, org }) => {
-      switch (sort) {
-        case "org":
-          return org.name;
-        case "applicant":
-          return applicant.nickname;
-        case "status":
-          return requestStatusLabel(t, req.status);
-        case "via":
-          return requestViaLabel(ui, req.via);
-        default:
-          return req.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredCodes = sortRows(
-    recentCodes.filter((record) => {
-      const state = codeState(record);
-      const owner = userByEmail.get(record.email);
-      return matchesQuery(query, [
-        record.id,
-        record.email,
-        owner?.nickname,
-        record.code,
-        state,
-        codeStateLabel(t, state),
-        record.ip,
-        record.failCount,
-      ]);
-    }),
-    (record) => {
-      const owner = userByEmail.get(record.email);
-      switch (sort) {
-        case "email":
-          return record.email;
-        case "user":
-          return owner?.nickname ?? t.codeUnregistered;
-        case "status":
-          return codeStateLabel(t, codeState(record));
-        case "expiresAt":
-          return record.expiresAt;
-        case "fails":
-          return record.failCount;
-        default:
-          return record.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredAudit = sortRows(
-    recentAudit.filter((log) => {
-      const actor = log.actorId ? userById.get(log.actorId) : null;
-      return matchesQuery(query, [
-        log.id,
-        actor?.nickname ?? t.auditSystem,
-        actor?.loginEmail,
-        log.action,
-        log.targetType,
-        log.targetId,
-        log.metadata,
-      ]);
-    }),
-    (log) => {
-      const actor = log.actorId ? userById.get(log.actorId) : null;
-      switch (sort) {
-        case "actor":
-          return actor?.nickname ?? t.auditSystem;
-        case "action":
-          return log.action;
-        case "target":
-          return `${log.targetType}-${log.targetId ?? ""}`;
-        default:
-          return log.createdAt;
-      }
-    },
-    direction,
-    locale,
-  );
-  const filteredPendingReportCount = filteredReports.filter(
-    (report) => report.status === "pending",
-  ).length;
-  const filteredPendingRequestCount = filteredRequests.filter(
-    ({ req }) => req.status === "pending",
-  ).length;
-  const filteredActiveCodeCount = filteredCodes.filter(
-    (record) => codeState(record) === "active",
-  ).length;
+  const filteredReports = allReports;
+  const filteredUsers = allUsers;
+  const filteredNeeds = allNeeds;
+  const filteredOrgs = allOrgs;
+  const filteredRequests = allRequests;
+  const filteredCodes = recentCodes;
+  const filteredAudit = recentAudit;
   const viewCounts: Partial<Record<AdminView, number>> = {
     reports: pendingReportCount,
-    users: allUsers.length,
-    needs: allNeeds.length,
-    orgs: allOrgs.length,
+    users: userCount,
+    needs: needCount,
+    orgs: orgCount,
     requests: pendingRequestCount,
     codes: activeCodeCount,
-    audit: recentAudit.length,
+    audit: auditCount,
   };
   const itemCountByView: Record<AdminView, number> = {
     overview: 0,
-    reports: filteredReports.length,
-    users: filteredUsers.length,
-    needs: filteredNeeds.length,
-    orgs: filteredOrgs.length,
-    requests: filteredRequests.length,
-    codes: filteredCodes.length,
-    audit: filteredAudit.length,
+    reports: activeView === "reports" ? activeItemCount : 0,
+    users: activeView === "users" ? activeItemCount : 0,
+    needs: activeView === "needs" ? activeItemCount : 0,
+    orgs: activeView === "orgs" ? activeItemCount : 0,
+    requests: activeView === "requests" ? activeItemCount : 0,
+    codes: activeView === "codes" ? activeItemCount : 0,
+    audit: activeView === "audit" ? activeItemCount : 0,
   };
-  const rawPage = Array.isArray(rawParams.page)
-    ? rawParams.page[0]
-    : rawParams.page;
-  const parsedPage = Number.parseInt(rawPage ?? "1", 10);
   const pageCount = Math.max(
     1,
     Math.ceil(itemCountByView[activeView] / PAGE_SIZE),
   );
-  const currentPage = Number.isFinite(parsedPage)
-    ? Math.min(Math.max(parsedPage, 1), pageCount)
-    : 1;
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleReports = filteredReports.slice(
-    pageStart,
-    pageStart + PAGE_SIZE,
-  );
-  const visibleUsers = filteredUsers.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleNeeds = filteredNeeds.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleOrgs = filteredOrgs.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleRequests = filteredRequests.slice(
-    pageStart,
-    pageStart + PAGE_SIZE,
-  );
-  const visibleCodes = filteredCodes.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleAudit = filteredAudit.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleReports = filteredReports;
+  const visibleUsers = filteredUsers;
+  const visibleNeeds = filteredNeeds;
+  const visibleOrgs = filteredOrgs;
+  const visibleRequests = filteredRequests;
+  const visibleCodes = filteredCodes;
+  const visibleAudit = filteredAudit;
   const rowNumber = (index: number) => pageStart + index + 1;
 
   return (
@@ -1037,7 +1161,7 @@ export default async function AdminPage({
 
       {activeView === "reports" && (
         <Section
-          title={fmt(t.reportsTitle, { n: filteredReports.length })}
+          title={fmt(t.reportsTitle, { n: itemCountByView.reports })}
           description={fmt(t.reportsDesc, {
             n: filteredPendingReportCount,
           })}
@@ -1052,7 +1176,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredReports.length === 0 ? (
+          {itemCountByView.reports === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.reportsEmpty}</EmptyList>
           ) : (
             <>
@@ -1238,7 +1362,7 @@ export default async function AdminPage({
 
       {activeView === "users" && (
         <Section
-          title={fmt(t.usersTitle, { n: filteredUsers.length })}
+          title={fmt(t.usersTitle, { n: itemCountByView.users })}
           description={t.usersDesc}
         >
           <TableControls
@@ -1251,7 +1375,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredUsers.length === 0 ? (
+          {itemCountByView.users === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.usersEmpty}</EmptyList>
           ) : (
             <>
@@ -1430,7 +1554,7 @@ export default async function AdminPage({
 
       {activeView === "needs" && (
         <Section
-          title={fmt(t.needsTitle, { n: filteredNeeds.length })}
+          title={fmt(t.needsTitle, { n: itemCountByView.needs })}
           description={t.needsDesc}
         >
           <TableControls
@@ -1443,7 +1567,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredNeeds.length === 0 ? (
+          {itemCountByView.needs === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.needsEmpty}</EmptyList>
           ) : (
             <>
@@ -1611,7 +1735,7 @@ export default async function AdminPage({
 
       {activeView === "orgs" && (
         <Section
-          title={fmt(t.orgsTitle, { n: filteredOrgs.length })}
+          title={fmt(t.orgsTitle, { n: itemCountByView.orgs })}
           description={t.orgsDesc}
         >
           <TableControls
@@ -1624,7 +1748,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredOrgs.length === 0 ? (
+          {itemCountByView.orgs === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.orgsEmpty}</EmptyList>
           ) : (
             <>
@@ -1727,7 +1851,7 @@ export default async function AdminPage({
 
       {activeView === "requests" && (
         <Section
-          title={fmt(t.requestsTitle, { n: filteredRequests.length })}
+          title={fmt(t.requestsTitle, { n: itemCountByView.requests })}
           description={fmt(t.requestsDesc, {
             n: filteredPendingRequestCount,
           })}
@@ -1742,7 +1866,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredRequests.length === 0 ? (
+          {itemCountByView.requests === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.requestsEmpty}</EmptyList>
           ) : (
             <>
@@ -1843,9 +1967,9 @@ export default async function AdminPage({
 
       {activeView === "codes" && (
         <Section
-          title={fmt(t.codesTitle, { n: filteredCodes.length })}
+          title={fmt(t.codesTitle, { n: itemCountByView.codes })}
           description={`${fmt(t.codesDescRecent, {
-            n: CODE_LIST_LIMIT,
+            n: itemCountByView.codes,
           })}${fmt(t.codesDescSuffix, { n: filteredActiveCodeCount })}`}
         >
           <div className="flex flex-wrap items-start gap-2">
@@ -1864,7 +1988,7 @@ export default async function AdminPage({
             <CodeAutoRefresh />
           </div>
 
-          {filteredCodes.length === 0 ? (
+          {itemCountByView.codes === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.codesEmpty}</EmptyList>
           ) : (
             <>
@@ -1998,7 +2122,7 @@ export default async function AdminPage({
 
       {activeView === "audit" && (
         <Section
-          title={fmt(t.auditTitle, { n: filteredAudit.length })}
+          title={fmt(t.auditTitle, { n: itemCountByView.audit })}
           description={t.auditDesc}
         >
           <TableControls
@@ -2011,7 +2135,7 @@ export default async function AdminPage({
             direction={direction}
             options={sortOptions}
           />
-          {filteredAudit.length === 0 ? (
+          {itemCountByView.audit === 0 ? (
             <EmptyList>{query ? t.noMatchingRows : t.auditEmpty}</EmptyList>
           ) : (
             <>
