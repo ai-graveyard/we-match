@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { connections, needs, type Need, type User } from "@/lib/db/schema";
+import { connections, contactReveals, needs, type Need, type User } from "@/lib/db/schema";
 import { getMembership } from "@/lib/queries";
 import {
   CONTACT_FIELDS,
@@ -11,6 +11,7 @@ import {
 import { NEED_LIMITS } from "@/lib/needs";
 import { normalizeTags } from "@/lib/tags";
 import { notify, track } from "@/lib/activity";
+import { checkQuota, effectiveDailyLimit } from "@/lib/quota";
 import type { ServerDict } from "@/lib/i18n/dict/types";
 import { fmt } from "@/lib/i18n/fmt";
 
@@ -109,7 +110,9 @@ export function contactableFields(
   return CONTACT_FIELDS.filter((f) => {
     if (!user[f.key]) return false;
     const vis = fieldVisibility(user.fieldVisibility, f.key);
-    return scope === "plaza" ? vis === "authenticated" : vis !== "hidden";
+    return scope === "plaza"
+      ? vis === "connected" || vis === "authenticated"
+      : vis !== "hidden";
   });
 }
 
@@ -172,8 +175,31 @@ export async function createNeed(
     return { error: t.need.preferredContactUnavailable };
   }
 
+  if (options.idempotencyKey) {
+    const [existing] = await db
+      .select()
+      .from(needs)
+      .where(
+        and(
+          eq(needs.userId, user.id),
+          eq(needs.idempotencyKey, options.idempotencyKey),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      return sameIdempotentCreation(existing, patch, orgId, preferredContact)
+        ? { need: existing, replayed: true }
+        : { error: t.need.idempotencyConflict };
+    }
+  }
+
+  const quota = await checkQuota(user, "need.publish", t);
+  if (!quota.ok) return { error: quota.message };
+
   const dayStart = new Date();
   dayStart.setHours(0, 0, 0, 0);
+  // 事务里只能同步查询，所以额度上限在进事务前先算好
+  const { limit: publishMax } = await effectiveDailyLimit(user, "need.publish");
   // 幂等判定、每日额度和插入共用一个写事务：同一用户的多个 Agent
   // 即使并发发布，也不能重复创建或一起穿透每日上限。
   const inserted = db.transaction(
@@ -202,9 +228,9 @@ export async function createNeed(
         .from(needs)
         .where(and(eq(needs.userId, user.id), gte(needs.createdAt, dayStart)))
         .all()[0];
-      if ((todayCount?.n ?? 0) >= NEED_LIMITS.dailyPublish) {
+      if ((todayCount?.n ?? 0) >= publishMax) {
         return {
-          error: fmt(t.need.dailyLimit, { max: NEED_LIMITS.dailyPublish }),
+          error: fmt(t.need.dailyLimit, { max: publishMax }),
         };
       }
 
@@ -331,7 +357,15 @@ export async function applyNeedPatch(
   return { need: updated };
 }
 
+// 揭示 → 举手 → 需求，按外键依赖顺序删；三步同一事务，避免中途失败留孤儿，
+// 也避免删除过程中并发接受插入新的 connection/reveal 触发外键错误。
 export async function deleteNeed(need: Need): Promise<void> {
-  await db.delete(connections).where(eq(connections.needId, need.id));
-  await db.delete(needs).where(eq(needs.id, need.id));
+  db.transaction(
+    (tx) => {
+      tx.delete(contactReveals).where(eq(contactReveals.needId, need.id)).run();
+      tx.delete(connections).where(eq(connections.needId, need.id)).run();
+      tx.delete(needs).where(eq(needs.id, need.id)).run();
+    },
+    { behavior: "immediate" },
+  );
 }

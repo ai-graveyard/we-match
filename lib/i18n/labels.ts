@@ -84,6 +84,7 @@ export function cardFieldLabel(t: UiDict, key: CardFieldKey) {
 export function cardVisibilityLabel(t: UiDict, value: CardFieldVisibility) {
   const map: Record<CardFieldVisibility, string> = {
     public: t.card.visPublic,
+    connected: t.card.visConnected,
     authenticated: t.card.visAuthenticated,
     orgs: t.card.visOrgs,
     hidden: t.card.visHidden,
@@ -91,7 +92,13 @@ export function cardVisibilityLabel(t: UiDict, value: CardFieldVisibility) {
   return map[value];
 }
 
-export function connectionStatusLabel(t: UiDict, status: ConnectionStatus) {
+/** stale：pending 挂满 72 小时。额度已经释放，文案也不该继续说「等待回应」 */
+export function connectionStatusLabel(
+  t: UiDict,
+  status: ConnectionStatus,
+  stale = false,
+) {
+  if (status === "pending" && stale) return t.connection.statusNoResponse;
   const map: Record<ConnectionStatus, string> = {
     pending: t.connection.statusPending,
     accepted: t.connection.statusAccepted,

@@ -1,5 +1,7 @@
 import type { Need } from "@/lib/db/schema";
 
+// 需求的常量与纯函数（期限、过期判定）；校验与落库在 lib/needs-service.ts。
+
 export const NEED_LIMITS = {
   title: 50,
   description: 2000,

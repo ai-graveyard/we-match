@@ -58,7 +58,7 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
       'fieldVisibility must be an object, e.g. {"email":"orgs"}',
     badVisibilityValue: "Invalid visibility: {key} cannot be {value}",
     warnNoPlazaContact:
-      "You have open plaza posts but no contact visible to signed-in users, so nobody can reach you",
+      "You have open plaza posts but no contact that can be exchanged, so a raised hand would have nothing to give",
     warnNoOrgContact:
       "You have open group posts but no contact visible to group members",
   },
@@ -77,7 +77,7 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     noOrgContact:
       "Your card has no contact visible to group members, so nobody could reach you. Turn one on under Me → Edit card first.",
     noPlazaContact:
-      "Your card has no contact visible to signed-in users, so nobody could reach you. Turn one on under Me → Edit card first.",
+      "Your card has no contact that can be exchanged (visible after a connection, or to signed-in users). Add one under Me → Edit card first.",
     preferredContactUnavailable:
       "That preferred contact is not visible within the chosen scope",
     dailyLimit: "You can post at most {max} times a day",
@@ -85,7 +85,7 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     noContactForScope:
       "No contact is available for this scope — edit your card first",
     staleHandsBlockRenewal:
-      "Raised hands have been waiting on you for over 3 days. Respond to them under Me → Raises before renewing or reopening this post.",
+      "Raised hands have been waiting on you for over 3 days. Respond to them under Me → Quota before renewing or reopening this post.",
     idempotencyConflict:
       "This Idempotency-Key was already used for a different post — use a new key for a new post",
   },
@@ -127,6 +127,48 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     needNotFound: "That post does not exist",
     already: "You already raised your hand",
     submitted: "Raised — waiting for the poster to respond",
+    missingContact: "Pick a contact to exchange",
+    contactUnavailable: "That contact is not available — add it on your card first",
+    rejectCooldown: "They did not accept. You can raise again in 7 days",
+    resendLimit: "You cannot raise on this post again",
+  },
+
+  quota: {
+    tooFast: "Too fast — try again in a moment",
+    publishDaily: "Today's {max} posts are used up. Resets at midnight",
+    publishDailyNewbie:
+      "New accounts can post {max} times a day. Fill in intro, a tag, and one contact to raise it to {full}",
+    publishStock: "You already have {max} open posts — close some before posting again",
+    publishBacklog:
+      "{n} raised hands are waiting on you. Respond under Me → Quota before posting again",
+    pendingStock:
+      "You have {max} raises waiting. Withdraw one, or wait for a reply, before raising again",
+    acceptedStock:
+      "You already have {max} unfinished connections — confirm or withdraw one first",
+    raiseDaily: "You already raised {max} times today. Resets at midnight",
+    acceptDaily: "You already accepted {max} raises today. Resets at midnight",
+    needAcceptCap:
+      "This post already connected 10 people. Post a new one if you still need more",
+    sameUserDaily: "You already reached out to them today — try again tomorrow",
+    revealDaily:
+      "You have given out contact details {max} times today. Resets at midnight",
+    penaltyPublish:
+      "Your posting quota is temporarily reduced while we take a look. It restores on its own",
+    penaltyRaise:
+      "Your raise quota is temporarily reduced. It restores on its own after a while",
+    penaltyAccept:
+      "Your accept quota is temporarily reduced while we take a look. It restores on its own",
+    needClosedToRaises:
+      "This post has received a lot of raises and is not taking new ones for now",
+    reportDaily: "You already filed {max} reports today. Resets at midnight",
+    reportCooldown:
+      "This report was just handled — you can report again in 7 days",
+    blockDaily: "You already blocked {max} people today. Resets at midnight",
+    orgCreateDaily: "You already created {max} groups today. Resets at midnight",
+    orgJoinDaily:
+      "You already sent {max} join requests today. Resets at midnight",
+    orgJoinStock:
+      "You have {max} group applications awaiting review — wait for an admin first",
   },
 
   report: {

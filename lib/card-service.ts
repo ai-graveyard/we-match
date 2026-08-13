@@ -90,9 +90,8 @@ export function validateCardPatch(
       return { error: t.card.badVisibilityObject };
     const visibility: FieldVisibility = {};
     const basicKeys = new Set<string>(BASIC_FIELDS.map((f) => f.key));
-    const threeStateKeys = new Set<string>(
-      [...CONTACT_FIELDS, ...SOCIAL_FIELDS].map((f) => f.key),
-    );
+    const contactKeys = new Set<string>(CONTACT_FIELDS.map((f) => f.key));
+    const socialKeys = new Set<string>(SOCIAL_FIELDS.map((f) => f.key));
     for (const [key, value] of Object.entries(raw)) {
       if (basicKeys.has(key)) {
         if (value === "public") {
@@ -106,8 +105,20 @@ export function validateCardPatch(
           continue;
         }
       }
-      if (threeStateKeys.has(key)) {
-        // public 是旧客户端的兼容别名，安全解释成默认 authenticated。
+      if (contactKeys.has(key)) {
+        // 历史 public 按 connected 收紧；authenticated 是用户主动放开。
+        if (value === "connected" || value === "public") {
+          if (options.preserveVisibilityDefaults) {
+            visibility[key as CardFieldKey] = "connected";
+          }
+          continue;
+        }
+        if (value === "authenticated" || value === "orgs" || value === "hidden") {
+          visibility[key as CardFieldKey] = value;
+          continue;
+        }
+      }
+      if (socialKeys.has(key)) {
         if (value === "authenticated" || value === "public") {
           if (options.preserveVisibilityDefaults) {
             visibility[key as CardFieldKey] = "authenticated";
@@ -146,14 +157,16 @@ export async function applyCardPatch(
   // 可联系性提醒：有开放需求但受众看不到任何联系方式
   const vis = (key: (typeof CONTACT_FIELDS)[number]["key"]) =>
     fieldVisibility(updated.fieldVisibility, key);
-  const hasAuthenticated = CONTACT_FIELDS.some(
-    (f) => updated[f.key] && vis(f.key) === "authenticated",
-  );
+  const hasPlazaContact = CONTACT_FIELDS.some((f) => {
+    if (!updated[f.key]) return false;
+    const v = vis(f.key);
+    return v === "connected" || v === "authenticated";
+  });
   const hasOrgVisible = CONTACT_FIELDS.some(
     (f) => updated[f.key] && vis(f.key) !== "hidden",
   );
   let warning: string | undefined;
-  if (!hasAuthenticated) {
+  if (!hasPlazaContact) {
     const [plazaNeed] = await db
       .select({ id: needs.id })
       .from(needs)

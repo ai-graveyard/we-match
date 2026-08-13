@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { connections, needs, orgMembers, orgs, users } from "@/lib/db/schema";
+import { needs, orgMembers, orgs, users } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { isExpired } from "@/lib/needs";
 import { TypeBadge, StatusBadge, deadlineText } from "@/components/need-card";
@@ -12,13 +12,15 @@ import { PageHeader } from "@/components/page-header";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
 import { ShareCard } from "@/components/share-card";
 import { siteOrigin } from "@/lib/site-url";
-import { visibleCard } from "@/lib/card";
-import { sharesOrg } from "@/lib/queries";
+import { visibleCard, CONTACT_FIELDS, fieldVisibility } from "@/lib/card";
+import { getNeedConnections, sharesOrg } from "@/lib/queries";
 import {
   ContactPanel,
   type ContactChannel,
 } from "@/components/contact-panel";
 import { ConnectionPanel } from "@/components/connection-panel";
+import { revealedFieldsTo } from "@/lib/connections-service";
+import { getRaiseQuota, isStalePending } from "@/lib/quota";
 import { isBlockedEitherWay } from "@/lib/activity";
 import { SafetyActions } from "@/components/safety-actions";
 import { getDict, getLocale } from "@/lib/i18n/server";
@@ -119,33 +121,29 @@ export default async function NeedDetailPage({
   const origin = await siteOrigin();
   const viewerSharesOrg =
     viewer && !isOwner ? await sharesOrg(viewer.id, author.id) : false;
+  const revealedFields =
+    viewer && !isOwner
+      ? await revealedFieldsTo(author.id, viewer.id)
+      : new Set<string>();
   const contactCard = visibleCard(author, {
     loggedIn: !!viewer,
     sharesOrg: !!viewerSharesOrg,
+    revealedFields,
   });
-  const contactChannels: ContactChannel[] = contactCard.contacts.flatMap(
-    (contact) =>
-      contact.value ? [{ key: contact.key, value: contact.value }] : [],
-  );
+  const viewerContactOptions = viewer
+    ? CONTACT_FIELDS.filter(
+        (field) =>
+          !!viewer[field.key] &&
+          fieldVisibility(viewer.fieldVisibility, field.key) !== "hidden",
+      ).map((field) => field.key)
+    : [];
   const canContact = !isOwner && need.status === "open" && !expired;
   const query = await searchParams;
   const contactQuery = Array.isArray(query.contact)
     ? query.contact[0]
     : query.contact;
   const connectionRows = viewer
-    ? await db
-        .select({ connection: connections, initiator: users })
-        .from(connections)
-        .innerJoin(users, eq(connections.initiatorId, users.id))
-        .where(
-          isOwner
-            ? eq(connections.needId, need.id)
-            : and(
-                eq(connections.needId, need.id),
-                eq(connections.initiatorId, viewer.id),
-              ),
-        )
-        .orderBy(desc(connections.updatedAt))
+    ? await getNeedConnections(need.id, viewer.id, isOwner)
     : [];
   const connectionItems = connectionRows.map(({ connection, initiator }) => ({
     id: connection.id,
@@ -153,12 +151,28 @@ export default async function NeedDetailPage({
     initiatorName: initiator.nickname,
     message: connection.message,
     status: connection.status,
+    stale: isStalePending(connection.status, connection.createdAt),
     ownerConfirmed: !!connection.ownerConfirmedAt,
     initiatorConfirmed: !!connection.initiatorConfirmedAt,
   }));
   const currentConnection = connectionItems[0];
   // 非发布者视角下 connectionItems 只会有自己的那条举手
   const interestStatus = isOwner ? null : currentConnection?.status ?? null;
+  const connected =
+    interestStatus === "accepted" || interestStatus === "completed";
+  const contactChannels: ContactChannel[] =
+    need.orgId != null
+      ? contactCard.contacts.flatMap((contact) =>
+          contact.value ? [{ key: contact.key, value: contact.value }] : [],
+        )
+      : connected && need.preferredContact && author[need.preferredContact]
+        ? [
+            {
+              key: need.preferredContact,
+              value: author[need.preferredContact] as string,
+            },
+          ].filter((channel) => revealedFields.has(channel.key))
+        : [];
   const canExpressInterest =
     !interestStatus ||
     interestStatus === "rejected" ||
@@ -166,6 +180,10 @@ export default async function NeedDetailPage({
   // 未登录先引导登录；登录后只要还能举手、或有可见联系方式，就给一个入口
   const showContactAction =
     canContact && (!viewer || canExpressInterest || contactChannels.length > 0);
+  const raiseQuota =
+    viewer && !isOwner && canExpressInterest && showContactAction
+      ? await getRaiseQuota(viewer)
+      : undefined;
 
   return (
     <div>
@@ -242,6 +260,8 @@ export default async function NeedDetailPage({
             channels={contactChannels}
             interestStatus={interestStatus}
             preferredContact={viewer ? need.preferredContact : null}
+            contactOptions={viewerContactOptions}
+            raiseQuota={raiseQuota}
             loginHref={
               viewer
                 ? undefined

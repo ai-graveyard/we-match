@@ -55,7 +55,7 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form action={loginFormAction} className="flex flex-col gap-3">
       <input type="hidden" name="next" value={next} />
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <EmailInput
           name="email"
           value={email}
@@ -67,7 +67,7 @@ export function LoginForm({ next }: { next: string }) {
           formAction={sendAction}
           formNoValidate
           disabled={sendPending || countdown > 0 || !emailReady}
-          className={`${secondaryBtn} shrink-0 disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray`}
+          className={`${secondaryBtn} w-full shrink-0 sm:w-auto disabled:border-line disabled:text-gray disabled:hover:bg-panel disabled:hover:text-gray`}
         >
           {countdown > 0 ? (
             <span className="font-mono">{countdown}s</span>

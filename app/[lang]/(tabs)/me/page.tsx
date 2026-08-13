@@ -1,25 +1,30 @@
 import { redirect } from "next/navigation";
 import { Bell, Plus, Search } from "lucide-react";
-import { and, count, desc, eq, gt, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import {
-  joinRequests,
-  needs,
-  notifications,
-  orgMembers,
-  orgs,
-} from "@/lib/db/schema";
+import { needs, notifications } from "@/lib/db/schema";
 import { version } from "@/package.json";
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { logoutAction } from "@/app/actions/auth";
-import { getUserOrgs } from "@/lib/queries";
+import {
+  getIncomingPendingHands,
+  getMyPendingJoinRequests,
+  getOrgOverviewStats,
+  getOutgoingHands,
+  getUserOrgs,
+} from "@/lib/queries";
+import { getQuotaSummary, QUOTAS } from "@/lib/quota";
 import { listApiKeys } from "@/lib/api-keys-service";
 import { siteOrigin } from "@/lib/site-url";
 import { NeedCard } from "@/components/need-card";
 import { AgentAccessContent } from "@/components/agent-access-content";
 import { ThemeToggleRow } from "@/components/theme-toggle";
-import { MeCategorySwitcher } from "@/components/me-category-switcher";
+import { QuotaPanel } from "@/components/quota-panel";
+import {
+  isMeCategory,
+  MeCategorySwitcher,
+} from "@/components/me-category-switcher";
 import { MeCardOverview } from "@/components/me-card-overview";
 import { LogoutConfirmation } from "@/components/logout-confirmation";
 import { DeleteAccountRow } from "@/components/delete-account";
@@ -57,13 +62,7 @@ export default async function MePage({
   const section = Array.isArray(params.section)
     ? params.section[0]
     : params.section;
-  const activeCategory =
-    section === "organization" ||
-    section === "need" ||
-    section === "agent" ||
-    section === "settings"
-      ? section
-      : "user";
+  const activeCategory = isMeCategory(section) ? section : "user";
 
   const apiKeys = await listApiKeys(user.id);
   const origin = await siteOrigin();
@@ -82,52 +81,23 @@ export default async function MePage({
 
   const myOrgs = await getUserOrgs(user.id);
   const myOrgCards = await Promise.all(
-    myOrgs.map(async ({ org, role }) => {
-      const [[membersRow], [openNeedsRow], [pendingRow]] = await Promise.all([
-        db
-          .select({ n: count() })
-          .from(orgMembers)
-          .where(eq(orgMembers.orgId, org.id)),
-        db
-          .select({ n: count() })
-          .from(needs)
-          .where(
-            and(
-              eq(needs.orgId, org.id),
-              eq(needs.status, "open"),
-              or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
-            ),
-          ),
-        role === "member"
-          ? Promise.resolve([{ n: 0 }])
-          : db
-              .select({ n: count() })
-              .from(joinRequests)
-              .where(
-                and(
-                  eq(joinRequests.orgId, org.id),
-                  eq(joinRequests.status, "pending"),
-                ),
-              ),
-      ]);
-
-      return {
-        org,
-        role,
-        memberCount: membersRow?.n ?? 0,
-        openNeedCount: openNeedsRow?.n ?? 0,
-        pendingRequestCount: pendingRow?.n ?? 0,
-      };
-    }),
+    myOrgs.map(async ({ org, role }) => ({
+      org,
+      role,
+      ...(await getOrgOverviewStats(org.id, {
+        withPendingRequests: role !== "member",
+      })),
+    })),
   );
-  const myPending = await db
-    .select({ orgId: orgs.id, orgName: orgs.name })
-    .from(joinRequests)
-    .innerJoin(orgs, eq(joinRequests.orgId, orgs.id))
-    .where(
-      and(eq(joinRequests.userId, user.id), eq(joinRequests.status, "pending")),
-    )
-    .orderBy(desc(joinRequests.createdAt));
+  const myPending = await getMyPendingJoinRequests(user.id);
+  const [quotaSummary, incomingHands, outgoingHands] = await Promise.all([
+    getQuotaSummary(user),
+    getIncomingPendingHands(user.id),
+    getOutgoingHands(user.id),
+  ]);
+  // 未处理举手攒到一半就提醒：它同时卡住发布和续期，不该等撞墙才知道
+  const showHandsBanner =
+    incomingHands.length >= Math.ceil(QUOTAS.stock.incomingPending / 2);
 
   return (
     <div>
@@ -136,6 +106,18 @@ export default async function MePage({
         activeCategory={activeCategory}
         user={
           <>
+            {showHandsBanner && (
+              <LocaleLink
+                href="/me/connections?view=received"
+                className={`mb-4 flex h-12 items-center gap-2 ${panel} px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3`}
+              >
+                <i className={statusDot} aria-hidden />
+                {fmt(t.me.handsWaiting, { n: incomingHands.length })}
+                <span className="ml-auto shrink-0 font-mono text-2xs text-gray">
+                  {t.me.handsWaitingGo}
+                </span>
+              </LocaleLink>
+            )}
             {/* 未读数用 6px 状态灯 + 等宽计数，不用橙色实心胶囊：
                 徽章不着橙、焦橙不做底色（见 DESIGN.md 焦橙纪律） */}
             <LocaleLink
@@ -259,6 +241,13 @@ export default async function MePage({
               </>
             )}
           </section>
+        }
+        quota={
+          <QuotaPanel
+            summary={quotaSummary}
+            incomingHands={incomingHands}
+            outgoingHands={outgoingHands}
+          />
         }
         agent={
           <AgentAccessContent apiKeys={apiKeys} origin={origin} />

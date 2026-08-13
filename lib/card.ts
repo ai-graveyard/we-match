@@ -1,5 +1,8 @@
 import type { FieldVisibility, User } from "@/lib/db/schema";
 
+// 名片的常量、可见性规则与对外投影，全是纯函数；写库在 lib/card-service.ts。
+// 全站命名约定：lib/X.ts = 常量 + 纯函数/校验，lib/X-service.ts = 有 IO 的写路径。
+
 // PRD 3.2：字段上限
 export const LIMITS = {
   nickname: 20,
@@ -22,7 +25,7 @@ export const BASIC_FIELDS = [
   { key: "city" },
 ] as const;
 
-// 联系方式与社媒：三态 authenticated | orgs | hidden
+// 联系方式：四态 connected | authenticated | orgs | hidden，缺省 connected
 export const CONTACT_FIELDS = [
   { key: "wechat" },
   { key: "email" },
@@ -31,6 +34,7 @@ export const CONTACT_FIELDS = [
 
 export type ContactFieldKey = (typeof CONTACT_FIELDS)[number]["key"];
 
+// 社媒：三态 authenticated | orgs | hidden，缺省 authenticated
 export const SOCIAL_FIELDS = [
   { key: "weixinMp" },
   { key: "weixinChannels" },
@@ -45,11 +49,19 @@ export type CardFieldKey =
 
 export type CardFieldVisibility =
   | "public"
+  | "connected"
   | "authenticated"
   | "orgs"
   | "hidden";
 
+export type CardViewer = {
+  loggedIn: boolean;
+  sharesOrg: boolean;
+  revealedFields?: ReadonlySet<string>;
+};
+
 const BASIC_KEYS = new Set<string>(BASIC_FIELDS.map((field) => field.key));
+const CONTACT_KEYS = new Set<string>(CONTACT_FIELDS.map((field) => field.key));
 const SENSITIVE_FIELDS = [...CONTACT_FIELDS, ...SOCIAL_FIELDS] as const;
 
 export function fieldVisibility(
@@ -58,21 +70,28 @@ export function fieldVisibility(
 ): CardFieldVisibility {
   const stored = visibility[key];
   if (BASIC_KEYS.has(key)) return stored === "hidden" ? "hidden" : "public";
-  // 敏感字段缺省为登录可见；历史 public 也安全降级为 authenticated。
   if (stored === "orgs" || stored === "hidden") return stored;
+  if (CONTACT_KEYS.has(key)) {
+    // 未记录 / 历史 public / 显式 connected → 连接后可见。
+    // 存量 authenticated 只有用户自己点过才会写进 JSON，予以保留。
+    if (stored === "authenticated") return "authenticated";
+    return "connected";
+  }
+  // 社媒：历史 public 降为 authenticated
   return "authenticated";
 }
 
-// 访问者视角能否看到某字段。sharesOrg：访问者与名片主人是否同属至少一个组织
+// 访问者视角能否看到某字段。revealedFields：对方通过连接交换给访问者的联系方式键
 export function canSee(
   visibility: FieldVisibility,
   key: CardFieldKey,
-  viewer: { loggedIn: boolean; sharesOrg: boolean },
+  viewer: CardViewer,
 ): boolean {
   const v = fieldVisibility(visibility, key);
   if (v === "public") return true;
   if (v === "authenticated") return viewer.loggedIn;
   if (v === "orgs") return viewer.loggedIn && viewer.sharesOrg;
+  if (v === "connected") return viewer.revealedFields?.has(key) ?? false;
   return false;
 }
 
@@ -85,26 +104,41 @@ export function normalizedFieldVisibility(
       normalized[field.key] = "hidden";
     }
   }
-  for (const field of SENSITIVE_FIELDS) {
+  for (const field of CONTACT_FIELDS) {
+    const value = fieldVisibility(visibility, field.key);
+    if (value !== "connected") normalized[field.key] = value;
+  }
+  for (const field of SOCIAL_FIELDS) {
     const value = fieldVisibility(visibility, field.key);
     if (value !== "authenticated") normalized[field.key] = value;
   }
   return normalized;
 }
 
-export function hasAuthenticatedCardDetails(user: User): boolean {
-  return SENSITIVE_FIELDS.some(
+export function hasLoginVisibleCardDetails(user: User): boolean {
+  return SENSITIVE_FIELDS.some((field) => {
+    if (!user[field.key]) return false;
+    return fieldVisibility(user.fieldVisibility, field.key) === "authenticated";
+  });
+}
+
+/** @deprecated 用 hasLoginVisibleCardDetails */
+export const hasAuthenticatedCardDetails = hasLoginVisibleCardDetails;
+
+export function countConnectedContacts(user: User): number {
+  return CONTACT_FIELDS.filter(
     (field) =>
       !!user[field.key] &&
-      fieldVisibility(user.fieldVisibility, field.key) === "authenticated",
-  );
+      fieldVisibility(user.fieldVisibility, field.key) === "connected",
+  ).length;
+}
+
+export function hasUnrevealedConnectedContacts(user: User): boolean {
+  return countConnectedContacts(user) > 0;
 }
 
 // 他人视角的名片数据：不可见字段直接置空，绝不下发
-export function visibleCard(
-  user: User,
-  viewer: { loggedIn: boolean; sharesOrg: boolean },
-) {
+export function visibleCard(user: User, viewer: CardViewer) {
   const vis = user.fieldVisibility;
   const pick = (key: CardFieldKey, value: string | null) =>
     value && canSee(vis, key, viewer) ? value : null;

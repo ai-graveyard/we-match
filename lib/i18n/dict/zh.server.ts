@@ -50,7 +50,7 @@ export const zhServer = {
     badVisibilityObject: 'fieldVisibility 需为对象，如 {"email":"orgs"}',
     badVisibilityValue: "可见性设置不正确：{key} 不能为 {value}",
     warnNoPlazaContact:
-      "你有开放中的广场需求，但名片上已没有登录用户可见的联系方式，别人将联系不到你",
+      "你有开放中的广场需求，但名片上已没有可交换的联系方式，别人举手后也拿不到你的联系方式",
     warnNoOrgContact:
       "你有开放中的组织需求，但名片上已没有组织成员可见的联系方式",
   },
@@ -68,13 +68,13 @@ export const zhServer = {
     noOrgContact:
       "名片上还没有组织成员可见的联系方式，发布后别人联系不到你。请先到「我的 → 编辑名片」开启",
     noPlazaContact:
-      "名片上还没有登录用户可见的联系方式，发布后别人联系不到你。请先到「我的 → 编辑名片」开启",
+      "名片上还没有可交换的联系方式（连接后可见或登录可见），发布后别人举手也拿不到你的联系方式。请先到「我的 → 编辑名片」填写",
     preferredContactUnavailable: "选择的优先联系方式在当前可见范围下不可用",
     dailyLimit: "每天最多发布 {max} 条需求",
     notOwner: "只能编辑自己的需求",
     noContactForScope: "当前可见范围下没有可用的联系方式，请先编辑名片",
     staleHandsBlockRenewal:
-      "有举手等你回应超过 3 天了，先到「我的 → 举手」处理完，才能续期或重新开放",
+      "有举手等你回应超过 3 天了，先到「我的 → 额度」处理完，才能续期或重新开放",
     idempotencyConflict: "这个 Idempotency-Key 已用于另一条不同的需求，请为新需求换一个 Key",
   },
 
@@ -112,6 +112,37 @@ export const zhServer = {
     needNotFound: "这条需求不存在",
     already: "你已经举过手了",
     submitted: "已经举手，等待发布者回应",
+    missingContact: "请选择一项联系方式作为交换",
+    contactUnavailable: "选择的联系方式当前不可用，请先到名片里填写",
+    rejectCooldown: "对方暂时没有接受，7 天后可以再举手",
+    resendLimit: "这条需求的举手次数已用完",
+  },
+
+  quota: {
+    tooFast: "操作太快，请稍后再试",
+    publishDaily: "今天的 {max} 条已用完，明天 0 点恢复",
+    publishDailyNewbie:
+      "新账号每天可发 {max} 条。填好名片（介绍、标签、一项联系方式）后提到 {full} 条",
+    publishStock: "你有 {max} 条需求正在开放，先关掉一些再发新的",
+    publishBacklog: "有 {n} 个举手在等你回应，到「我的 → 额度」处理完就能继续发布",
+    pendingStock: "有 {max} 个举手还在等回应。撤回一个，或等对方回应后再举手",
+    acceptedStock: "未完成的连接已满 {max} 个，先确认完成或撤回再举手",
+    raiseDaily: "今天已经举手 {max} 次，明天 0 点恢复",
+    acceptDaily: "今天已经接受 {max} 个举手，明天 0 点恢复",
+    needAcceptCap: "这条需求已经连上 10 个人，如果还要找人，建议新发一条",
+    sameUserDaily: "今天已经联系过 TA 了，明天再试",
+    revealDaily: "今天作为联系方式提供方已达 {max} 次，明天 0 点恢复",
+    // 降额提示不告知具体触发条件——说清楚就等于给了绕过说明书
+    penaltyPublish: "你的发布额度暂时被下调，我们正在核查，处理完会自动恢复",
+    penaltyRaise: "你的举手额度暂时被下调，过一段时间会自动恢复",
+    penaltyAccept: "你的接受额度暂时被下调，我们正在核查，处理完会自动恢复",
+    needClosedToRaises: "这条需求收到的举手较多，暂不接收新的",
+    reportDaily: "今天已经提交 {max} 条举报，明天 0 点恢复",
+    reportCooldown: "这条举报刚处理过，7 天后可以再次举报",
+    blockDaily: "今天已经拉黑 {max} 个用户，明天 0 点恢复",
+    orgCreateDaily: "今天已经创建 {max} 个组织，明天 0 点恢复",
+    orgJoinDaily: "今天已经提交 {max} 次加入申请，明天 0 点恢复",
+    orgJoinStock: "你有 {max} 个组织申请正在等审批，先等管理员处理",
   },
 
   report: {

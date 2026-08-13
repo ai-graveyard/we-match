@@ -1,3 +1,4 @@
+// 组织常量与纯函数；写路径见 lib/orgs-service.ts
 export const ORG_LIMITS = {
   name: 10,
   description: 500,

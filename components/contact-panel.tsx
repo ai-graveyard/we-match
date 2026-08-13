@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Mail, MessageCircle, Phone, X } from "lucide-react";
 import { copyText } from "@/components/copy-button";
-import { InterestForm, type ConnectionStatus } from "@/components/connection-panel";
+import {
+  InterestForm,
+  type ConnectionStatus,
+  type RaiseQuota,
+} from "@/components/connection-panel";
 import type { ContactFieldKey } from "@/lib/card";
 import { useDict } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/fmt";
@@ -105,6 +109,8 @@ export function ContactPanel({
   loginHref,
   initialOpen = false,
   interestStatus,
+  contactOptions = [],
+  raiseQuota,
 }: {
   need: { id: number; type: "need" | "offer"; title: string };
   author: string;
@@ -113,6 +119,8 @@ export function ContactPanel({
   loginHref?: string;
   initialOpen?: boolean;
   interestStatus: ConnectionStatus | null;
+  contactOptions?: ContactFieldKey[];
+  raiseQuota?: RaiseQuota;
 }) {
   const t = useDict();
   const [open, setOpen] = useState(initialOpen);
@@ -228,7 +236,12 @@ export function ContactPanel({
 
             {canExpressInterest && (
               <div className="mt-4">
-                <InterestForm needId={need.id} label={intent} />
+                <InterestForm
+                  needId={need.id}
+                  label={intent}
+                  contactOptions={contactOptions}
+                  quota={raiseQuota}
+                />
                 <p className="mt-2 text-2xs text-gray">
                   {fmt(t.contact.interestHint, { name: author })}
                 </p>
@@ -248,13 +261,8 @@ export function ContactPanel({
 
             {channels.length > 0 && (
               <>
-                {!connected && (
-                  <h3 className={`${sectionLabel} mt-4 block`}>
-                    {t.contact.alsoDirect}
-                  </h3>
-                )}
                 <div
-                  className={`${panel} p-3 ${connected ? "mt-4" : "mt-2"}`}
+                  className={`${panel} p-3 mt-4`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className={sectionLabel}>

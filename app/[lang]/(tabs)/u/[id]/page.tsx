@@ -2,10 +2,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { blocks, needs, users } from "@/lib/db/schema";
+import { blocks, contactReveals, needs, users } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { sharesOrg } from "@/lib/queries";
-import { hasAuthenticatedCardDetails, visibleCard } from "@/lib/card";
+import {
+  countConnectedContacts,
+  hasLoginVisibleCardDetails,
+  hasUnrevealedConnectedContacts,
+  visibleCard,
+} from "@/lib/card";
 import { CopyButton } from "@/components/copy-button";
 import { NeedCard } from "@/components/need-card";
 import { PageHeader } from "@/components/page-header";
@@ -14,6 +19,7 @@ import { MaskedEmail } from "@/components/masked-email";
 import { ShareCard } from "@/components/share-card";
 import { siteOrigin } from "@/lib/site-url";
 import { SafetyActions } from "@/components/safety-actions";
+import { revealedFieldsTo } from "@/lib/connections-service";
 import {
   panel,
   primaryBtn,
@@ -24,7 +30,7 @@ import {
 } from "@/lib/ui";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
-import { fmt } from "@/lib/i18n/fmt";
+import { fmt, plural } from "@/lib/i18n/fmt";
 import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
 import { uiDict } from "@/lib/i18n/dict";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
@@ -105,12 +111,39 @@ export default async function UserCardPage({
     requestedView === "user" || requestedView === "org"
       ? requestedView
       : "guest";
+  const revealedFields =
+    viewer && !isSelf
+      ? await revealedFieldsTo(owner.id, viewer.id)
+      : new Set<string>();
+  const revealSources =
+    viewer && !isSelf
+      ? await db
+          .select({
+            field: contactReveals.field,
+            title: needs.title,
+          })
+          .from(contactReveals)
+          .innerJoin(needs, eq(needs.id, contactReveals.needId))
+          .where(
+            and(
+              eq(contactReveals.fromUserId, owner.id),
+              eq(contactReveals.toUserId, viewer.id),
+            ),
+          )
+      : [];
+  const revealSourceByField = new Map<string, string>(
+    revealSources.map((row) => [row.field, row.title]),
+  );
   const audience = isSelf
     ? {
         loggedIn: previewView !== "guest",
         sharesOrg: previewView === "org",
       }
-    : { loggedIn: !!viewer, sharesOrg: !!shared };
+    : {
+        loggedIn: !!viewer,
+        sharesOrg: !!shared,
+        revealedFields,
+      };
   const card = visibleCard(owner, audience);
   const visibleEmail = card.contacts.find((item) => item.key === "email")?.value;
   const publicCard = visibleCard(owner, {
@@ -119,7 +152,12 @@ export default async function UserCardPage({
   });
   const origin = await siteOrigin();
   const showLoginGate =
-    !audience.loggedIn && hasAuthenticatedCardDetails(owner);
+    !audience.loggedIn && hasLoginVisibleCardDetails(owner);
+  const showConnectionGate =
+    !!audience.loggedIn &&
+    !isSelf &&
+    hasUnrevealedConnectedContacts(owner) &&
+    card.contacts.length === 0;
 
   const groups = [
     {
@@ -129,6 +167,7 @@ export default async function UserCardPage({
     { title: t.card.groupSocial, items: card.socials },
   ].filter((g) => g.items.length > 0);
   const primaryCopyKey = groups[0]?.items[0]?.key;
+  const connectedCount = isSelf ? countConnectedContacts(owner) : 0;
 
   return (
     <div>
@@ -156,6 +195,11 @@ export default async function UserCardPage({
               {t.me.editCard}
             </LocaleLink>
           </div>
+          {connectedCount > 0 && (
+            <p className="mt-1 text-xs text-gray">
+              {plural(t.card.previewConnected, connectedCount)}
+            </p>
+          )}
         </section>
       )}
       <section className={`${panel} p-4`}>
@@ -164,11 +208,20 @@ export default async function UserCardPage({
           <div className="min-w-0">
             <h1 className="text-xl font-semibold">{card.nickname}</h1>
             {visibleEmail && (
-              <MaskedEmail
-                email={visibleEmail}
-                showLabel={t.card.showEmail}
-                hideLabel={t.card.hideEmail}
-              />
+              <>
+                <MaskedEmail
+                  email={visibleEmail}
+                  showLabel={t.card.showEmail}
+                  hideLabel={t.card.hideEmail}
+                />
+                {revealSourceByField.get("email") && (
+                  <p className="font-mono text-3xs text-gray">
+                    {fmt(t.card.revealedFromNeed, {
+                      title: revealSourceByField.get("email")!,
+                    })}
+                  </p>
+                )}
+              </>
             )}
             {card.city && <p className="text-xs text-gray">{card.city}</p>}
           </div>
@@ -221,6 +274,20 @@ export default async function UserCardPage({
         </section>
       )}
 
+      {showConnectionGate && (
+        <section className={`mt-4 ${panel}`}>
+          <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
+            {t.card.connectionGateTitle}
+          </h2>
+          <div className="p-4">
+            <p className="text-sm">{t.card.connectionGateBody}</p>
+            <a href="#plaza-needs" className="mt-2 inline-block text-xs text-ink underline">
+              {t.card.connectionGateNeeds}
+            </a>
+          </div>
+        </section>
+      )}
+
       {groups.map((group) => (
         <section
           key={group.title}
@@ -244,6 +311,13 @@ export default async function UserCardPage({
                   {item.visibility === "orgs" && (
                     <span className="font-mono text-3xs text-gray">
                       {cardVisibilityLabel(t, "orgs")}
+                    </span>
+                  )}
+                  {revealSourceByField.get(item.key) && (
+                    <span className="font-mono text-3xs text-gray">
+                      {fmt(t.card.revealedFromNeed, {
+                        title: revealSourceByField.get(item.key)!,
+                      })}
                     </span>
                   )}
                 </div>
@@ -299,7 +373,7 @@ async function PlazaNeeds({
     .limit(50);
 
   return (
-    <section className="mt-4">
+    <section id="plaza-needs" className="mt-4">
       <h2 className={sectionLabel}>
         {isSelf ? t.card.plazaNeedsSelf : t.card.plazaNeedsOther}
       </h2>

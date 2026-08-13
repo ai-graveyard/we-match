@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   check:
@@ -22,5 +23,58 @@ jobs:
 
       - run: pnpm lint
 
-      # next build 顺带做类型检查，这里没有独立的 test/typecheck 脚本。
+      - run: pnpm test
+
+      # next build 顺带做类型检查。
       - run: pnpm build
+
+  # 只有 check 全绿才部署；PR 只跑 check 不部署。
+  # main push 与手动触发才会进入这一步，且生产部署串行（并发锁）。
+  deploy:
+    name: Deploy to server
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.EC2_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # DEPLOY_PATH 是服务器上这个仓库的 git checkout 目录，make deploy 会在那边
+      # git pull、备份数据库、本地构建镜像、重启服务，不经过任何镜像仓库。
+      - name: Deploy on server
+        run: |
+          ssh -p "${{ secrets.EC2_PORT }}" -i ~/.ssh/deploy_key "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            make deploy
+          EOF
+
+      # 部署后对公开地址做 HTTPS smoke check。未配置 SITE_ORIGIN 时跳过并提示，
+      # 便于在正式配置好域名前先把管线跑通。
+      - name: Post-deploy health check
+        env:
+          SMOKE_URL: ${{ secrets.SITE_ORIGIN }}
+        run: |
+          if [ -z "${SMOKE_URL}" ]; then
+            echo "SITE_ORIGIN 未配置，跳过部署后 smoke check（正式上线前请配置）"
+            exit 0
+          fi
+          for i in 1 2 3 4 5; do
+            if curl -fsS "${SMOKE_URL%/}/api/health" | grep -q '"ok":true'; then
+              echo "health 通过"
+              exit 0
+            fi
+            echo "health 未就绪，重试 ${i}..."
+            sleep 5
+          done
+          echo "部署后 health 检查失败"
+          exit 1

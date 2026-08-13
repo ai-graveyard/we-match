@@ -34,7 +34,7 @@ export default async function LoginPage({
         <LanguageToggle />
       </div>
       <main className="flex flex-1 items-center justify-center px-4 pb-24">
-        <div className="w-full max-w-[360px]">
+        <div className="w-full max-w-[440px]">
           <Brand size="lg" className="justify-center" />
           <p className="mb-8 mt-2 text-center text-sm text-gray">
             {t.brand.slogan}

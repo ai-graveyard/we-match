@@ -6,6 +6,7 @@ import { serializeNeed } from "@/lib/api/serialize";
 import { visibleCard } from "@/lib/card";
 import { sharesOrg } from "@/lib/queries";
 import { isBlockedEitherWay } from "@/lib/activity";
+import { revealedFieldsTo } from "@/lib/connections-service";
 import { getRequestDict } from "@/lib/i18n/request";
 
 type Context = { params: Promise<{ id: string }> };
@@ -27,7 +28,12 @@ export async function GET(request: Request, { params }: Context) {
   ) return apiError(404, "not_found", (await getRequestDict()).api.userNotFound);
 
   const shares = await sharesOrg(auth.user.id, target.id);
-  const card = visibleCard(target, { loggedIn: true, sharesOrg: shares });
+  const revealedFields = await revealedFieldsTo(target.id, auth.user.id);
+  const card = visibleCard(target, {
+    loggedIn: true,
+    sharesOrg: shares,
+    revealedFields,
+  });
 
   const plazaNeeds = await db
     .select()

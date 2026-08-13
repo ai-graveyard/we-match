@@ -210,7 +210,9 @@ export function CardForm({
         <section key={group.title} className={sectionCls}>
           <h2 className={`${labelCls} mb-3 block`}>{group.title}</h2>
           <p className="mb-3 text-2xs leading-5 text-gray">
-            {t.card.sensitiveHint}
+            {group.fields === CONTACT_FIELDS
+              ? t.card.contactHint
+              : t.card.socialHint}
           </p>
           <div className="flex flex-col gap-3">
             {group.fields.map((f) => (
@@ -224,7 +226,11 @@ export function CardForm({
                     name={`vis_${f.key}`}
                     value={visOf(f.key)}
                     onChange={setVisOf(f.key)}
-                    options={["authenticated", "orgs", "hidden"]}
+                    options={
+                      group.fields === CONTACT_FIELDS
+                        ? ["connected", "authenticated", "orgs", "hidden"]
+                        : ["authenticated", "orgs", "hidden"]
+                    }
                   />
                 </div>
                 {f.key === "contactPhone" ? (

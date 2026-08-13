@@ -65,14 +65,17 @@ export function NeedForm({
   orgs,
   suggestions,
   contactOptions,
+  publishHint,
 }: {
   initial: NeedFormInitial;
   orgs: { id: number; name: string }[];
   suggestions: string[];
   contactOptions: {
     key: ContactFieldKey;
-    visibility: "authenticated" | "orgs";
+    visibility: "connected" | "authenticated" | "orgs";
   }[];
+  /** 剩余发布额度，只在快用完时由页面传下来（QUOTA.md 11.1） */
+  publishHint?: { remaining: number; limit: number } | null;
 }) {
   const t = useDict();
   const editing = initial.id != null;
@@ -105,7 +108,10 @@ export function NeedForm({
 
   const labelCls = sectionLabel;
   const eligibleContacts = contactOptions.filter(
-    (option) => scope !== "plaza" || option.visibility === "authenticated",
+    (option) =>
+      scope !== "plaza" ||
+      option.visibility === "connected" ||
+      option.visibility === "authenticated",
   );
   const selectedContact =
     eligibleContacts.find((option) => option.key === preferredContact)?.key ??
@@ -314,6 +320,14 @@ export function NeedForm({
             ? t.need.formSubmitEdit
             : t.need.formSubmitCreate}
       </button>
+      {!editing && publishHint && (
+        <p className="-mt-2 text-center font-mono text-3xs text-gray">
+          {fmt(t.quota.remaining, {
+            n: publishHint.remaining,
+            max: publishHint.limit,
+          })}
+        </p>
+      )}
     </form>
   );
 }

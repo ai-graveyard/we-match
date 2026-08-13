@@ -20,9 +20,9 @@
 
 ## 数据约束
 
-- 需求：title ≤ 50 字（必填）；description ≤ 2000 字；tags ≤ 10 个、单个 ≤ 20 字；每天最多发布 10 条；`preferredContact` 可为 `wechat|email|contactPhone`；`expiresAt` 为未来的 ISO 8601 时间或 `null`（永久）；超过截止时间即 `expired: true` 并从默认列表隐藏
+- 需求：title ≤ 50 字（必填）；description ≤ 2000 字；tags ≤ 10 个、单个 ≤ 20 字；每天最多发布 10 条（新账号 3 条）；`preferredContact` 可为 `wechat|email|contactPhone`；`expiresAt` 为未来的 ISO 8601 时间或 `null`（永久）；超过截止时间即 `expired: true` 并从默认列表隐藏
 - 名片：nickname ≤ 20 字（不能为空）；bio ≤ 100；city ≤ 20；tags 同上；联系方式/社媒单值 ≤ 100 字；contactPhone 须为 11 位中国大陆手机号（或留空）
-- 可见性 `fieldVisibility`：键为字段名，值为档位。基本信息（bio/tags/city）为 `public|hidden`，未记录默认 `public`；联系方式（wechat/email/contactPhone）与社媒（weixinMp/weixinChannels/xiaohongshu/weibo）为 `authenticated|orgs|hidden`，未记录默认 `authenticated`。`authenticated` = 任意已登录用户可见，`orgs` = 仅与本人同组织的成员可见。昵称始终公开；联系方式与社媒不存在匿名公开档
+- 可见性 `fieldVisibility`：键为字段名，值为档位。基本信息（bio/tags/city）为 `public|hidden`，未记录默认 `public`；**联系方式**（wechat/email/contactPhone）为 `connected|authenticated|orgs|hidden`，未记录默认 `connected`（举手被接受后才交换那一项）；**社媒**（weixinMp/weixinChannels/xiaohongshu/weibo）为 `authenticated|orgs|hidden`，未记录默认 `authenticated`。`authenticated` = 任意已登录用户可见，`orgs` = 仅与本人同组织的成员可见，`connected` = 仅该字段被交换给访问者时可见。昵称始终公开；联系方式与社媒不存在匿名公开档。他人名片接口不会返回未揭示的联系方式原值。
 
 ## 端点
 
@@ -135,7 +135,7 @@ curl -s -X PATCH -H "Authorization: Bearer $WEMATCH_API_KEY" \
 - `orgId` 缺省或 null 发广场；指定组织须是成员。**发布后范围不可改**
 - `expiresAt` 必填：未来的 ISO 8601 时间；永久有效传 `null`
 - `preferredContact` 可选；须是本人名片在该范围下对受众可见且已填写的联系方式。省略时自动选择第一项可用渠道
-- 前置校验：发广场要求名片至少一项联系方式为 `authenticated`；发组织要求 `authenticated` 或 `orgs`。不满足返回 422，先引导用户改名片可见性
+- 前置校验：发广场要求名片至少一项联系方式为 `connected` 或 `authenticated`；发组织要求非 `hidden`。不满足返回 422，先引导用户改名片可见性
 - 成功返回 201：`{ "need": {...} }`
 - Agent 应带 `Idempotency-Key: <每次逻辑发布唯一的值>`。响应丢失后的重试复用同一个值；重放返回 200、`replayed: true` 和 `Idempotency-Replayed: true`，不会创建第二条需求。Key 最长 128 字符，只允许字母、数字、`.`、`_`、`:`、`-`。
 
@@ -149,7 +149,7 @@ curl -s -X PATCH -H "Authorization: Bearer $WEMATCH_API_KEY" \
 
 编辑自己的需求，body 可含 `type` / `title` / `description` / `tags` / `status`（`open|done|closed`）/ `preferredContact` / `expiresAt`（ISO 时间或 `null`）。范围（orgId）不可改。空 body `{}` 会把截止时间快速延长到一个月后。
 
-**续期锁**：用户存在超过 72 小时未处理的举手时，延长截止时间、改为永久、重开（`status` 改回 `open`）都会被拒，返回 422 `renewal_blocked`。这是平台规则，不要重试或绕过；把 message 转告用户，引导 TA 去网页「我的 → 举手」处理完再续期。缩短截止、关闭、标完成、只改内容不受影响。
+**续期锁**：用户存在超过 72 小时未处理的举手时，延长截止时间、改为永久、重开（`status` 改回 `open`）都会被拒，返回 422 `renewal_blocked`。这是平台规则，不要重试或绕过；把 message 转告用户，引导 TA 去网页「我的 → 额度」处理完再续期。缩短截止、关闭、标完成、只改内容不受影响。
 
 ### DELETE /needs/:id（需 write）
 

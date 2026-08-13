@@ -64,6 +64,20 @@
       "when": 1786367060010,
       "tag": "0008_lowly_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786550000000,
+      "tag": "0009_m6-connection",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1786630000000,
+      "tag": "0010_quota-p3p4",
+      "breakpoints": true
     }
   ]
 }

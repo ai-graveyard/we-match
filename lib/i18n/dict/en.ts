@@ -269,6 +269,7 @@ export const en: UiDict = {
     hideEmail: "Hide email",
 
     visPublic: "Public",
+    visConnected: "After connecting",
     visAuthenticated: "Signed-in users",
     visOrgs: "Shared groups",
     visHidden: "Hidden",
@@ -282,6 +283,10 @@ export const en: UiDict = {
     nicknameAlwaysPublic: "Always public",
     sensitiveHint:
       "Never shown to signed-out visitors. “Signed-in users” means any registered user can see it.",
+    contactHint:
+      "Default is “after connecting”: only someone whose raised hand you accept sees the one field you exchange. Changing this later does not take back what they already saw.",
+    socialHint:
+      "Social accounts stay visible to signed-in users so people can decide whether to raise a hand.",
     savedWithWarning: "Saved. Note: {warning}",
     viewPublicCard: "View public card",
 
@@ -289,11 +294,21 @@ export const en: UiDict = {
     previewUser: "Signed-in user",
     previewOrg: "Shared group member",
     previewHint: "Previewing what this audience sees",
+    previewConnected: {
+      one: "{n} more contact is exchanged only after a raised hand is accepted on a specific post",
+      other:
+        "{n} more contacts are exchanged only after a raised hand is accepted on a specific post",
+    },
 
-    loginGateTitle: "Contact and social",
+    loginGateTitle: "Social",
     loginGateBody:
-      "Sign in to see the contact details this person shares with signed-in users",
+      "Sign in to see the social accounts this person shares with signed-in users",
     loginGateAction: "Sign in to view",
+    connectionGateTitle: "Contact",
+    connectionGateBody:
+      "Contact details are exchanged after they accept your raised hand",
+    connectionGateNeeds: "See their plaza posts",
+    revealedFromNeed: "From “{title}”",
 
     plazaNeedsSelf: "My plaza posts",
     plazaNeedsOther: "Their plaza posts",
@@ -311,9 +326,13 @@ export const en: UiDict = {
     catUser: "Profile",
     catOrganization: "Groups",
     catNeed: "Posts",
+    catQuota: "Quota",
     catAgent: "Agent",
     catSettings: "Settings",
     catNavLabel: "My sections",
+
+    handsWaiting: "{n} raised hands waiting on you",
+    handsWaitingGo: "Respond",
 
     myOrgs: "My groups",
     createOrg: "New group",
@@ -387,6 +406,10 @@ export const en: UiDict = {
       "Say briefly what you can offer, or what you'd like to know",
     interestHint:
       "{name} decides whether to accept, and you'll be notified either way",
+    exchangePreview:
+      "If they accept, they will see your {field}. Anything seen cannot be taken back",
+    exchangeLabel: "Contact to exchange if they accept",
+    quotaFooter: "{pending} waiting for a reply · {remaining} raises left",
     waitingTitle: "Raised — waiting for {name}",
     waitingBody:
       "You'll be notified when they respond. You can withdraw under “My raises”.",
@@ -405,14 +428,56 @@ export const en: UiDict = {
     mailSubject: "Re: {title}",
   },
 
+  quota: {
+    metaTitle: "Quota",
+    intro:
+      "Used well, you will barely notice these limits. This is everything you have left today and everything you are holding.",
+    dailyHeading: "Today",
+    stockHeading: "Currently held",
+    used: "{used} / {max}",
+    remaining: "{n} of {max} left",
+    resetHint: "Daily quotas reset at midnight",
+
+    dailyPublish: "Posts",
+    dailyRaise: "Raises",
+    dailyAccept: "Accepts",
+
+    stockOpenNeeds: "Open posts",
+    stockPendingHands: "Raises awaiting a reply",
+    stockAcceptedOpen: "Connected, not finished",
+    stockIncomingPending: "Raises awaiting your reply",
+    stockPendingJoins: "Group applications pending",
+
+    newbieHint:
+      "Fill in your card (intro, a tag, one contact) to raise the daily posting quota from {newbie} to {regular}",
+    newbieHintLink: "Edit card",
+    penaltyHint:
+      "This quota is temporarily reduced while we take a look. It restores on its own",
+    earnedHint: "includes +{n} earned",
+
+    handsHeading: "Raised hands waiting on you",
+    handsEmpty: "Nothing waiting on you",
+    myHandsHeading: "Hands I raised",
+    myHandsEmpty: "No raises in progress",
+    handsRenewalLocked:
+      "A raised hand has waited over 3 days. Respond to it to renew posts again",
+  },
+
   connection: {
     statusPending: "Waiting",
+    statusNoResponse: "No response",
     statusAccepted: "Connected",
     statusRejected: "Not accepted",
     statusCompleted: "Completed",
     statusCancelled: "Withdrawn",
     ownerHeading: "Raised hands ({n})",
     viewerHeading: "My raise",
+    centerTitle: "My connections",
+    tabReceived: "Received",
+    tabInitiated: "Sent",
+    receivedEmpty: "No one has raised a hand for your needs yet",
+    initiatedEmpty: "You haven't raised a hand yet",
+    viewAll: "View all connections",
     reject: "Not now",
     accept: "Accept and connect",
     withdraw: "Withdraw",

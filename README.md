@@ -4,10 +4,11 @@
 
 极简供需匹配工具：每人一张名片，可发布「我需要 / 我提供」到公开广场或组织；靠浏览、筛选、搜索找到人，再用对方开放的渠道线下联系。
 
-- 产品文档：[docs/PRD.md](docs/PRD.md)（含里程碑；M6 连接制尚未落地）
+- 产品文档：[docs/PRD.md](docs/PRD.md)（含里程碑；M6 连接制已落地，额度赚回与惩罚阶梯仍按 QUOTA.md P4 观察）
 - 设计规范：[docs/DESIGN.md](docs/DESIGN.md)
 - Agent / 开放 API 方案：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)，接口清单见 [skills/we-match/references/api.md](skills/we-match/references/api.md)
-- 额度与反滥用设计稿：[docs/QUOTA.md](docs/QUOTA.md)（随 M6 落地，尚无代码）
+- 额度与反滥用设计稿：[docs/QUOTA.md](docs/QUOTA.md)（P1 揭示模型与 P2 发布/举手/接受额度已随 M6 落地；赚回与惩罚阶梯见 P4）
+- 重构蓝图：[docs/REFACTOR.md](docs/REFACTOR.md)（当前代码 vs 目标形态的差距图与分阶段路线）
 
 官方站点：https://wematch.v2ai.org
 
@@ -22,7 +23,7 @@
 
 ## 本地开发
 
-要求：Node.js 20+，包管理器为 pnpm。
+要求：Node.js 22，包管理器为 pnpm。
 
 ```bash
 pnpm install
@@ -70,7 +71,8 @@ pnpm db:seed
 | `RESEND_API_KEY` | Resend API Key（`MAIL_PROVIDER=resend` 时必填） |
 | `MAIL_FROM` | 发信人，域名须已在 Resend 验证过，如 `We Match <noreply@wematch.v2ai.org>` |
 | `BETA_MODE` | 内测模式，验证码固定 `888888`。不填时按「没配 Resend = 还在内测」自动判定；`1` 强制开，`0` 强制关。**开着等于任何人可以登录成任何人**，正式对外前必须关掉 |
-| `SITE_ORIGIN` | 对外站点 origin。生产环境建议固定配置，防止 Agent 安装指令和告知邮件受 Host 头影响 |
+| `QUOTA_P4_MODE` | P4 反滥用惩罚阶梯执行模式：`shadow`（默认，只观测写 `quota_penalty_shadow` 事件、不降额）或 `enforce`（真正降额）。先在 shadow 下核对没误伤真实用户，再切 `enforce` |
+| `SITE_ORIGIN` | 对外站点 origin。生产环境建议固定配置，防止 Agent 安装指令和告知邮件受 Host 头影响；也用于部署后 health smoke check |
 
 示例：
 
@@ -121,12 +123,17 @@ docker compose up -d --build
 | `make build` | 构建镜像 |
 | `make start` / `make stop` / `make restart` | 起停服务 |
 | `make logs` | 跟踪日志 |
-| `make deploy` | `git pull` + 重新构建 + 重启，服务器上用这条 |
+| `make backup` | 在线备份 SQLite 数据库 |
+| `make deploy` | `git pull` + 备份数据库 + 重新构建 + 重启 + 清理，服务器上用这条 |
 
 ### CI/CD
 
-- `.github/workflows/ci.yml`：push / PR 时跑 `pnpm lint` + `pnpm build`。
-- `.github/workflows/deploy.yml`：push 到 `main` 时 SSH 到服务器，在 `DEPLOY_PATH` 目录跑 `make deploy`（`git pull` + 本地建镜像 + 重启，不经镜像仓库，和 [fastype](../fastype) 同一套模式）。
+CI 与部署合并在 `.github/workflows/ci.yml`，一条流水线两个 job：
+
+- `check`：push / PR / 手动触发都跑 `pnpm lint` + `pnpm test` + `pnpm build`（`next build` 顺带类型检查）。
+- `deploy`：仅在 push 到 `main` 或手动触发、且 `check` 全绿后执行；PR **不部署**。SSH 到服务器在 `DEPLOY_PATH` 跑 `make deploy`（`git pull` + 备份 + 本地建镜像 + 重启，不经镜像仓库），生产部署带 `production-deploy` 并发锁串行执行。部署后对 `SITE_ORIGIN/api/health` 做 HTTPS smoke check（未配 `SITE_ORIGIN` 时自动跳过并提示）。
+
+`/api/health` 是最小探针，只在库能查时返回 `{ "ok": true }`，不暴露版本或迁移等内部信息。
 
 需要在本仓库的 GitHub Secrets 中配置：
 
@@ -136,6 +143,9 @@ docker compose up -d --build
 | `EC2_KNOWN_HOSTS` | `ssh-keyscan` 得到的 known_hosts 内容 |
 | `EC2_HOST` / `EC2_PORT` / `EC2_USER` | 服务器地址 / SSH 端口 / 登录用户 |
 | `DEPLOY_PATH` | 服务器上本仓库的 git checkout 目录 |
+| `SITE_ORIGIN` | 部署后 smoke check 的公开地址（未配则跳过该步） |
+
+分支保护建议：把 `check` 设为 `main` 的必需状态检查，让未过 CI 的改动无法合并。
 
 服务器是和其他项目共用的一台机器，`make deploy` 用 Dockerfile 里的 `com.ai-graveyard.project=we-match` 标签把镜像清理限定在自己的镜像上，不影响别的服务。
 
@@ -160,7 +170,10 @@ SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 
 - [ ] 邮件：Resend 发信域名已验证（SPF / DKIM 已生效），`MAIL_PROVIDER=resend` 已配置并真实收到验证码；顺手确认没进垃圾箱
 - [ ] 内测模式已关闭：登录页**不再**显示「内测中：验证码固定 888888」，验证码是随机的（配好 Resend 即自动关闭）
-- [ ] 法务：填写 [lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱（`/terms`、`/privacy` 会展示），文案经过人工确认
+- [ ] 法务：[lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱已填（`/terms`、`/privacy` 会展示，占位值必须替换成真实运营主体），协议与政策全文经过人工确认
 - [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_EMAILS` 已配置
 - [ ] `APP_PORT` 已配置为分配给 we-match 的实际端口，不是默认的 `3000`
 - [ ] 反向代理 HTTPS 就绪，备份 cron 已配置
+- [ ] CI：`check` 已设为 `main` 的必需状态检查；如需部署后 smoke check，`SITE_ORIGIN` Secret 已配置
+- [ ] 额度惩罚：`QUOTA_P4_MODE` 默认 `shadow`；观察 `quota_penalty_shadow` 事件确认无误伤后，再决定是否切 `enforce`
+- [ ] 部署后访问 `SITE_ORIGIN/api/health` 返回 `{ "ok": true }`

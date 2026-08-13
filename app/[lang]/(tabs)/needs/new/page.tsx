@@ -8,6 +8,7 @@ import { NeedForm, type NeedFormInitial } from "@/components/need-form";
 import { PageHeader } from "@/components/page-header";
 import { expiryFromPreset } from "@/lib/needs";
 import { CONTACT_FIELDS, fieldVisibility } from "@/lib/card";
+import { getPublishHint } from "@/lib/quota";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { pageTitle } from "@/lib/i18n/metadata";
 import { localePath } from "@/lib/i18n/routing";
@@ -67,7 +68,12 @@ export default async function NeedNewPage({
     return [
       {
         key: field.key,
-        visibility: visibility === "orgs" ? "orgs" : "authenticated",
+        visibility:
+          visibility === "orgs"
+            ? "orgs"
+            : visibility === "authenticated"
+              ? "authenticated"
+              : "connected",
       } as const,
     ];
   });
@@ -93,6 +99,7 @@ export default async function NeedNewPage({
         orgs={myOrgs}
         suggestions={suggestions}
         contactOptions={contactOptions}
+        publishHint={editId == null ? await getPublishHint(user) : null}
       />
     </div>
   );

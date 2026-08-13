@@ -7,11 +7,13 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-// 基本资料：public | hidden；联系方式/社媒：authenticated | orgs | hidden。
-// public 仅为历史敏感字段兼容值，读取时安全降级为 authenticated。
+// 基本资料：public | hidden。
+// 社媒：authenticated | orgs | hidden，缺省 authenticated。
+// 联系方式：connected | orgs | authenticated | hidden，缺省 connected。
+// public 仅为历史敏感字段兼容值：社媒降为 authenticated，联系方式降为 connected。
 export type FieldVisibility = Record<
   string,
-  "public" | "authenticated" | "orgs" | "hidden"
+  "public" | "connected" | "authenticated" | "orgs" | "hidden"
 >;
 
 export const users = sqliteTable("users", {
@@ -110,6 +112,7 @@ export const needs = sqliteTable(
   (t) => [
     index("needs_org_idx").on(t.orgId),
     index("needs_user_idx").on(t.userId),
+    index("needs_user_created_idx").on(t.userId, t.createdAt),
     uniqueIndex("needs_user_idempotency_uidx").on(t.userId, t.idempotencyKey),
   ],
 );
@@ -203,6 +206,17 @@ export const connections = sqliteTable(
       .notNull()
       .references(() => users.id),
     message: text("message"),
+    // 举手方选定的交换物；接受后写入 contact_reveals
+    initiatorContact: text("initiator_contact", {
+      enum: ["wechat", "email", "contactPhone"],
+    }),
+    // 含首次在内的举手次数，L4「撤回后重发 ≤ 3」用
+    raiseCount: integer("raise_count").notNull().default(1),
+    // 最近一次举手时刻。每日举手额度按它算：updatedAt 会被对方的接受/拒绝
+    // 改写，拿它计数会把别人的动作记到举手方头上
+    lastRaisedAt: integer("last_raised_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
     status: text("status", {
       enum: ["pending", "accepted", "rejected", "completed", "cancelled"],
     })
@@ -225,6 +239,39 @@ export const connections = sqliteTable(
     uniqueIndex("connections_need_initiator_uidx").on(t.needId, t.initiatorId),
     index("connections_initiator_idx").on(t.initiatorId),
     index("connections_status_idx").on(t.status),
+    index("connections_initiator_created_idx").on(t.initiatorId, t.createdAt),
+    index("connections_initiator_raised_idx").on(t.initiatorId, t.lastRaisedAt),
+    index("connections_initiator_status_idx").on(t.initiatorId, t.status),
+    index("connections_need_status_idx").on(t.needId, t.status),
+  ],
+);
+
+export const contactReveals = sqliteTable(
+  "contact_reveals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    connectionId: integer("connection_id")
+      .notNull()
+      .references(() => connections.id),
+    needId: integer("need_id")
+      .notNull()
+      .references(() => needs.id),
+    fromUserId: integer("from_user_id")
+      .notNull()
+      .references(() => users.id),
+    toUserId: integer("to_user_id")
+      .notNull()
+      .references(() => users.id),
+    field: text("field", {
+      enum: ["wechat", "email", "contactPhone"],
+    }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    index("contact_reveals_from_created_idx").on(t.fromUserId, t.createdAt),
+    index("contact_reveals_to_created_idx").on(t.toUserId, t.createdAt),
   ],
 );
 
@@ -263,7 +310,10 @@ export const blocks = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [primaryKey({ columns: [t.blockerId, t.blockedId] })],
+  (t) => [
+    primaryKey({ columns: [t.blockerId, t.blockedId] }),
+    index("blocks_blocked_created_idx").on(t.blockedId, t.createdAt),
+  ],
 );
 
 export const reports = sqliteTable(
@@ -286,7 +336,10 @@ export const reports = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index("reports_status_created_idx").on(t.status, t.createdAt)],
+  (t) => [
+    index("reports_status_created_idx").on(t.status, t.createdAt),
+    index("reports_target_created_idx").on(t.targetType, t.targetId, t.createdAt),
+  ],
 );
 
 export const auditLogs = sqliteTable(
@@ -339,4 +392,5 @@ export type Need = typeof needs.$inferSelect;
 export type Org = typeof orgs.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
+export type ContactReveal = typeof contactReveals.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
