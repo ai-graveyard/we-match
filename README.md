@@ -42,20 +42,20 @@ pnpm db:seed
 
 ### 内测模式
 
-没配 Resend 时，验证码只会落在日志和管理后台里——那样谁都登不进来，内测没法做。所以生产环境下
-**只要没配 `MAIL_PROVIDER=resend`，验证码就自动固定为 `888888`**，登录页会显示「内测中：验证码固定 888888」，
-服务端日志也会打一条警告。
+生产环境默认**失败关闭**：没配 Resend 时验证码只会落在日志和管理后台里，外部用户无法登录，
+但绝不会自动退回万能验证码。只有显式设置 `BETA_MODE=1` 才会把验证码固定为 `888888`，
+登录页同时显示「内测中：验证码固定 888888」，服务端日志也会打一条警告。
 
 想脱离自动判定：
 
 | 场景 | 配置 |
 |------|------|
-| Resend 已配好，但仍让内测用户用固定码 | `BETA_MODE=1` |
-| 邮件还没配好，但宁可谁都登不进去 | `BETA_MODE=0` |
-| 正式对外 | 配好 Resend，固定码自动关闭 |
+| 明确的小范围内测，允许所有测试账号共用固定码 | `BETA_MODE=1` |
+| 邮件还没配好 | 不设置或设置 `BETA_MODE=0`，外部用户无法登录 |
+| 正式对外 | 配好 Resend，并保持 `BETA_MODE` 非 `1` |
 
-⚠️ 固定码模式下**任何人都能登录成任何人**，只有内测期可以接受。它的判定条件是「邮件通道没配」，
-所以正式上线时忘配 Resend 不会让站点悄悄敞开——登录页和日志都会喊出来，但仍请按上线前清单逐条核对。
+⚠️ 固定码模式下**任何人都能登录成任何人**，只允许测试账号使用。正式上线时忘配 Resend
+会导致用户无法登录，而不是让站点悄悄敞开。
 
 ## 环境变量
 
@@ -70,7 +70,7 @@ pnpm db:seed
 | `MAIL_PROVIDER` | 邮件通道：`log`（默认，验证码打日志）或 `resend`。**生产必须配 `resend`**，否则用户收不到验证码 |
 | `RESEND_API_KEY` | Resend API Key（`MAIL_PROVIDER=resend` 时必填） |
 | `MAIL_FROM` | 发信人，域名须已在 Resend 验证过，如 `We Match <noreply@wematch.v2ai.org>` |
-| `BETA_MODE` | 内测模式，验证码固定 `888888`。不填时按「没配 Resend = 还在内测」自动判定；`1` 强制开，`0` 强制关。**开着等于任何人可以登录成任何人**，正式对外前必须关掉 |
+| `BETA_MODE` | 内测模式，`1` 时验证码固定 `888888`；不填或其他值均关闭。**开着等于任何人可以登录成任何人**，正式对外绝不能设为 `1` |
 | `QUOTA_P4_MODE` | P4 反滥用惩罚阶梯执行模式：`shadow`（默认，只观测写 `quota_penalty_shadow` 事件、不降额）或 `enforce`（真正降额）。先在 shadow 下核对没误伤真实用户，再切 `enforce` |
 | `SITE_ORIGIN` | 对外站点 origin。生产环境建议固定配置，防止 Agent 安装指令和告知邮件受 Host 头影响；也用于部署后 health smoke check |
 
@@ -97,6 +97,10 @@ export ADMIN_EMAILS="you@example.com"
 ## Agent 接入
 
 用户可在「我的 → Agent 接入」生成 API Key（`wm_` 前缀），用开放 API `/api/v1/*` 以本人身份读写名片、需求与组织。
+
+匹配以用户自己的开放需求为起点：`GET /api/v1/matches?need=<id>` 由平台召回反向类型、
+同范围、仍开放的候选并给出重合标签；Agent 再结合只留在端侧的私有画像做语义判断，
+只向用户解释少数真正值得联系的人。平台不替人做举手或接受决定。
 
 官方 Claude Skill 位于 [`skills/we-match/`](skills/we-match/)，接口说明见 [`skills/we-match/references/api.md`](skills/we-match/references/api.md)。
 
@@ -169,7 +173,7 @@ SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 ### 上线前检查
 
 - [ ] 邮件：Resend 发信域名已验证（SPF / DKIM 已生效），`MAIL_PROVIDER=resend` 已配置并真实收到验证码；顺手确认没进垃圾箱
-- [ ] 内测模式已关闭：登录页**不再**显示「内测中：验证码固定 888888」，验证码是随机的（配好 Resend 即自动关闭）
+- [ ] 内测模式已关闭：登录页**不再**显示「内测中：验证码固定 888888」，验证码是随机的（已配好 Resend，且 `BETA_MODE` 非 `1`）
 - [ ] 法务：[lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱已填（`/terms`、`/privacy` 会展示，占位值必须替换成真实运营主体），协议与政策全文经过人工确认
 - [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_EMAILS` 已配置
 - [ ] `APP_PORT` 已配置为分配给 we-match 的实际端口，不是默认的 `3000`

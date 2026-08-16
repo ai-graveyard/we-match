@@ -3,7 +3,7 @@ import { Bell, Plus, Search } from "lucide-react";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { needs, notifications } from "@/lib/db/schema";
-import { version } from "@/package.json";
+import packageJson from "@/package.json";
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { logoutAction } from "@/app/actions/auth";
@@ -307,7 +307,7 @@ export default async function MePage({
                     {t.me.version}
                   </span>
                   <span className="shrink-0 font-mono text-2xs text-gray">
-                    v{version}
+                    v{packageJson.version}
                   </span>
                 </div>
               </div>

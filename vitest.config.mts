@@ -5,8 +5,8 @@ export default defineConfig({
   resolve: {
     alias: {
       // lib 代码带 "server-only" 保险丝，测试环境换成空模块
-      "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
-      "@": path.resolve(__dirname),
+      "server-only": path.resolve(import.meta.dirname, "tests/stubs/server-only.ts"),
+      "@": path.resolve(import.meta.dirname),
     },
   },
   test: {

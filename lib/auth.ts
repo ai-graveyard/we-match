@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { and, count, desc, eq, gt, gte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sessions, users, verificationCodes, type User } from "@/lib/db/schema";
-import { getMailProvider, isMailDeliveryEnabled } from "@/lib/mail";
+import { getMailProvider } from "@/lib/mail";
 import type { Locale } from "@/lib/i18n/config";
 import type { ServerDict } from "@/lib/i18n/dict/types";
 import { fmt } from "@/lib/i18n/fmt";
@@ -21,18 +21,16 @@ export const FIXED_CODE = "888888";
 /**
  * 固定验证码模式：所有验证码都是 888888。
  *
- * 开发环境一直开，免去翻日志。生产环境的判定是「邮件通道没配 = 还在内测」——
- * 内测期没接 Resend 时，随机码只会落在日志里，等于谁都登不进来。
+ * 开发环境一直开，免去翻日志。生产环境默认关闭；只有显式设置
+ * `BETA_MODE=1` 才进入固定码内测。没接 Resend 时宁可让外部用户无法登录，
+ * 也不能因为一次漏配把所有邮箱账号自动敞开。
  *
  * 代价必须说清楚：**开着就等于任何人可以登录成任何人**，只有内测期可以接受。
- * `BETA_MODE=0` 强制关闭（宁可谁都登不进去，也不要敞着），
- * `BETA_MODE=1` 强制打开（Resend 已配好、但还想让内测用户用固定码）。
+ * `BETA_MODE=1` 只允许明确的小范围测试账号使用。
  */
 export function isFixedCodeMode(): boolean {
   if (process.env.NODE_ENV !== "production") return true;
-  if (process.env.BETA_MODE === "0") return false;
-  if (process.env.BETA_MODE === "1") return true;
-  return !isMailDeliveryEnabled();
+  return process.env.BETA_MODE === "1";
 }
 
 let warnedFixedCode = false;
@@ -42,7 +40,7 @@ function warnFixedCodeOnce() {
   // 服务端日志固定英文，运维读的不是产品界面
   console.warn(
     `[AUTH] BETA MODE: every verification code is ${FIXED_CODE}. Anyone can sign in as anyone. ` +
-      `Configure MAIL_PROVIDER=resend to turn this off, or set BETA_MODE=0 to disable sign-in entirely.`,
+      `Before public access, configure MAIL_PROVIDER=resend and keep BETA_MODE different from 1.`,
   );
 }
 

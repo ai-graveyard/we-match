@@ -169,6 +169,8 @@ export const zhServer = {
     userNotFound: "用户不存在",
     needNotFound: "需求不存在",
     needNotYours: "需求不存在或不属于你",
+    matchNeedParamNotId: "need 参数需为本人需求 id",
+    matchSourceNotOpen: "只能为仍开放且未过期的需求查找匹配",
     scopeImmutable: "可见范围发布后不可修改，请关闭后重新发布",
     badSince: "since 需为 ISO 8601 时间",
     badCursor: "cursor 无效或已过期，请移除后重试",
@@ -274,5 +276,7 @@ Claude Code 需重启会话以加载新 Skill）。
 
     needMatchesTitle: "发现 {n} 条可能匹配的需求",
     needMatchesBody: "与你刚发布的「{need}」标签相关",
+    matchingNeedAddedTitle: "你的需求出现了一个新候选",
+    matchingNeedAddedBody: "「{candidate}」可能匹配你的「{need}」",
   },
 };

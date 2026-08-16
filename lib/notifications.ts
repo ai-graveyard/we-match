@@ -16,7 +16,13 @@ export type NotificationPayload =
   | { type: "connection_cancelled"; name: string; need: string; needId: number }
   | { type: "connection_completed"; need: string; needId: number }
   | { type: "completion_confirmation_requested"; name: string; needId: number }
-  | { type: "matches_available"; n: number; need: string };
+  | { type: "matches_available"; n: number; need: string }
+  | {
+      type: "matching_need_added";
+      need: string;
+      candidate: string;
+      candidateId: number;
+    };
 
 type Rendered = { title: string; body: string | null };
 
@@ -81,6 +87,14 @@ export function renderNotification(
       return {
         title: fmt(n.needMatchesTitle, { n: payload.n }),
         body: fmt(n.needMatchesBody, { need: payload.need }),
+      };
+    case "matching_need_added":
+      return {
+        title: n.matchingNeedAddedTitle,
+        body: fmt(n.matchingNeedAddedBody, {
+          need: payload.need,
+          candidate: payload.candidate,
+        }),
       };
     default:
       // TS 认为上面已穷举 NotificationPayload，但运行时的 payload.type

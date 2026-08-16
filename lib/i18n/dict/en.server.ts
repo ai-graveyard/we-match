@@ -197,6 +197,8 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
     userNotFound: "User not found",
     needNotFound: "Post not found",
     needNotYours: "Post not found, or it is not yours",
+    matchNeedParamNotId: "need must be the id of one of your posts",
+    matchSourceNotOpen: "Matches are available only for open, unexpired posts",
     scopeImmutable:
       "Scope cannot change after posting — close it and post again",
     badSince: "since must be an ISO 8601 timestamp",
@@ -302,5 +304,7 @@ what I need."
 
     needMatchesTitle: "Found {n} posts that might match",
     needMatchesBody: "Related by tag to your new post “{need}”",
+    matchingNeedAddedTitle: "A new candidate matches your post",
+    matchingNeedAddedBody: "“{candidate}” may match your “{need}”",
   },
 };

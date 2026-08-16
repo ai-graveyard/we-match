@@ -6,7 +6,8 @@ import { uiDict } from "@/lib/i18n/dict";
 
 // 链接分享卡片。ImageResponse 只带拉丁字体，中文会渲染成豆腐块，
 // 所以卡面使用品牌口号的英文对应文案，中文原文由 alt 与 og:description 提供。
-// 站点级 OG 图同样没有语言段，用默认语言
+// OG 图放在 [lang] 段内，继承同级 layout 的 metadataBase，避免构建和线上
+// 把分享图错误解析为 http://localhost:3000。图像正文仍用统一英文口号。
 const BRAND_SLOGAN = uiDict(DEFAULT_LOCALE).brand.slogan;
 
 export const alt = `${BRAND_NAME} — ${BRAND_SLOGAN}`;

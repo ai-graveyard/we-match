@@ -89,7 +89,8 @@ api_keys   id, user_id, name, key(明文, 唯一),
 
 ### 3.2 端点范围
 
-覆盖三类：本人视角（名片读写、我的需求、我的组织）、需求 CRUD（含状态、续期、优先联系方式）、他人只读（名片、组织成员）。
+覆盖四类：本人视角（名片读写、我的需求、我的组织）、需求 CRUD（含状态、续期、优先联系方式）、
+候选匹配（`GET /matches?need=<本人开放需求 id>`，平台召回、端侧 Agent 判断）、他人只读（名片、组织成员）。
 
 **端点清单、参数与响应字段以 [`skills/we-match/references/api.md`](../skills/we-match/references/api.md) 为准**，那份文档随 Skill 一起发给 Agent，改接口时改它，本文不再重复一份会漂移的表。
 

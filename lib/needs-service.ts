@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { auditLogs, connections, needs, type Need, type User } from "@/lib/db/schema";
 import { getMembership } from "@/lib/queries";
@@ -10,7 +10,8 @@ import {
 } from "@/lib/card";
 import { NEED_LIMITS } from "@/lib/needs";
 import { normalizeTags } from "@/lib/tags";
-import { notify, track } from "@/lib/activity";
+import { track } from "@/lib/activity";
+import { notifyMatchesForNewNeed } from "@/lib/matches";
 import { checkQuota, effectiveDailyLimit } from "@/lib/quota";
 import type { ServerDict } from "@/lib/i18n/dict/types";
 import { fmt } from "@/lib/i18n/fmt";
@@ -267,35 +268,7 @@ export async function createNeed(
     metadata: { scope: orgId == null ? "plaza" : "org" },
   });
 
-  if (need.tags.length > 0) {
-    const tagConditions = need.tags.map((tag) => sql`${needs.tags} LIKE ${`%${tag}%`}`);
-    const [matchCount] = await db
-      .select({ n: count() })
-      .from(needs)
-      .where(
-        and(
-          ne(needs.id, need.id),
-          eq(needs.type, need.type === "need" ? "offer" : "need"),
-          orgId == null ? isNull(needs.orgId) : eq(needs.orgId, orgId),
-          eq(needs.status, "open"),
-          eq(needs.moderationStatus, "visible"),
-          isNull(needs.deletedAt),
-          or(isNull(needs.expiresAt), gt(needs.expiresAt, new Date())),
-          or(...tagConditions),
-        ),
-      );
-    if ((matchCount?.n ?? 0) > 0) {
-      await notify({
-        userId: user.id,
-        payload: {
-          type: "matches_available",
-          n: matchCount.n,
-          need: need.title,
-        },
-        href: `/?type=${need.type === "need" ? "offer" : "need"}&tag=${encodeURIComponent(need.tags[0])}`,
-      });
-    }
-  }
+  await notifyMatchesForNewNeed(need);
   return { need, replayed: false };
 }
 
