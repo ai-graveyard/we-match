@@ -1,6 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
+import { needDraftKey, parseNeedDraft } from "@/lib/need-draft";
+import { DRAFT_UNAVAILABLE, readDraft, writeDraft, subscribeDraft } from "@/lib/browser-draft";
+import { PhoneInput } from "@/components/phone-input";
 import {
   createNeedAction,
   updateNeedAction,
@@ -13,7 +16,7 @@ import {
   type ExpiryPreset,
 } from "@/lib/needs";
 import { TagInput } from "@/components/tag-input";
-import type { ContactFieldKey } from "@/lib/card";
+import { LIMITS, type ContactFieldKey } from "@/lib/card";
 import { useDict } from "@/lib/i18n/client";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
@@ -35,6 +38,7 @@ import {
   segmentGroup,
   segmentItem,
   textarea as textareaCls,
+  textBtn,
 } from "@/lib/ui";
 
 export type NeedFormInitial = {
@@ -61,12 +65,18 @@ function toIso(local: string): string {
 }
 
 export function NeedForm({
+  userId,
+  nickname,
+  filledContactFields,
   initial,
   orgs,
   suggestions,
   contactOptions,
   publishHint,
 }: {
+  userId: number;
+  nickname: string;
+  filledContactFields: ContactFieldKey[];
   initial: NeedFormInitial;
   orgs: { id: number; name: string }[];
   suggestions: string[];
@@ -78,6 +88,18 @@ export function NeedForm({
   publishHint?: { remaining: number; limit: number } | null;
 }) {
   const t = useDict();
+  const draftKey = needDraftKey(userId, initial.id);
+  const rawDraft = useSyncExternalStore(subscribeDraft, () => readDraft(draftKey), () => null);
+  const [dirty, setDirty] = useState(false);
+  const [draftToken, setDraftToken] = useState("");
+  function markDirty() {
+    setDirty(true);
+    if (!draftToken) setDraftToken(crypto.randomUUID());
+  }
+  const [displayName, setDisplayName] = useState(nickname);
+  const emptyContactFields = (["wechat", "email", "contactPhone"] as ContactFieldKey[]).filter((field) => !filledContactFields.includes(field));
+  const [inlineContactField, setInlineContactField] = useState<ContactFieldKey>(emptyContactFields[0] ?? "wechat");
+  const [inlineContactValue, setInlineContactValue] = useState("");
   const editing = initial.id != null;
   const [state, formAction, pending] = useActionState<NeedFormState, FormData>(
     editing ? updateNeedAction : createNeedAction,
@@ -98,6 +120,7 @@ export function NeedForm({
   );
 
   const chooseExpiry = (preset: ExpiryPreset) => {
+    markDirty();
     setExpiryPreset(preset);
     if (preset === "permanent") {
       setDeadline("");
@@ -117,13 +140,39 @@ export function NeedForm({
     eligibleContacts.find((option) => option.key === preferredContact)?.key ??
     eligibleContacts[0]?.key ??
     "";
+  const inlineContact = !editing && eligibleContacts.length === 0 && emptyContactFields.length > 0;
+  const recovered = parseNeedDraft(rawDraft, initial, ["plaza", ...orgs.map((org) => String(org.id))]);
+  useEffect(() => {
+    if (!dirty || pending) return;
+    writeDraft(draftKey, title.trim() || description.trim() || tags.length ? JSON.stringify({ version: 1, token: draftToken, fields: { id: initial.id, type, title, description, tags, scope, expiresAt: expiryPreset === "permanent" ? null : toIso(deadline), expiryPreset } }) : null);
+  }, [dirty, pending, draftKey, draftToken, initial.id, type, title, description, tags, scope, deadline, expiryPreset]);
+
+  function restoreDraft() {
+    if (!recovered) return;
+    setType(recovered.type); setTitle(recovered.title); setDescription(recovered.description);
+    setTags(recovered.tags); setScope(recovered.scope);
+    setDeadline(recovered.expiresAt ? toLocalInput(recovered.expiresAt) : "");
+    setExpiryPreset(recovered.expiryPreset ?? (recovered.expiresAt == null ? "permanent" : "custom"));
+    const storedToken = rawDraft ? JSON.parse(rawDraft).token : null;
+    setDraftToken(typeof storedToken === "string" && /^[\da-f-]{36}$/i.test(storedToken) ? storedToken : crypto.randomUUID());
+    setDirty(true);
+  }
 
   return (
     <form
       action={formAction}
+      onChangeCapture={markDirty}
       className={`flex flex-col gap-4 ${panel} p-4`}
     >
       {editing && <input type="hidden" name="id" value={initial.id} />}
+      <input type="hidden" name="draftToken" value={draftToken} />
+      {!dirty && recovered && <div className="border-b border-line pb-4">
+        <p className="text-xs text-gray">{t.need.formDraftAvailable}</p>
+        <div className="mt-2 flex gap-4">
+          <button type="button" className={textBtn} onClick={restoreDraft}>{t.need.formDraftRestore}</button>
+          <button type="button" className={textBtn} onClick={() => writeDraft(draftKey, null)}>{t.need.formDraftDiscard}</button>
+        </div>
+      </div>}
 
       <div>
         <span className={`${labelCls} mb-1 block`}>{t.need.formType}</span>
@@ -132,7 +181,7 @@ export function NeedForm({
             <button
               key={opt}
               type="button"
-              onClick={() => setType(opt)}
+              onClick={() => { markDirty(); setType(opt); }}
               className={segmentItem(type === opt, i === 0)}
             >
               {intentLabel(t, opt)}
@@ -152,6 +201,7 @@ export function NeedForm({
           className={sharedInput}
           maxLength={NEED_LIMITS.title}
           required
+          placeholder={type === "need" ? t.need.formTitlePlaceholderNeed : t.need.formTitlePlaceholderOffer}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -170,13 +220,15 @@ export function NeedForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+        <p className="mt-1 text-2xs leading-relaxed text-gray">{t.need.formDescriptionHint}</p>
+        {!description && <button type="button" className={`${textBtn} mt-2`} onClick={() => { markDirty(); setDescription(type === "need" ? t.need.formTemplateNeed : t.need.formTemplateOffer); }}>{t.need.formUseTemplate}</button>}
       </div>
 
       <div>
         <span className={`${labelCls} mb-1 block`}>{t.need.formTags}</span>
         <TagInput
           value={tags}
-          onChange={setTags}
+          onChange={(value) => { markDirty(); setTags(value); }}
           suggestions={suggestions}
           maxCount={NEED_LIMITS.tagCount}
           maxLength={NEED_LIMITS.tagLength}
@@ -246,7 +298,7 @@ export function NeedForm({
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setScope(opt.id)}
+                    onClick={() => { markDirty(); setScope(opt.id); }}
                     className={`${chip} ${scope === opt.id ? chipOn : chipOff}`}
                   >
                     {opt.name}
@@ -293,6 +345,20 @@ export function NeedForm({
               {t.need.formPreferredContactHint}
             </p>
           </>
+        ) : inlineContact ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold">{t.need.formInlineContactTitle}</p>
+            <div><label htmlFor="publish-nickname" className={`${labelCls} mb-1 block`}>{t.need.formNickname}</label>
+              <input id="publish-nickname" name="nickname" className={sharedInput} required maxLength={LIMITS.nickname} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {emptyContactFields.map((field) => <button key={field} type="button" className={`${chip} ${inlineContactField === field ? chipOn : chipOff}`} onClick={() => { setInlineContactField(field); setInlineContactValue(""); }}>{cardFieldLabel(t, field)}</button>)}
+            </div>
+            <label htmlFor="publish-contact" className={labelCls}>{cardFieldLabel(t, inlineContactField)}</label>
+            {inlineContactField === "contactPhone" ? <PhoneInput id="publish-contact" name="inlineContactValue" required value={inlineContactValue} onChange={setInlineContactValue} /> : <input id="publish-contact" name="inlineContactValue" type={inlineContactField === "email" ? "email" : "text"} className={sharedInput} required maxLength={LIMITS.value} value={inlineContactValue} onChange={(event) => setInlineContactValue(event.target.value)} />}
+            <input type="hidden" name="inlineContactField" value={inlineContactField} />
+            <p className="text-2xs leading-relaxed text-gray">{t.need.formInlineContactHint}</p>
+          </div>
         ) : (
           <p className="text-2xs leading-5 text-gray">
             {t.need.formNoContactPrefix}
@@ -304,11 +370,12 @@ export function NeedForm({
         <input
           type="hidden"
           name="preferredContact"
-          value={selectedContact}
+          value={inlineContact ? inlineContactField : selectedContact}
         />
       </div>
 
       {state.error && <p className={fieldError}>{state.error}</p>}
+      {rawDraft === DRAFT_UNAVAILABLE ? <p role="status" className="text-2xs text-gray">{t.need.formDraftUnavailable}</p> : dirty && rawDraft && <p role="status" className="text-2xs text-gray">{t.need.formDraftSaved}</p>}
       <button
         type="submit"
         disabled={pending}

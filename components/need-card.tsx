@@ -1,10 +1,15 @@
-import type { Need } from "@/lib/db/schema";
+import type { Need, User } from "@/lib/db/schema";
 import { isExpired } from "@/lib/needs";
 import { shortDateTime } from "@/lib/format";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
-import { statusLabel, typeLabel, typeShort } from "@/lib/i18n/labels";
+import {
+  relativeTime,
+  statusLabel,
+  typeLabel,
+  typeShort,
+} from "@/lib/i18n/labels";
 import type { UiDict } from "@/lib/i18n/dict/types";
 import { badge } from "@/lib/ui";
 
@@ -48,8 +53,80 @@ export function deadlineText(t: UiDict, expiresAt: Date | null) {
     : t.need.permanent;
 }
 
-export async function NeedCard({ need, first }: { need: Need; first?: boolean }) {
+type NeedCardAuthor = Pick<User, "nickname" | "city">;
+
+/**
+ * 广场卡片需要在点开前给足第一次判断所需的信息；本人需求和名片内的附属列表则继续
+ * 使用紧凑形态，避免重复显示发布者。author 既是数据，也是两种信息密度的明确开关。
+ */
+export async function NeedCard({
+  need,
+  author,
+  first,
+}: {
+  need: Need;
+  author?: NeedCardAuthor;
+  first?: boolean;
+}) {
   const t = await getDict();
+
+  if (author) {
+    return (
+      <LocaleLink
+        href={`/needs/${need.id}`}
+        className={`group block px-4 py-4 transition-colors duration-100 hover:bg-bg-3 ${
+          first ? "" : "border-t border-line"
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={`inline-flex h-6 shrink-0 items-center rounded-sm px-2 font-mono text-2xs ${
+              need.type === "need"
+                ? "bg-ink font-semibold text-panel"
+                : "border border-line text-gray"
+            }`}
+          >
+            {typeLabel(t, need.type)}
+          </span>
+          <span className="min-w-0 truncate text-xs font-semibold">
+            {author.nickname}
+          </span>
+          {author.city && (
+            <span className="min-w-0 truncate text-2xs text-gray">
+              {author.city}
+            </span>
+          )}
+          <span className="ml-auto shrink-0 font-mono text-3xs text-gray">
+            {relativeTime(t, need.updatedAt)}
+          </span>
+        </div>
+
+        <div className="mt-2 flex items-start gap-2">
+          <h2 className="min-w-0 flex-1 text-base font-semibold leading-snug transition-colors duration-100 group-hover:text-ink">
+            {need.title}
+          </h2>
+          <StatusBadge need={need} />
+        </div>
+        {need.description && (
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray">
+            {need.description}
+          </p>
+        )}
+
+        <div className="mt-3 flex min-w-0 items-center gap-2 border-t border-line pt-2">
+          {need.tags.length > 0 && (
+            <span className="min-w-0 truncate font-mono text-2xs text-gray">
+              {need.tags.join(" · ")}
+            </span>
+          )}
+          <span className="ml-auto shrink-0 font-mono text-2xs text-gray">
+            {deadlineText(t, need.expiresAt)}
+          </span>
+        </div>
+      </LocaleLink>
+    );
+  }
+
   return (
     <LocaleLink
       href={`/needs/${need.id}`}

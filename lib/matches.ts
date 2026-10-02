@@ -42,7 +42,7 @@ function sharedTags(source: Need, candidate: Need): string[] {
 export async function getMatchCandidates(
   userId: number,
   sourceNeedId: number,
-  options: { since?: Date | null; limit?: number } = {},
+  options: { since?: Date | null; limit?: number; uniqueAuthors?: boolean } = {},
 ): Promise<MatchCandidateResult> {
   const [source] = await db
     .select()
@@ -109,7 +109,7 @@ export async function getMatchCandidates(
             sql`, `,
           )})
         )`
-      : sql<number>`0`;
+      : sql<number>`cast(0 as integer)`;
 
   const rows = await db
     .select({
@@ -121,11 +121,18 @@ export async function getMatchCandidates(
     .innerJoin(users, eq(needs.userId, users.id))
     .where(and(...conds))
     .orderBy(desc(overlapCount), desc(needs.updatedAt), desc(needs.id))
-    .limit(Math.min(Math.max(options.limit ?? 20, 1), 100));
+    .limit(options.uniqueAuthors ? 100 : Math.min(Math.max(options.limit ?? 20, 1), 100));
+
+  const seenAuthors = new Set<number>();
+  const selectedRows = options.uniqueAuthors ? rows.filter((row) => {
+    if (seenAuthors.has(row.author.id)) return false;
+    seenAuthors.add(row.author.id);
+    return true;
+  }).slice(0, Math.min(Math.max(options.limit ?? 20, 1), 100)) : rows;
 
   return {
     source,
-    candidates: rows.map((row) => ({
+    candidates: selectedRows.map((row) => ({
       need: row.need,
       author: row.author,
       matchedTags: sharedTags(source, row.need),
@@ -144,11 +151,10 @@ export async function notifyMatchesForNewNeed(need: Need): Promise<void> {
   const exact = result.candidates.filter((item) => item.matchedTags.length > 0);
   if (exact.length === 0) return;
 
-  const oppositeType = need.type === "need" ? "offer" : "need";
   await notify({
     userId: need.userId,
     payload: { type: "matches_available", n: exact.length, need: need.title },
-    href: `/?type=${oppositeType}&tag=${encodeURIComponent(exact[0].matchedTags[0])}`,
+    href: `/needs/${need.id}#candidates`,
   });
 
   // 同一个已有用户可能有多条需求命中新帖子；只发一次，避免通知轰炸。

@@ -6,6 +6,7 @@
 
 - 产品文档：[docs/PRD.md](docs/PRD.md)（含里程碑；M6 连接制已落地，额度赚回与惩罚阶梯仍按 QUOTA.md P4 观察）
 - 设计规范：[docs/DESIGN.md](docs/DESIGN.md)
+- 产品优化与下一阶段验证：[docs/PRODUCT-VALIDATION.md](docs/PRODUCT-VALIDATION.md)（首次发布、候选发现、连接邮件、七天结果与小范围运营实验）
 - Agent / 开放 API 方案：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)，接口清单见 [skills/we-match/references/api.md](skills/we-match/references/api.md)
 - 额度与反滥用设计稿：[docs/QUOTA.md](docs/QUOTA.md)（P1 揭示模型与 P2 发布/举手/接受额度已随 M6 落地；赚回与惩罚阶梯见 P4）
 - 重构蓝图：[docs/REFACTOR.md](docs/REFACTOR.md)（当前代码 vs 目标形态的差距图与分阶段路线）

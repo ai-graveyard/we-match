@@ -31,10 +31,14 @@ export const enAdmin: AdminDict = {
   resetSort: "Reset sort",
   noMatchingRows: "No data matches the current search",
 
+  cohortTitle: "Seven-day post outcomes",
+  cohortDesc: "Posts from the latest 30 publication days with a full seven-day observation window and a recorded creation event. Stages count distinct posts. A raise is not a qualified response; completion is self-reported.",
+  cohortFirstRaise: "Median time to first raise (posts with a raise only)",
+  cohortHours: "hours",
   overviewStatsTitle: "Key numbers",
   overviewStatsDesc: "Live state of the platform",
-  overviewFunnelTitle: "Match funnel",
-  overviewFunnelDesc: "From posting to both sides confirming",
+  overviewFunnelTitle: "Lifetime activity",
+  overviewFunnelDesc: "Lifetime event counts use different units and are not conversion rates",
   overviewModulesTitle: "Sections",
   overviewModulesDesc: "Pick one to manage in detail",
 

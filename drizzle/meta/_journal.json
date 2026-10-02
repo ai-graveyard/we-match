@@ -85,6 +85,13 @@
       "when": 1786665600000,
       "tag": "0011_need-soft-delete",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790960008596,
+      "tag": "0012_connection-email",
+      "breakpoints": true
     }
   ]
 }

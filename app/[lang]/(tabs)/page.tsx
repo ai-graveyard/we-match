@@ -1,5 +1,5 @@
 import { Plus, X } from "lucide-react";
-import { and, eq, gt, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, gt, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blocks, needs, orgs, users } from "@/lib/db/schema";
@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth";
 import { getUserOrgs } from "@/lib/queries";
 import { normalizeInviteCode } from "@/lib/orgs";
 import { NeedCard } from "@/components/need-card";
+import { publicAuthor } from "@/lib/public-profile";
 import { EmptyState, ListEnd } from "@/components/list-states";
 import { BrandFooter } from "@/components/brand-footer";
 import { SearchField } from "@/components/search-field";
@@ -24,7 +25,6 @@ import { getDict, getLocale } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { localePath } from "@/lib/i18n/routing";
 import { fmt } from "@/lib/i18n/fmt";
-import { typeLabel, typeShort } from "@/lib/i18n/labels";
 import {
   normalizePlazaSort,
   plazaOrderBy,
@@ -40,6 +40,7 @@ function buildQuery(params: {
   tag?: string;
   all?: string;
   sort?: PlazaSort;
+  page?: number;
 }) {
   const qs = new URLSearchParams();
   if (params.org) qs.set("org", params.org);
@@ -48,6 +49,7 @@ function buildQuery(params: {
   if (params.tag) qs.set("tag", params.tag);
   if (params.all) qs.set("all", params.all);
   if (params.sort && params.sort !== "updated") qs.set("sort", params.sort);
+  if (params.page && params.page > 1) qs.set("page", String(params.page));
   const s = qs.toString();
   return s ? `/?${s}` : "/";
 }
@@ -122,14 +124,25 @@ export default async function PlazaPage({
   }
   if (tag) conds.push(sql`${needs.tags} LIKE ${`%"${tag}"%`}`);
 
-  const rows = await db
-    .select({ need: needs })
+  const filter = and(...conds);
+  const [totalRow] = await db.select({ n: count() }).from(needs)
+    .innerJoin(users, eq(needs.userId, users.id)).where(filter);
+  const total = totalRow?.n ?? 0;
+  const pageSize = 20;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const requestedPage = Number(pick(raw.page));
+  const page = Math.min(pageCount, Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1);
+  const list = await db
+    .select({
+      need: needs,
+      author: publicAuthor,
+    })
     .from(needs)
     .innerJoin(users, eq(needs.userId, users.id))
-    .where(and(...conds))
+    .where(filter)
     .orderBy(...plazaOrderBy(sort))
-    .limit(100);
-  const list = rows.map((row) => row.need);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   const current = {
     org: activeOrg ? String(activeOrg.id) : undefined,
@@ -140,9 +153,9 @@ export default async function PlazaPage({
     sort,
   };
   const typeTabs = [
-    { label: t.plaza.typeAll, mobileLabel: t.plaza.typeAllShort, value: undefined },
-    { label: typeLabel(t, "need"), mobileLabel: typeShort(t, "need"), value: "need" },
-    { label: typeLabel(t, "offer"), mobileLabel: typeShort(t, "offer"), value: "offer" },
+    { label: t.plaza.typeAll, value: undefined },
+    { label: t.plaza.typeNeed, value: "need" },
+    { label: t.plaza.typeOffer, value: "offer" },
   ];
   const publishHref = activeOrg
     ? `/needs/new?scope=${activeOrg.id}`
@@ -151,7 +164,13 @@ export default async function PlazaPage({
   return (
     <div>
       <div className="flex items-center gap-3">
-        <h1 className="sr-only">{t.plaza.title}</h1>
+        {!viewer && (
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold">{t.plaza.title}</h1>
+            <p className="mt-1 text-xs text-gray">{t.plaza.intro}</p>
+          </div>
+        )}
+        {viewer && <h1 className="sr-only">{t.plaza.title}</h1>}
         {viewer && (
           <nav
             aria-label={t.plaza.scopeNavLabel}
@@ -225,7 +244,7 @@ export default async function PlazaPage({
         <p className="mt-4 text-xs text-gray">{t.plaza.inviteInvalid}</p>
       )}
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-col gap-2 md:flex-row">
         <SearchField
           action={localePath(locale, "/")}
           name="q"
@@ -247,7 +266,7 @@ export default async function PlazaPage({
             </>
           }
         />
-        <div className={`${segmentGroup} shrink-0`}>
+        <div className={`${segmentGroup} grid w-full shrink-0 grid-cols-3 md:flex md:w-auto`}>
           {typeTabs.map((tab, i) => {
             const active = type === tab.value || (!type && !tab.value);
             return (
@@ -257,8 +276,7 @@ export default async function PlazaPage({
                 aria-label={tab.label}
                 className={segmentItem(active, i === 0)}
               >
-                <span className="md:hidden">{tab.mobileLabel}</span>
-                <span className="hidden md:inline">{tab.label}</span>
+                {tab.label}
               </LocaleLink>
             );
           })}
@@ -318,7 +336,7 @@ export default async function PlazaPage({
           {!showAll && <i className={statusDot} aria-hidden />}
           <span>
             {fmt(showAll ? t.plaza.countAll : t.plaza.countOngoing, {
-              n: list.length,
+              n: total,
             })}
           </span>
           <span aria-hidden>·</span>
@@ -341,14 +359,34 @@ export default async function PlazaPage({
             : activeOrg
               ? t.plaza.emptyOrg
               : t.plaza.emptyPlaza}
+          <span className="mt-3 flex flex-wrap justify-center gap-3">
+            {(q || tag || type) && (
+              <LocaleLink href={buildQuery({ org: current.org, all: current.all, sort })} className="text-ink underline">
+                {t.plaza.clearFilters}
+              </LocaleLink>
+            )}
+            <LocaleLink href={publishHref} className="text-ink underline">{t.plaza.publishFirst}</LocaleLink>
+          </span>
         </EmptyState>
       ) : (
         <>
           <div className={`mt-3 ${panel}`}>
-            {list.map((need, i) => (
-              <NeedCard key={need.id} need={need} first={i === 0} />
+            {list.map(({ need, author }, i) => (
+              <NeedCard
+                key={need.id}
+                need={need}
+                author={author}
+                first={i === 0}
+              />
             ))}
           </div>
+          {pageCount > 1 && (
+            <nav aria-label={t.plaza.paginationLabel} className="mt-4 flex items-center justify-between gap-2">
+              {page > 1 ? <LocaleLink href={buildQuery({ ...current, page: page - 1 })} className={secondaryBtn}>{t.plaza.previousPage}</LocaleLink> : <span />}
+              <span className="font-mono text-2xs text-gray">{page} / {pageCount}</span>
+              {page < pageCount ? <LocaleLink href={buildQuery({ ...current, page: page + 1 })} className={secondaryBtn}>{t.plaza.nextPage}</LocaleLink> : <span />}
+            </nav>
+          )}
           {/* 广场范围的移动端末尾由品牌页脚兼任终点标记；组织范围和桌面端仍用普通标记 */}
           {!activeOrg && <BrandFooter />}
           <ListEnd desktopOnly={!activeOrg} />

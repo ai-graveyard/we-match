@@ -64,6 +64,8 @@ If this wasn't you, delete it right away at {origin}/me?section=agent`,
   },
 
   need: {
+    inlineContactInvalid: "Enter a valid contact (at most 200 characters)",
+    inlineContactExists: "This contact already exists. Adjust it on your card before posting",
     badType: "Choose a type (need / offer)",
     emptyTitle: "Title cannot be empty",
     titleTooLong: "Title is at most {max} characters",

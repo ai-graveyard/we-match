@@ -32,6 +32,8 @@ import { OrgOverviewCard } from "@/components/org-overview-card";
 import { BrandFooter } from "@/components/brand-footer";
 import { EmptyState, ListEnd } from "@/components/list-states";
 import { LanguageToggleRow } from "@/components/language-toggle";
+import { ConnectionEmailPreference } from "@/components/connection-email-preference";
+import { isMailDeliveryEnabled } from "@/lib/mail";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { pageTitle } from "@/lib/i18n/metadata";
 import { LocaleLink } from "@/lib/i18n/link";
@@ -259,6 +261,7 @@ export default async function MePage({
               <div className="border-t border-line">
                 <LanguageToggleRow />
               </div>
+              <ConnectionEmailPreference enabled={user.connectionEmailEnabled} available={isMailDeliveryEnabled() && !!process.env.SITE_ORIGIN} />
               {isAdmin(user) && (
                 <LocaleLink
                   href="/admin"

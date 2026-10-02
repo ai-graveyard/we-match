@@ -31,10 +31,14 @@ export const zhAdmin = {
   resetSort: "重置排序",
   noMatchingRows: "没有符合当前搜索条件的数据",
 
+  cohortTitle: "需求的 7 天结果",
+  cohortDesc: "最近 30 个发布日中已观察满 7 天的需求，仅计有发布事件的需求。阶段按需求去重；举手不等于有效回应，双方确认也不等于交易成交。",
+  cohortFirstRaise: "首个举手的中位时长（仅已收到举手的需求）",
+  cohortHours: "小时",
   overviewStatsTitle: "关键数据",
   overviewStatsDesc: "当前平台的实时状态",
-  overviewFunnelTitle: "撮合漏斗",
-  overviewFunnelDesc: "从发布需求到双方确认完成",
+  overviewFunnelTitle: "累计操作次数",
+  overviewFunnelDesc: "全历史事件计数，单位不同，不作为转化率",
   overviewModulesTitle: "管理模块",
   overviewModulesDesc: "选择一项进入详细管理",
 

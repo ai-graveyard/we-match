@@ -29,6 +29,7 @@ import {
 } from "@/lib/db/schema";
 import { CODE_MAX_FAILS, getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
+import { getNeedCohortMetrics } from "@/lib/product-metrics";
 import { isExpired } from "@/lib/needs";
 import { shortDateTime } from "@/lib/format";
 import { CodeAutoRefresh } from "@/components/admin-code-refresh";
@@ -987,6 +988,7 @@ export default async function AdminPage({
   let activeSessionCount = 0;
   let completedConnectionCount = 0;
   let funnelEvents: { name: string; n: number }[] = [];
+  const cohort = activeView === "overview" ? await getNeedCohortMetrics(now) : null;
   if (activeView === "overview") {
     const [activeSessions, completedConnections, groupedFunnel] = await Promise.all([
       db
@@ -1137,6 +1139,22 @@ export default async function AdminPage({
               ))}
             </div>
           </Section>
+
+          {cohort && <Section title={t.cohortTitle} description={t.cohortDesc}>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { label: t.funnelPublished, value: cohort.published, rate: false },
+                { label: t.funnelRequested, value: cohort.raised, rate: true },
+                { label: t.funnelAccepted, value: cohort.accepted, rate: true },
+                { label: t.funnelCompleted, value: cohort.completed, rate: true },
+              ].map((item) => <div key={item.label} className="rounded-md border border-line bg-panel p-4">
+                <p className="text-2xs text-gray">{item.label}</p>
+                <p className="mt-1 font-mono text-xl font-semibold">{item.value}</p>
+                {item.rate && <p className="mt-1 font-mono text-2xs text-gray">{cohort.published ? `${Math.round(item.value / cohort.published * 100)}%` : "—"}</p>}
+              </div>)}
+            </div>
+            <p className="mt-3 text-xs text-gray">{t.cohortFirstRaise}: <span className="font-mono">{cohort.firstRaiseMedianHours == null ? "—" : `${cohort.firstRaiseMedianHours.toFixed(1)} ${t.cohortHours}`}</span></p>
+          </Section>}
 
           <Section title={t.overviewModulesTitle} description={t.overviewModulesDesc}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

@@ -20,9 +20,13 @@ export default async function NeedNewPage({
 }: PageProps<"/[lang]/needs/new">) {
   const t = await getDict();
   const locale = await getLocale();
-  const user = await getSessionUser();
-  if (!user) redirect(localePath(locale, "/login?next=/needs/new"));
   const params = await searchParams;
+  const user = await getSessionUser();
+  if (!user) {
+    const scope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
+    const next = scope && /^\d+$/.test(scope) ? `/needs/new?scope=${scope}` : "/needs/new";
+    redirect(localePath(locale, `/login?next=${encodeURIComponent(next)}`));
+  }
   const editId = params.id ? Number(params.id) : null;
 
   let initial: NeedFormInitial = {
@@ -95,6 +99,9 @@ export default async function NeedNewPage({
         className="mb-4"
       />
       <NeedForm
+        userId={user.id}
+        nickname={user.nickname}
+        filledContactFields={CONTACT_FIELDS.filter((field) => !!user[field.key]).map((field) => field.key)}
         initial={initial}
         orgs={myOrgs}
         suggestions={suggestions}

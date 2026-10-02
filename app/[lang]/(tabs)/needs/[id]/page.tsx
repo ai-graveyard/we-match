@@ -8,6 +8,9 @@ import { getSessionUser } from "@/lib/auth";
 import { isExpired } from "@/lib/needs";
 import { TypeBadge, StatusBadge, deadlineText } from "@/components/need-card";
 import { NeedActions } from "@/components/need-actions";
+import { NeedCandidates } from "@/components/need-candidates";
+import { PublishedNotice } from "@/components/published-notice";
+import { needDraftKey } from "@/lib/need-draft";
 import { PageHeader } from "@/components/page-header";
 import { DefaultUserAvatar } from "@/components/default-user-avatar";
 import { ShareCard } from "@/components/share-card";
@@ -202,6 +205,7 @@ export default async function NeedDetailPage({
 
   return (
     <div>
+      {isOwner && (query.published === "1" || query.saved === "1") && <PublishedNotice draftKey={needDraftKey(viewer!.id, query.saved === "1" ? need.id : undefined)} token={typeof query.draft === "string" ? query.draft : null} updated={query.saved === "1"} />}
       <PageHeader title={t.need.metaDetail} mobileOnly className="mb-4" />
       <section className={`${panel} p-4`}>
         <div className="flex items-center gap-2">
@@ -302,7 +306,7 @@ export default async function NeedDetailPage({
           <div className="min-w-0">
             <div className="font-semibold">{author.nickname}</div>
             <div className="truncate text-xs text-gray">
-              {author.bio ||
+              {contactCard.bio ||
                 (viewer ? t.need.detailViewCard : t.need.detailLoginToView)}
             </div>
           </div>
@@ -313,6 +317,8 @@ export default async function NeedDetailPage({
           />
         </LocaleLink>
       </section>
+
+      {isOwner && <NeedCandidates userId={viewer!.id} needId={need.id} />}
 
       {viewer && !isOwner && (
         <SafetyActions targetType="need" targetId={need.id} />

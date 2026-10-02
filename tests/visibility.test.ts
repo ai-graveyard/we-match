@@ -18,6 +18,7 @@ function user(overrides: Partial<User> = {}): User {
     xiaohongshu: null,
     weibo: null,
     fieldVisibility: {},
+    connectionEmailEnabled: true,
     status: "active",
     suspendedAt: null,
     deletedAt: null,

@@ -56,6 +56,8 @@ export const zhServer = {
   },
 
   need: {
+    inlineContactInvalid: "请输入一项有效的联系方式（最多 200 字）",
+    inlineContactExists: "这项联系方式已有内容，请在名片中调整后再发布",
     badType: "请选择需求类型（need / offer）",
     emptyTitle: "标题不能为空",
     titleTooLong: "标题最多 {max} 字",

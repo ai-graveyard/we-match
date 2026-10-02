@@ -1,7 +1,8 @@
 import "server-only";
 import { and, count, eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { auditLogs, connections, needs, type Need, type User } from "@/lib/db/schema";
+import { auditLogs, connections, needs, users, type Need, type User } from "@/lib/db/schema";
+import { validatePublishingContact, type PublishingContact } from "@/lib/publishing-contact";
 import { getMembership } from "@/lib/queries";
 import {
   CONTACT_FIELDS,
@@ -152,8 +153,18 @@ export async function createNeed(
   patch: NeedPatch,
   orgId: number | null,
   t: ServerDict,
-  options: { idempotencyKey?: string | null } = {},
+  options: { idempotencyKey?: string | null; publishingContact?: PublishingContact } = {},
 ): Promise<{ error: string } | { need: Need; replayed: boolean }> {
+  const originalUser = user;
+  let contact = options.publishingContact;
+  if (contact) {
+    const validated = validatePublishingContact(contact, t);
+    if ("error" in validated) return validated;
+    contact = validated.contact;
+    if (user[contact.field]) return { error: t.need.inlineContactExists };
+    user = { ...user, nickname: contact.nickname, [contact.field]: contact.value,
+      fieldVisibility: { ...user.fieldVisibility, [contact.field]: "connected" } };
+  }
   if (orgId != null) {
     if (!Number.isInteger(orgId) || orgId <= 0)
       return { error: t.need.badScope };
@@ -239,6 +250,16 @@ export async function createNeed(
         };
       }
 
+      if (contact) {
+        const current = tx.select().from(users).where(eq(users.id, originalUser.id)).get();
+        if (!current || current.status !== "active") return { error: t.auth.sessionExpired };
+        if (current[contact.field]) return { error: t.need.inlineContactExists };
+        tx.update(users).set({
+          nickname: contact.nickname,
+          [contact.field]: contact.value,
+          fieldVisibility: { ...current.fieldVisibility, [contact.field]: "connected" },
+        }).where(eq(users.id, user.id)).run();
+      }
       const need = tx
         .insert(needs)
         .values({

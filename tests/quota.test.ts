@@ -102,6 +102,7 @@ describe("isRegularAccount", () => {
       xiaohongshu: null,
       weibo: null,
       fieldVisibility: {},
+      connectionEmailEnabled: true,
       status: "active" as const,
       suspendedAt: null,
       deletedAt: null,

@@ -1,4 +1,6 @@
 import "server-only";
+import { after } from "next/server";
+import { CONNECTION_EMAIL_TYPES, deliverConnectionEmail } from "@/lib/connection-email";
 
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -31,7 +33,7 @@ export async function notify(input: {
   if (!snapshot) {
     throw new Error(`renderNotification 未覆盖通知类型：${type}`);
   }
-  await db.insert(notifications).values({
+  const [notification] = await db.insert(notifications).values({
     userId: input.userId,
     type,
     title: snapshot.title.slice(0, 80),
@@ -39,7 +41,10 @@ export async function notify(input: {
     params,
     // href 不带语言前缀，点开时再按当时的语言补
     href: input.href?.slice(0, 500) || null,
-  });
+  }).returning({ id: notifications.id });
+  if (CONNECTION_EMAIL_TYPES.has(type)) {
+    after(() => deliverConnectionEmail(notification.id));
+  }
 }
 
 export async function track(input: {
@@ -93,4 +98,3 @@ export async function isBlockedEitherWay(firstUserId: number, secondUserId: numb
     .limit(1);
   return !!row;
 }
-

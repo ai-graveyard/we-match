@@ -14,8 +14,14 @@ import {
 import { expiryFromPreset, hasDeadlinePassed } from "@/lib/needs";
 import { getRequestDict, getRequestLocale } from "@/lib/i18n/request";
 import { localePath } from "@/lib/i18n/routing";
+import { validatePublishingContact } from "@/lib/publishing-contact";
 
 export type NeedFormState = { error?: string };
+
+function draftReceipt(formData: FormData): string {
+  const token = String(formData.get("draftToken") ?? "");
+  return /^[\da-f-]{36}$/i.test(token) ? `&draft=${encodeURIComponent(token)}` : "";
+}
 
 // 表单值 → 服务层输入（标签是 JSON 字符串）
 function formInput(formData: FormData): Record<string, unknown> | null {
@@ -53,9 +59,15 @@ export async function createNeedAction(
   // 可见范围：plaza 或组织 id；发布后不可改
   const scopeRaw = String(formData.get("scope") ?? "plaza");
   const orgId = scopeRaw === "plaza" ? null : Number(scopeRaw);
-  const result = await createNeed(user, parsed.patch, orgId, t);
+  const inline = formData.get("inlineContactField")
+    ? validatePublishingContact({ nickname: formData.get("nickname"), field: formData.get("inlineContactField"), value: formData.get("inlineContactValue") }, t)
+    : null;
+  if (inline && "error" in inline) return inline;
+  const result = await createNeed(user, parsed.patch, orgId, t, {
+    publishingContact: inline && "contact" in inline ? inline.contact : undefined,
+  });
   if ("error" in result) return { error: result.error };
-  redirect(localePath(locale, `/needs/${result.need.id}`));
+  redirect(localePath(locale, `/needs/${result.need.id}?published=1${draftReceipt(formData)}`));
 }
 
 export async function updateNeedAction(
@@ -86,7 +98,7 @@ export async function updateNeedAction(
   // 可见范围不可改；内容和截止时间可编辑
   const applied = await applyNeedPatch(need, { ...parsed.patch, preferredContact }, t);
   if ("error" in applied) return { error: applied.error };
-  redirect(localePath(locale, `/needs/${need.id}`));
+  redirect(localePath(locale, `/needs/${need.id}?saved=1${draftReceipt(formData)}`));
 }
 
 export async function setNeedStatusAction(

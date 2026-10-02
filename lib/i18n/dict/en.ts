@@ -9,6 +9,8 @@ export const en: UiDict = {
   },
 
   common: {
+    on: "On",
+    off: "Off",
     copy: "Copy",
     copied: "Copied",
     copyFailed: "Copy failed",
@@ -81,7 +83,13 @@ export const en: UiDict = {
   },
 
   plaza: {
+    clearFilters: "Clear filters",
+    publishFirst: "Post a need or offer",
+    paginationLabel: "Post pages",
+    previousPage: "Previous",
+    nextPage: "Next",
     title: "Plaza",
+    intro: "Find people you can help — and people who can help you.",
     scopeNavLabel: "Post scope",
     inviteBanner: "“{name}” invited you to join",
     inviteApply: "Apply",
@@ -93,7 +101,8 @@ export const en: UiDict = {
     sortNewest: "Newest",
     sortExpiring: "Ending soon",
     typeAll: "All",
-    typeAllShort: "All",
+    typeNeed: "People need",
+    typeOffer: "People offer",
     countOngoing: "{n} open",
     countAll: "{n} total",
     showOngoingOnly: "Open only",
@@ -104,6 +113,30 @@ export const en: UiDict = {
   },
 
   need: {
+    candidatesTitle: "People to consider",
+    candidatesHint: "Candidates share the opposite direction and scope, ranked by common tags. Confirm the terms together.",
+    candidateTags: "Common tags: {tags}",
+    candidateNoTags: "Same scope, without common tags. Check whether this person is a fit.",
+    candidatesEmpty: "No available candidates yet. Share your post with your community and check back later.",
+    candidatesBrowse: "Browse more posts in this scope",
+    publishedHint: "Posted. Review candidates below or share your post with friends.",
+    formTitlePlaceholderNeed: "e.g. Find a SaaS designer to review three dashboard screens",
+    formTitlePlaceholderOffer: "e.g. Offer a one-hour Next.js architecture review",
+    formDescriptionHint: "Explain the goal, terms, timing and relevant experience. Only include information you want to share.",
+    formUseTemplate: "Use a writing outline",
+    formTemplateNeed: "Problem to solve:\nExpected result:\nTerms (paid / mutual help / exchange):\nTiming and location (remote?):\nBackground or reference links:",
+    formTemplateOffer: "What I can offer:\nWho this helps:\nRelevant experience or portfolio links:\nTerms (paid / mutual help / exchange):\nAvailability and location:",
+    formInlineContactTitle: "Add contact details and post",
+    formInlineContactHint: "This contact is saved to your card and exchanged only after accepting a raise. Complete other details later.",
+    formNickname: "Display name",
+    formContactValue: "Contact details",
+    formContactAdd: "Add a contact to exchange",
+    formInlineContactExists: "Adjust existing contacts on your card. You can add a new contact here.",
+    formDraftAvailable: "An unpublished draft is available.",
+    formDraftRestore: "Restore draft",
+    formDraftDiscard: "Discard draft",
+    formDraftSaved: "Draft saved in this browser tab; cleared after posting.",
+    formDraftUnavailable: "This browser cannot save a draft. Copy your text before leaving.",
     typeNeed: "Need",
     typeOffer: "Offer",
     typeNeedShort: "N",
@@ -141,7 +174,7 @@ export const en: UiDict = {
     formScopeLocked: "{scope} (cannot be changed after posting)",
     formScopeEmptyHint: "Join a group to post to that group only",
     formPreferredContact: "Preferred contact",
-    formPreferredContactHint: "This channel is shown first when someone reaches out",
+    formPreferredContactHint: "Only this contact is exchanged after acceptance; your whole card stays protected.",
     formNoContactPrefix: "No contact is available for this scope. First",
     formNoContactLink: "edit your card",
     formSubmitCreate: "Post",
@@ -149,7 +182,7 @@ export const en: UiDict = {
 
     detailPublisher: "Posted by",
     detailViewCard: "View card and contact details",
-    detailLoginToView: "Sign in to see contact details",
+    detailLoginToView: "Sign in and raise a hand to exchange contacts after acceptance",
     detailExpiredHint:
       "This post is past its deadline and hidden from lists. Tap “Extend one month” to bring it back.",
 
@@ -320,6 +353,9 @@ export const en: UiDict = {
   },
 
   me: {
+    emailNotifications: "Connection emails",
+    emailNotificationsHint: "Send raises and accept/reject results to your sign-in email. Contact details stay on the site.",
+    emailNotificationsUnavailable: "Email delivery is not configured. Notifications remain available on the site.",
     metaTitle: "Me",
     notifications: "Notifications",
 

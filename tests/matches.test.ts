@@ -142,6 +142,17 @@ describe("Agent match candidate recall", () => {
     });
   });
 
+  test("open posts without tags can recall candidates without an ordinal ORDER BY error", async () => {
+    const owner = await createUser("无标签需求方");
+    const provider = await createUser("无标签供给方");
+    const source = await insertNeed(owner.id, { type: "need", title: "还没填写标签" });
+    const offer = await insertNeed(provider.id, { type: "offer", title: "可以提供帮助", updatedAt: new Date(Date.now() + 10_000) });
+    const result = await getMatchCandidates(owner.id, source.id, { limit: 3, uniqueAuthors: true });
+    if ("error" in result) throw new Error(result.error);
+    expect(result.candidates[0].need.id).toBe(offer.id);
+    expect(result.candidates[0].matchedTags).toEqual([]);
+  });
+
   test("requires current organization membership on both sides", async () => {
     const orgOwner = await createUser("组织 Owner");
     const sourceOwner = await createUser("仍在组织的需求方");
@@ -234,6 +245,7 @@ describe("symmetric match notifications", () => {
         ),
       );
     expect(publisherNotices).toHaveLength(1);
+    expect(publisherNotices[0].href).toBe(`/needs/${"need" in first ? first.need.id : -1}#candidates`);
     expect(ownerNotices).toHaveLength(1);
     expect(ownerNotices[0].params).toMatchObject({
       need: existing.title,
@@ -274,3 +286,19 @@ describe("symmetric match notifications", () => {
     expect(row.n).toBe(0);
   });
 });
+
+  test("web discovery shows distinct people without changing default API recall", async () => {
+    const owner = await createUser("去重需求方");
+    const provider = await createUser("多帖子供给方");
+    const other = await createUser("另一位供给方");
+    const source = await insertNeed(owner.id, { type: "need", title: "候选去重", tags: ["候选去重"] });
+    for (let i = 0; i < 3; i++) await insertNeed(provider.id, { type: "offer", title: `同人供给${i}`, tags: ["候选去重"] });
+    await insertNeed(other.id, { type: "offer", title: "不同人供给", tags: ["候选去重"] });
+    const result = await getMatchCandidates(owner.id, source.id, { limit: 3, uniqueAuthors: true });
+    if ("error" in result) throw new Error(result.error);
+    expect(new Set(result.candidates.map((candidate) => candidate.author.id)).size).toBe(result.candidates.length);
+    expect(result.candidates.slice(0, 2).map((candidate) => candidate.author.id)).toEqual(expect.arrayContaining([provider.id, other.id]));
+    const full = await getMatchCandidates(owner.id, source.id, { limit: 100 });
+    if ("error" in full) throw new Error(full.error);
+    expect(full.candidates.filter((candidate) => candidate.author.id === provider.id)).toHaveLength(3);
+  });
