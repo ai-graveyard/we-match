@@ -2,36 +2,46 @@
 
 **你有所需，我有所供。**
 
-极简供需匹配工具：每人一张名片，可发布「我需要 / 我提供」到公开广场或组织；靠浏览、筛选、搜索找到人，再用对方开放的渠道线下联系。
+极简供需匹配工具：每人一张名片，可发布「我需要 / 我提供」到公开广场或组织；通过浏览、搜索和结构化候选找到人，由用户在网页举手、接受并交换联系方式。Agent 可代办注册、维护名片和需求、筛选候选。
 
-- 产品文档：[docs/PRD.md](docs/PRD.md)（含里程碑；M6 连接制已落地，额度赚回与惩罚阶梯仍按 QUOTA.md P4 观察）
+- 产品文档：[docs/PRD.md](docs/PRD.md)（当前功能与边界，已同步 2026-10-03 代码）
 - 设计规范：[docs/DESIGN.md](docs/DESIGN.md)
 - 产品优化与下一阶段验证：[docs/PRODUCT-VALIDATION.md](docs/PRODUCT-VALIDATION.md)（首次发布、候选发现、连接邮件、七天结果与小范围运营实验）
 - Agent / 开放 API 方案：[docs/AGENT-SKILL.md](docs/AGENT-SKILL.md)，接口清单见 [skills/we-match/references/api.md](skills/we-match/references/api.md)
-- 额度与反滥用设计稿：[docs/QUOTA.md](docs/QUOTA.md)（P1 揭示模型与 P2 发布/举手/接受额度已随 M6 落地；赚回与惩罚阶梯见 P4）
-- 重构蓝图：[docs/REFACTOR.md](docs/REFACTOR.md)（当前代码 vs 目标形态的差距图与分阶段路线）
+- 额度与反滥用：[docs/QUOTA.md](docs/QUOTA.md)（发布/举手/接受、赚回及 P4 降额已实现；默认 shadow，未落地规则单列）
+- 重构蓝图：[docs/REFACTOR.md](docs/REFACTOR.md)（当前分层、例外与剩余差距）
 
 官方站点：https://wematch.v2ai.org
+
+## 当前功能
+
+- 中英文界面、明暗主题；广场按范围、类型、标签和关键词筛选，支持三种排序及每页 20 条分页。
+- 发布页支持写作提纲、补齐空联系方式、当前标签页草稿恢复；自己的开放需求详情展示最多三位不同发布者的候选。
+- 名片逐字段控制可见性；组织审批、连接管理、举报拉黑和治理后台已实现。
+- 举手、接受、拒绝可发送连接邮件，用户可在设置中关闭；无持久投递队列或自动重试。
+- 后台提供观察满七天的需求结果统计；它记录举手、接受、完成确认，不等同于实际成交。
+
+以上描述仓库实现，不代表当前线上部署已验收。开发约定见 [AGENTS.md](AGENTS.md)，历史本地 UI 验收见 [docs/UI-REVIEW.md](docs/UI-REVIEW.md)。
 
 ## 技术栈
 
 - Next.js 16（App Router）+ React 19
 - SQLite（better-sqlite3）+ Drizzle ORM
-- Tailwind CSS 4
+- Tailwind CSS 4 + shadcn/ui（Radix）
 - 邮箱 + 验证码登录（开发环境验证码固定 888888，打日志不真实发送）
 
-单文件数据库、零外部服务依赖，适合自部署；**不适配 Vercel serverless**。
+核心数据使用单文件数据库，无需外部数据库或缓存；正式邮件投递依赖 Resend，适合自部署；**不适配 Vercel serverless**。
 
 ## 本地开发
 
-要求：Node.js 22，包管理器为 pnpm。
+要求：Node.js 22，包管理器为 pnpm（版本以 `package.json` 的 `packageManager` 为准）。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)。首次启动会自动创建 `data/we-match.db` 并跑迁移。
+打开 [http://localhost:3000](http://localhost:3000)。数据库模块首次加载会自动创建 `data/we-match.db` 并跑迁移（构建时也可能触发）。需要隔离数据时，先设置 `DATABASE_PATH`。
 
 可选：写入演示数据（幂等，已有种子用户则跳过）：
 
@@ -73,7 +83,8 @@ pnpm db:seed
 | `MAIL_FROM` | 发信人，域名须已在 Resend 验证过，如 `We Match <noreply@wematch.v2ai.org>` |
 | `BETA_MODE` | 内测模式，`1` 时验证码固定 `888888`；不填或其他值均关闭。**开着等于任何人可以登录成任何人**，正式对外绝不能设为 `1` |
 | `QUOTA_P4_MODE` | P4 反滥用惩罚阶梯执行模式：`shadow`（默认，只观测写 `quota_penalty_shadow` 事件、不降额）或 `enforce`（真正降额）。先在 shadow 下核对没误伤真实用户，再切 `enforce` |
-| `SITE_ORIGIN` | 对外站点 origin。生产环境建议固定配置，防止 Agent 安装指令和告知邮件受 Host 头影响；也用于部署后 health smoke check |
+| `SITE_ORIGIN` | 对外站点 origin。安装指令优先使用它；连接通知邮件必须有有效固定值才发送，不回退到请求头。CI smoke check 另读取同名 GitHub Secret |
+| `BACKUP_KEEP` | 备份脚本保留份数，默认 14；Docker 中覆盖此值需另行传入容器环境 |
 
 示例：
 
@@ -90,6 +101,7 @@ export ADMIN_EMAILS="you@example.com"
 | `pnpm build` | 构建 Skill 包 + Next.js 生产构建 |
 | `pnpm start` | 启动生产服务 |
 | `pnpm lint` | ESLint |
+| `pnpm test` | Vitest；每个测试环境使用临时 SQLite 数据库 |
 | `pnpm db:generate` | 根据 schema 生成 Drizzle 迁移 |
 | `pnpm db:seed` | 写入演示种子数据 |
 | `pnpm db:backup` | 非 Docker 部署：在线备份 `DATABASE_PATH`（默认 `./data/we-match.db`）到 `./backups` |
@@ -97,7 +109,7 @@ export ADMIN_EMAILS="you@example.com"
 
 ## Agent 接入
 
-用户可在「我的 → Agent 接入」生成 API Key（`wm_` 前缀），用开放 API `/api/v1/*` 以本人身份读写名片、需求与组织。
+用户可在「我的 → Agent」生成 API Key（`wm_` 前缀），也可通过邮箱验证码 API 注册或签发。每人最多 3 把，明文只在创建时显示，服务端保存哈希和末四位。开放 API `/api/v1/*` 支持本人名片与需求读写、候选匹配、组织与成员读取、只读通知；组织管理和社交操作仍在网页完成。
 
 匹配以用户自己的开放需求为起点：`GET /api/v1/matches?need=<id>` 由平台召回反向类型、
 同范围、仍开放的候选并给出重合标签；Agent 再结合只留在端侧的私有画像做语义判断，
@@ -161,7 +173,7 @@ pnpm build
 SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 ```
 
-将 `data/`（或 `DATABASE_PATH` 指向的目录）放在持久化卷上，并用 systemd / pm2 守护进程。站点 origin 会根据请求的 `Host` / `X-Forwarded-*` 自动推断，一般无需额外配置。
+将 `data/`（或 `DATABASE_PATH` 指向的目录）放在持久化卷上，并用 systemd / pm2 守护进程。生产设置固定 `SITE_ORIGIN`；普通站点链接未配置时会回退到请求头，但连接通知邮件不会。
 
 ### 备份
 
@@ -175,7 +187,7 @@ SESSION_SECRET=… ADMIN_EMAILS=… MAIL_PROVIDER=resend … pnpm start
 
 - [ ] 邮件：Resend 发信域名已验证（SPF / DKIM 已生效），`MAIL_PROVIDER=resend` 已配置并真实收到验证码；顺手确认没进垃圾箱
 - [ ] 内测模式已关闭：登录页**不再**显示「内测中：验证码固定 888888」，验证码是随机的（已配好 Resend，且 `BETA_MODE` 非 `1`）
-- [ ] 法务：[lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱已填（`/terms`、`/privacy` 会展示，占位值必须替换成真实运营主体），协议与政策全文经过人工确认
+- [ ] 法务：[lib/brand.ts](lib/brand.ts) 中的运营者名称与联系邮箱核对正确（`/terms`、`/privacy` 会展示，当前已填写，部署者需核对为自己的真实运营信息），协议与政策全文经过人工确认
 - [ ] `SESSION_SECRET` 已用 `openssl rand -hex 32` 生成，`ADMIN_EMAILS` 已配置
 - [ ] `APP_PORT` 已配置为分配给 we-match 的实际端口，不是默认的 `3000`
 - [ ] 反向代理 HTTPS 就绪，备份 cron 已配置

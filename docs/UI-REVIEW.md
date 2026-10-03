@@ -50,7 +50,7 @@
 
 ## 后续组件统一
 
-按用户要求接入官方 shadcn Radix 组件，替换前台与后台的可见原生控件；保留现有设计令牌。组件清单和表单约束见 DESIGN.md 第 8 节。原先手写的弹窗焦点 hook 已移除，改由 Dialog / AlertDialog 管理；验证码改为 InputOTP，日期时间改为 Calendar + Popover + Select。
+按用户要求接入官方 shadcn Radix 组件，替换前台与后台的可见原生控件；保留现有设计令牌。组件清单和表单约束见 DESIGN.md 第 5、9 节。原先手写的弹窗焦点 hook 已移除，改由 Dialog / AlertDialog 管理；验证码改为 InputOTP，日期时间改为 Calendar + Popover + Select。
 
 
 组件迁移验收：Lint、TypeScript、110 项既有测试与 Webpack 生产构建通过；21 个主要页面/栏目在 320px 和 1280px 英文视口复查无整页横向溢出。隔离数据库中实测了名片可见性连续保存、日期及小时/分钟写入、后台 GET 排序、邮件 Switch 更新、AlertDialog 退出提交和 InputOTP 登录；生产数据未修改。发现并修复 React Action 自动 reset 触发 Radix Select 回到初始值的问题，受控表单现在在捕获阶段拦截 reset。Dialog 内 Select、Shift+Tab 焦点循环、Escape 关闭及焦点返回入口均已检查。
