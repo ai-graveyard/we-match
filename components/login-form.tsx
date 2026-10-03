@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
 import { useActionState, useEffect, useState } from "react";
 import {
   loginAction,
@@ -62,7 +65,7 @@ export function LoginForm({ next }: { next: string }) {
           onChange={setEmail}
           required
         />
-        <button
+        <Button variant="plain" size="plain"
           type="submit"
           formAction={sendAction}
           formNoValidate
@@ -76,7 +79,7 @@ export function LoginForm({ next }: { next: string }) {
           ) : (
             t.login.getCode
           )}
-        </button>
+        </Button>
       </div>
       <CodeBoxes
         length={CODE_LENGTH}
@@ -91,7 +94,7 @@ export function LoginForm({ next }: { next: string }) {
       {/* 普通面板 + 6px 状态灯，橙只剩这一个点：本屏的焦橙主控件是「登录」按钮，
           警示框式的橙边框和警示图标都是清单外的装饰（见 DESIGN.md 焦橙纪律） */}
       {sendState.notice && (
-        <div
+        <Card
           role="alert"
           className="rounded-sm border border-line bg-panel p-3"
         >
@@ -102,16 +105,16 @@ export function LoginForm({ next }: { next: string }) {
           <p className="mt-1 text-xs leading-5 text-gray">
             {sendState.notice.body}
           </p>
-        </div>
+        </Card>
       )}
       {error && <p className={fieldError}>{error}</p>}
-      <button
+      <Button variant="plain" size="plain"
         type="submit"
         disabled={loginPending || !emailReady || code.length < CODE_LENGTH}
         className={primaryBtn}
       >
         {loginPending ? t.login.submitting : t.login.submit}
-      </button>
+      </Button>
     </form>
   );
 }

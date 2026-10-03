@@ -1,3 +1,7 @@
+
+import { Badge } from "@/components/ui/badge";
+
+import { Card } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { Bell, Plus, Search } from "lucide-react";
 import { and, count, desc, eq, isNull } from "drizzle-orm";
@@ -6,7 +10,6 @@ import { needs, notifications } from "@/lib/db/schema";
 import packageJson from "@/package.json";
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
-import { logoutAction } from "@/app/actions/auth";
 import {
   getIncomingPendingHands,
   getMyPendingJoinRequests,
@@ -140,9 +143,9 @@ export default async function MePage({
               shareUrl={`${origin}/u/${user.id}`}
             />
 
-            <form action={logoutAction} className="mt-6">
+            <div className="mt-6">
               <LogoutConfirmation />
-            </form>
+            </div>
 
             <BrandFooter />
           </>
@@ -190,7 +193,7 @@ export default async function MePage({
                 <h3 className={sectionLabel}>
                   {t.me.orgsPending}
                 </h3>
-                <div className={`mt-2 ${panel}`}>
+                <Card className={`mt-2 overflow-hidden ${panel}`}>
                   {myPending.map((pendingOrg, index) => (
                     <div
                       key={pendingOrg.orgId}
@@ -201,12 +204,12 @@ export default async function MePage({
                       <span className="min-w-0 truncate">
                         {pendingOrg.orgName}
                       </span>
-                      <span className={`${badge} ml-auto`}>
+                      <Badge className={`${badge} ml-auto`}>
                         {t.me.orgsPendingBadge}
-                      </span>
+                      </Badge>
                     </div>
                   ))}
-                </div>
+                </Card>
               </section>
             )}
           </section>
@@ -230,7 +233,7 @@ export default async function MePage({
               </EmptyState>
             ) : (
               <>
-                <div className={`mt-2 ${panel}`}>
+                <Card className={`mt-2 overflow-hidden ${panel}`}>
                   {myNeeds.map((needItem, i) => (
                     <NeedCard
                       key={needItem.id}
@@ -238,7 +241,7 @@ export default async function MePage({
                       first={i === 0}
                     />
                   ))}
-                </div>
+                </Card>
                 <ListEnd />
               </>
             )}
@@ -256,7 +259,7 @@ export default async function MePage({
         }
         settings={
           <section>
-            <div className={`overflow-hidden ${panel}`}>
+            <Card className={`overflow-hidden ${panel}`}>
               <ThemeToggleRow />
               <div className="border-t border-line">
                 <LanguageToggleRow />
@@ -280,13 +283,13 @@ export default async function MePage({
                   </span>
                 </LocaleLink>
               )}
-            </div>
+            </Card>
 
             <section className="mt-6">
               <h2 className={sectionLabel}>
                 {t.me.sectionAbout}
               </h2>
-              <div className={`mt-2 overflow-hidden ${panel}`}>
+              <Card className={`mt-2 overflow-hidden ${panel}`}>
                 <LocaleLink
                   href="/terms"
                   className="group flex h-12 items-center gap-4 px-4 text-sm font-semibold transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
@@ -313,20 +316,20 @@ export default async function MePage({
                     v{packageJson.version}
                   </span>
                 </div>
-              </div>
+              </Card>
             </section>
 
             <section className="mt-6">
               <h2 className={sectionLabel}>
                 {t.me.sectionAccount}
               </h2>
-              <div className={`mt-2 overflow-hidden ${panel}`}>
+              <Card className={`mt-2 overflow-hidden ${panel}`}>
                 <DeleteAccountRow
                   ownedOrgNames={myOrgs
                     .filter(({ role }) => role === "owner")
                     .map(({ org }) => org.name)}
                 />
-              </div>
+              </Card>
             </section>
           </section>
         }

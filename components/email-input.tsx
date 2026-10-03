@@ -1,5 +1,8 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
 import { useDict } from "@/lib/i18n/client";
 
 export const EMAIL_MAX_LENGTH = 254;
@@ -29,8 +32,8 @@ export function EmailInput({
 }) {
   const t = useDict();
   return (
-    <div className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
-      <input
+    <Card className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
+      <Input variant="bare"
         id={id}
         className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none placeholder:font-sans placeholder:text-gray"
         type="email"
@@ -38,6 +41,7 @@ export function EmailInput({
         inputMode="email"
         maxLength={EMAIL_MAX_LENGTH}
         placeholder={placeholder ?? t.login.emailPlaceholder}
+        aria-label={placeholder ?? t.login.emailPlaceholder}
         required={required}
         autoComplete={autoComplete}
         autoCapitalize="none"
@@ -46,6 +50,6 @@ export function EmailInput({
         // 大小写不敏感，直接在输入时归一，省得用户以为自己开了两个号
         onChange={(e) => onChange(e.target.value.trimStart().toLowerCase())}
       />
-    </div>
+    </Card>
   );
 }

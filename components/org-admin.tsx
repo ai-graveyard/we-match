@@ -1,5 +1,10 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
 import { useActionState, useState } from "react";
 import { Check, RotateCw, ShieldCheck, UserMinus, X } from "lucide-react";
 import {
@@ -40,7 +45,7 @@ export function InviteCodePanel({
 
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-sm border border-line bg-bg px-3 py-1.5 font-mono text-base tracking-[0.2em]">
           {code}
         </span>
@@ -57,27 +62,27 @@ export function InviteCodePanel({
           <>
             <form action={resetInviteCodeAction}>
               <input type="hidden" name="orgId" value={orgId} />
-              <button type="submit" className={smallBtnCls}>
+              <Button variant="plain" size="plain" type="submit" className={smallBtnCls}>
                 {t.org.inviteResetConfirm}
-              </button>
+              </Button>
             </form>
-            <button
+            <Button variant="plain" size="plain"
               type="button"
               className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
-            </button>
+            </Button>
           </>
         ) : (
-          <button
+          <Button variant="plain" size="plain"
             type="button"
             className={textBtn}
             onClick={() => setConfirming(true)}
           >
             <RotateCw size={11} aria-hidden />
             {t.org.inviteReset}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -106,51 +111,53 @@ export function RequestList({ requests }: { requests: PendingRequest[] }) {
   return (
     <div>
       {state.error && <p className={`mb-2 ${fieldError}`}>{state.error}</p>}
-      <div className={panel}>
+      <Card className={panel}>
         {requests.map((req, i) => (
           <div
             key={req.id}
-            className={`flex items-center gap-2 px-3 py-2.5 ${
+            className={`flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center ${
               i > 0 ? "border-t border-line" : ""
             }`}
           >
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <a
               href={localePath(locale, `/u/${req.applicant.id}`)}
-              className="min-w-0 truncate text-sm font-semibold hover:underline"
+              className="w-full truncate text-sm font-semibold hover:underline"
             >
               {req.applicant.nickname}
             </a>
-            <span className={badge}>
+            <Badge className={badge}>
               {requestViaLabel(t, req.via)}
-            </span>
+            </Badge>
             <span className="shrink-0 font-mono text-3xs text-gray">
               {relativeTime(t, new Date(req.createdAt))}
             </span>
+            </div>
             <div className="ml-auto flex shrink-0 gap-1.5">
               <form action={formAction}>
                 <input type="hidden" name="requestId" value={req.id} />
                 <input type="hidden" name="decision" value="approve" />
-                <button type="submit" disabled={pending} className={smallBtnCls}>
+                <Button variant="plain" size="plain" type="submit" disabled={pending} className={smallBtnCls}>
                   <Check size={12} aria-hidden />
                   {t.org.requestApprove}
-                </button>
+                </Button>
               </form>
               <form action={formAction}>
                 <input type="hidden" name="requestId" value={req.id} />
                 <input type="hidden" name="decision" value="reject" />
-                <button
+                <Button variant="plain" size="plain"
                   type="submit"
                   disabled={pending}
                   className="inline-flex h-11 items-center gap-1 rounded-sm px-2 text-sm text-gray transition-colors duration-100 hover:text-ink"
                 >
                   <X size={14} aria-hidden />
                   {t.org.requestReject}
-                </button>
+                </Button>
               </form>
             </div>
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -172,25 +179,25 @@ export function RemoveMemberButton({
         <form action={removeMemberAction}>
           <input type="hidden" name="orgId" value={orgId} />
           <input type="hidden" name="userId" value={userId} />
-          <button
+          <Button variant="plain" size="plain"
             type="submit"
             className="text-2xs font-semibold text-ink"
           >
             {t.org.memberRemoveConfirm}
-          </button>
+          </Button>
         </form>
-        <button
+        <Button variant="plain" size="plain"
           type="button"
           className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
-        </button>
+        </Button>
       </span>
     );
   }
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       aria-label={fmt(t.org.memberRemoveLabel, { name: nickname })}
       className={textBtn}
@@ -198,7 +205,7 @@ export function RemoveMemberButton({
     >
       <UserMinus size={12} aria-hidden />
       {t.org.memberRemove}
-    </button>
+    </Button>
   );
 }
 
@@ -238,21 +245,21 @@ export function PromoteAdminButton({
           <form action={formAction}>
             <input type="hidden" name="orgId" value={orgId} />
             <input type="hidden" name="userId" value={userId} />
-            <button
+            <Button variant="plain" size="plain"
               type="submit"
               disabled={pending}
               className="text-2xs font-semibold text-ink disabled:text-gray"
             >
               {pending ? t.org.memberPromoting : t.org.memberPromoteConfirm}
-            </button>
+            </Button>
           </form>
-          <button
+          <Button variant="plain" size="plain"
             type="button"
             className={textBtn}
             onClick={() => setConfirming(false)}
           >
             {t.common.cancel}
-          </button>
+          </Button>
         </span>
         {state.error && (
           <span className={`${fieldError} max-w-48 text-right`}>
@@ -264,7 +271,7 @@ export function PromoteAdminButton({
   }
 
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       aria-label={fmt(t.org.memberPromoteLabel, { name: nickname })}
       className={textBtn}
@@ -272,7 +279,7 @@ export function PromoteAdminButton({
     >
       <ShieldCheck size={12} aria-hidden />
       {t.org.memberPromote}
-    </button>
+    </Button>
   );
 }
 
@@ -284,28 +291,28 @@ export function LeaveOrgButton({ orgId }: { orgId: number }) {
       <span className="flex items-center gap-2">
         <form action={leaveOrgAction}>
           <input type="hidden" name="orgId" value={orgId} />
-          <button type="submit" className={smallBtnCls}>
+          <Button variant="plain" size="plain" type="submit" className={smallBtnCls}>
             {t.org.leaveConfirm}
-          </button>
+          </Button>
         </form>
-        <button
+        <Button variant="plain" size="plain"
           type="button"
           className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
-        </button>
+        </Button>
       </span>
     );
   }
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       className={textBtn}
       onClick={() => setConfirming(true)}
     >
       {t.org.leave}
-    </button>
+    </Button>
   );
 }
 
@@ -317,30 +324,30 @@ export function DissolveOrgButton({ orgId }: { orgId: number }) {
       <span className="flex items-center gap-2">
         <form action={dissolveOrgAction}>
           <input type="hidden" name="orgId" value={orgId} />
-          <button
+          <Button variant="plain" size="plain"
             type="submit"
             className={smallBtnCls}
           >
             {t.org.dissolveConfirm}
-          </button>
+          </Button>
         </form>
-        <button
+        <Button variant="plain" size="plain"
           type="button"
           className={textBtn}
           onClick={() => setConfirming(false)}
         >
           {t.common.cancel}
-        </button>
+        </Button>
       </span>
     );
   }
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       className={textBtn}
       onClick={() => setConfirming(true)}
     >
       {t.org.dissolve}
-    </button>
+    </Button>
   );
 }

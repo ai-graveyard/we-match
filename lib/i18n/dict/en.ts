@@ -165,6 +165,8 @@ export const en: UiDict = {
     formDescription: "Description",
     formTags: "Tags",
     formDeadline: "Deadline",
+    formHour: "Hour",
+    formMinute: "Minute",
     formDeadlineCustom: "Custom deadline",
     formPermanentHint:
       "Stays open until you close it or mark it done",
@@ -302,6 +304,7 @@ export const en: UiDict = {
     hideEmail: "Hide email",
 
     visPublic: "Public",
+    visibilityLabel: "Visibility",
     visConnected: "After connecting",
     visAuthenticated: "Signed-in users",
     visOrgs: "Shared groups",

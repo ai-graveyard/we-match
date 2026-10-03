@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
@@ -23,7 +25,7 @@ export function CodeAutoRefresh() {
   }, [refresh]);
 
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       onClick={refresh}
       className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-line bg-panel px-3 text-xs text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px"
@@ -34,6 +36,6 @@ export function CodeAutoRefresh() {
         className={pending ? "animate-spin" : undefined}
       />
       {pending ? t.common.refreshing : t.common.refresh}
-    </button>
+    </Button>
   );
 }

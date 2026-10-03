@@ -1,12 +1,13 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useDict } from "@/lib/i18n/client";
 import {
-  miniSwitch,
-  miniSwitchItem,
-  settingsRowInteractive,
+  settingsRow,
 } from "@/lib/ui";
 
 type Theme = "light" | "dark";
@@ -52,6 +53,7 @@ function toggleTheme() {
   localStorage.setItem("theme", next);
   document.documentElement.setAttribute("data-theme", next);
   applyThemeColor(next);
+  window.dispatchEvent(new Event("theme-change"));
 }
 
 /** 开发模式 Strict Mode 重挂载会把 <html> 重置为 JSX 里的属性，绘制前补回主题；生产环境等效空操作 */
@@ -67,7 +69,7 @@ export function ThemeApplier() {
 export function ThemeToggle() {
   const t = useDict();
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       onClick={toggleTheme}
       aria-label={t.theme.toggleLabel}
@@ -75,40 +77,27 @@ export function ThemeToggle() {
     >
       <Moon size={15} className="dark:hidden" aria-hidden />
       <Sun size={15} className="hidden dark:block" aria-hidden />
-    </button>
+    </Button>
   );
+}
+
+function subscribeTheme(callback: () => void) {
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
 }
 
 export function ThemeToggleRow() {
   const t = useDict();
+  const dark = useSyncExternalStore(subscribeTheme,
+    () => document.documentElement.getAttribute("data-theme") === "dark", () => false);
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      aria-label={t.theme.toggleLabel}
-      className={settingsRowInteractive}
-    >
+    <div className={settingsRow}>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{t.theme.title}</span>
-        <span className="mt-0.5 block text-xs text-gray">
-          <span className="dark:hidden">{t.theme.currentLight}</span>
-          <span className="hidden dark:inline">{t.theme.currentDark}</span>
-        </span>
+        <span className="mt-0.5 block text-xs text-gray">{dark ? t.theme.currentDark : t.theme.currentLight}</span>
       </span>
-      {/* 选中态走 dark: 变体而不是 JS 判断：主题由 <html data-theme> 决定，
-          服务端渲染时读不到，用状态会先闪一下错的档位 */}
-      <span className={miniSwitch} aria-hidden>
-        <span
-          className={`${miniSwitchItem} bg-ink text-panel dark:bg-transparent dark:text-gray`}
-        >
-          {t.theme.light}
-        </span>
-        <span
-          className={`${miniSwitchItem} text-gray dark:bg-ink dark:text-panel`}
-        >
-          {t.theme.dark}
-        </span>
-      </span>
-    </button>
+      <Switch checked={dark} onCheckedChange={toggleTheme} aria-label={t.theme.toggleLabel} />
+    </div>
   );
 }

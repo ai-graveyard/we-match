@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useActionState, useState } from "react";
 import {
   Check,
@@ -48,10 +50,10 @@ export function NeedActions({
         {expired && (
           <form action={renewAction}>
             <input type="hidden" name="id" value={id} />
-            <button type="submit" className={btnCls}>
+            <Button variant="plain" size="plain" type="submit" className={btnCls}>
               <RefreshCw size={12} aria-hidden />
               {t.need.actionRenew}
-            </button>
+            </Button>
           </form>
         )}
         <LocaleLink href={`/needs/new?id=${id}`} className={btnCls}>
@@ -63,57 +65,57 @@ export function NeedActions({
             <form action={statusAction}>
               <input type="hidden" name="id" value={id} />
               <input type="hidden" name="status" value="done" />
-              <button type="submit" className={btnCls}>
+              <Button variant="plain" size="plain" type="submit" className={btnCls}>
                 <Check size={12} aria-hidden />
                 {t.need.actionMarkDone}
-              </button>
+              </Button>
             </form>
             <form action={statusAction}>
               <input type="hidden" name="id" value={id} />
               <input type="hidden" name="status" value="closed" />
-              <button type="submit" className={btnCls}>
+              <Button variant="plain" size="plain" type="submit" className={btnCls}>
                 <CircleX size={12} aria-hidden />
                 {t.need.actionClose}
-              </button>
+              </Button>
             </form>
           </>
         ) : (
           <form action={statusAction}>
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="status" value="open" />
-            <button type="submit" className={btnCls}>
+            <Button variant="plain" size="plain" type="submit" className={btnCls}>
               <RotateCcw size={12} aria-hidden />
               {t.need.actionReopen}
-            </button>
+            </Button>
           </form>
         )}
         {confirming ? (
           <form action={deleteNeedAction} className="flex items-center gap-2">
             <input type="hidden" name="id" value={id} />
-            <button
+            <Button variant="plain" size="plain"
               type="submit"
               className={btnCls}
             >
               <Trash2 size={12} aria-hidden />
               {t.common.confirmDelete}
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="plain"
               type="button"
               className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
-            </button>
+            </Button>
           </form>
         ) : (
-          <button
+          <Button variant="plain" size="plain"
             type="button"
             className={textBtn}
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={12} aria-hidden />
             {t.common.delete}
-          </button>
+          </Button>
         )}
       </div>
       {error && <p className={fieldError}>{error}</p>}

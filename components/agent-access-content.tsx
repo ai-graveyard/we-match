@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import type { ApiKeyListItem } from "@/lib/api-keys";
 import { API_KEY_LIMITS, maskApiKey } from "@/lib/api-keys";
 import { shortDateTime } from "@/lib/format";
@@ -30,7 +32,7 @@ export async function AgentAccessContent({
           {apiKeys.length} / {API_KEY_LIMITS.perUser}
         </span>
       </div>
-      <div className={`mt-2 ${panel}`}>
+      <Card className={`mt-2 overflow-hidden ${panel}`}>
         {apiKeys.map((key, index) => (
           <ApiKeyRow
             key={key.id}
@@ -53,21 +55,21 @@ export async function AgentAccessContent({
             atLimit={apiKeys.length >= API_KEY_LIMITS.perUser}
           />
         </div>
-      </div>
+      </Card>
 
       <section className="mt-6">
         <h2 className={sectionLabel}>
           {t.agent.installHeading}
         </h2>
-        <div className={`mt-2 ${panel} p-4 text-sm`}>
+        <Card className={`mt-2 ${panel} p-4 text-sm`}>
           <p>{t.agent.installBody}</p>
           <div className="mt-2 flex items-center gap-1 rounded-sm bg-bg-3 px-2 py-1.5">
-            <code className="min-w-0 flex-1 break-all font-mono text-2xs">
+            <code className="min-w-0 flex-1 font-mono text-2xs">
               {installMessage}
             </code>
             <CopyButton text={installMessage} />
           </div>
-        </div>
+        </Card>
         <p className="mt-2 text-2xs text-gray">
           <a href="/we-match-skill.zip" download className="underline">
             {t.agent.downloadLink}

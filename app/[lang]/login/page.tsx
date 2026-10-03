@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/login-form";
 import { BackButton } from "@/components/page-header";
 import { Brand } from "@/components/brand";
@@ -39,7 +41,7 @@ export default async function LoginPage({
           <p className="mb-8 mt-2 text-center text-sm text-gray">
             {t.brand.slogan}
           </p>
-          <div className={`${panel} p-6`}>
+          <Card className={`${panel} p-6`}>
             <h1 className="mb-4 text-xl font-semibold">{t.login.heading}</h1>
             <LoginForm next={next} />
             <p className="mt-4 text-center text-2xs leading-5 text-gray">
@@ -58,7 +60,7 @@ export default async function LoginPage({
                 {t.login.privacyLink}
               </LocaleLink>
             </p>
-          </div>
+          </Card>
           {/* 固定码模式必须让人一眼看见——生产环境开着它等于门没锁，
               悄悄跑在这个状态下是最坏的情况（见 lib/auth.ts isFixedCodeMode） */}
           {isFixedCodeMode() && (

@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import { getMatchCandidates } from "@/lib/matches";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
@@ -16,7 +18,7 @@ export async function NeedCandidates({ userId, needId }: { userId: number; needI
       <h2 className={sectionLabel}>{t.need.candidatesTitle}</h2>
       <p className="mt-1 text-xs leading-relaxed text-gray">{t.need.candidatesHint}</p>
       {result.candidates.length > 0 ? (
-        <div className={`mt-3 overflow-hidden ${panel}`}>
+        <Card className={`mt-3 overflow-hidden ${panel}`}>
           {result.candidates.map((candidate, i) => (
             <div key={candidate.need.id} className={i ? "border-t border-line" : ""}>
               <NeedCard need={candidate.need} author={{ nickname: candidate.author.nickname, city: null }} first />
@@ -25,7 +27,7 @@ export async function NeedCandidates({ userId, needId }: { userId: number; needI
               </p>
             </div>
           ))}
-        </div>
+        </Card>
       ) : <p className={`mt-3 ${panel} p-4 text-xs text-gray`}>{t.need.candidatesEmpty}</p>}
       <LocaleLink href={`/?${query}`} className="mt-3 inline-flex text-xs text-ink underline">{t.need.candidatesBrowse}</LocaleLink>
     </section>

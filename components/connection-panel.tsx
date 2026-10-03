@@ -1,5 +1,14 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
+
+import { FormSelect } from "@/components/ui/form-select";
+
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
 import { useActionState, useState } from "react";
 import {
   cancelConnectionAction,
@@ -64,31 +73,23 @@ export function InterestForm({
     contactOptions[0] ?? "",
   );
   return (
-    <form action={action} className={`${panel} p-3`}>
+    <form onResetCapture={(event) => { event.preventDefault(); event.stopPropagation(); }} action={action} className={`${panel} p-3`}>
       <input type="hidden" name="needId" value={needId} />
       {contactOptions.length > 0 && (
         <div className="mb-3">
-          <label
+          <Label
             htmlFor={`connection-contact-${needId}`}
             className={sectionLabel}
           >
             {t.contact.exchangeLabel}
-          </label>
-          <select
-            id={`connection-contact-${needId}`}
-            name="contact"
-            value={contact}
-            onChange={(event) =>
-              setContact(event.target.value as ContactFieldKey)
-            }
-            className="mt-1 w-full rounded-sm border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-ink"
-          >
-            {contactOptions.map((key) => (
-              <option key={key} value={key}>
-                {cardFieldLabel(t, key)}
-              </option>
-            ))}
-          </select>
+          </Label>
+          <FormSelect
+            id={`connection-contact-${needId}`} name="contact"
+            label={t.contact.exchangeLabel} value={contact}
+            onValueChange={(value) => setContact(value as ContactFieldKey)}
+            className="mt-1 h-11 w-full bg-bg text-sm"
+            options={contactOptions.map((key) => ({ value: key, label: cardFieldLabel(t, key) }))}
+          />
           {contact && (
             <p className="mt-1 text-xs text-gray">
               {fmt(t.contact.exchangePreview, {
@@ -98,13 +99,13 @@ export function InterestForm({
           )}
         </div>
       )}
-      <label
+      <Label
         htmlFor={`connection-message-${needId}`}
         className={sectionLabel}
       >
         {t.contact.interestMessageLabel}
-      </label>
-      <textarea
+      </Label>
+      <Textarea
         id={`connection-message-${needId}`}
         name="message"
         maxLength={200}
@@ -114,13 +115,13 @@ export function InterestForm({
       />
       {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
-      <button
+      <Button variant="plain" size="plain"
         type="submit"
         disabled={pending || !!state.ok}
         className={`${primaryBtn} mt-3 w-full`}
       >
         {pending ? t.common.submitting : label}
-      </button>
+      </Button>
       {quota && (
         <p className="mt-2 text-center font-mono text-3xs text-gray">
           {fmt(t.contact.quotaFooter, {
@@ -158,9 +159,9 @@ export function ConnectionCard({
     <article className={`p-4 ${first ? "" : "border-t border-line"}`}>
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold">{otherName}</span>
-        <span className={`${badge} ml-auto`}>
+        <Badge className={`${badge} ml-auto`}>
           {connectionStatusLabel(t, row.status, row.stale)}
-        </span>
+        </Badge>
       </div>
       {needHref && needTitle && (
         <LocaleLink
@@ -183,9 +184,9 @@ export function ConnectionCard({
       {!isOwner && ["pending", "accepted"].includes(row.status) && (
         <form action={cancelConnectionAction} className="mt-3">
           <input type="hidden" name="connectionId" value={row.id} />
-          <button className="text-2xs text-gray underline">
+          <Button variant="plain" size="plain" className="text-2xs text-gray underline">
             {t.connection.withdraw}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -201,9 +202,9 @@ export function ConnectionCard({
           {!myConfirmed && (
             <form action={confirmConnectionCompletedAction} className="mt-2">
               <input type="hidden" name="connectionId" value={row.id} />
-              <button className={secondaryBtn}>
+              <Button variant="plain" size="plain" className={secondaryBtn}>
                 {t.connection.confirmDone}
-              </button>
+              </Button>
             </form>
           )}
         </div>
@@ -232,7 +233,7 @@ export function ConnectionPanel({
           ? fmt(t.connection.ownerHeading, { n: rows.length })
           : t.connection.viewerHeading}
       </h2>
-      <div className={`mt-2 ${panel}`}>
+      <Card className={`mt-2 ${panel}`}>
         {rows.map((row, index) => (
           <ConnectionCard
             key={row.id}
@@ -242,7 +243,7 @@ export function ConnectionPanel({
             first={index === 0}
           />
         ))}
-      </div>
+      </Card>
     </section>
   );
 }
@@ -259,16 +260,16 @@ function OwnerPendingActions({ connectionId }: { connectionId: number }) {
         <form action={action}>
           <input type="hidden" name="connectionId" value={connectionId} />
           <input type="hidden" name="decision" value="reject" />
-          <button className={`${secondaryBtn} w-full`}>
+          <Button variant="plain" size="plain" className={`${secondaryBtn} h-full w-full`}>
             {t.connection.reject}
-          </button>
+          </Button>
         </form>
         <form action={action}>
           <input type="hidden" name="connectionId" value={connectionId} />
           <input type="hidden" name="decision" value="accept" />
-          <button className={`${primaryBtn} w-full`}>
+          <Button variant="plain" size="plain" className={`${primaryBtn} w-full`}>
             {t.connection.accept}
-          </button>
+          </Button>
         </form>
       </div>
       {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}

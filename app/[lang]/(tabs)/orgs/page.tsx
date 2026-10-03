@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import { and } from "drizzle-orm";
@@ -84,7 +86,7 @@ export default async function OrgPlazaPage({
         </EmptyState>
       ) : (
         <>
-        <div className={`mt-3 ${panel}`}>
+        <Card className={`mt-3 overflow-hidden ${panel}`}>
           {list.map(({ org, memberCount }, i) => (
             <LocaleLink
               key={org.id}
@@ -109,7 +111,7 @@ export default async function OrgPlazaPage({
               )}
             </LocaleLink>
           ))}
-        </div>
+        </Card>
         <ListEnd />
         </>
       )}

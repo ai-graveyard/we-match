@@ -1,6 +1,12 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 import { useEffect, useRef, useState } from "react";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import Link from "next/link";
 import { Check, Copy, Mail, MessageCircle, Phone, X } from "lucide-react";
 import { copyText } from "@/components/copy-button";
@@ -91,13 +97,13 @@ function ChannelAction({
     );
   }
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       className={className}
       onClick={() => onCopy(channel.value, channel.key)}
     >
       {content}
-    </button>
+    </Button>
   );
 }
 
@@ -131,7 +137,6 @@ export function ContactPanel({
   );
   const [copied, setCopied] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const intent = intentLabel(t, need.type === "need" ? "offer" : "need");
   // 举手被接受即「已连接」；被拒或撤回后可以重新举手
   const connected =
@@ -154,20 +159,6 @@ export function ContactPanel({
     [],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
 
   async function handleCopy(value: string, key: string) {
     const ok = await copyText(value);
@@ -191,47 +182,38 @@ export function ContactPanel({
   if (!canExpressInterest && channels.length === 0) return null;
 
   return (
-    <>
-      <button
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+      <Button variant="plain" size="plain"
         type="button"
         onClick={() => setOpen(true)}
         className={`${primaryBtn} w-full`}
         aria-haspopup="dialog"
       >
         {actionLabel}
-      </button>
+      </Button>
+      </DialogTrigger>
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="contact-dialog-title"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 md:items-center md:p-4"
-        >
-          <section className="max-h-[calc(100dvh-16px)] w-full max-w-[440px] overflow-y-auto rounded-t-md border border-line bg-bg p-4 pb-[calc(24px+var(--safe-b))] text-ink md:rounded-md md:pb-4">
+      <DialogContent showCloseButton={false} className="top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 rounded-b-none bg-bg p-4 pb-[calc(24px+var(--safe-b))] md:top-1/2 md:bottom-auto md:left-1/2 md:max-w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-md md:pb-4">
             <header className="flex min-h-11 items-center justify-between gap-3">
               <div className="min-w-0">
-                <h2 id="contact-dialog-title" className="text-sm font-semibold">
+                <DialogTitle className="text-sm font-semibold">
                   {connected
                     ? fmt(t.contact.contactPerson, { name: author })
                     : actionLabel}
-                </h2>
-                <p className="mt-0.5 truncate font-mono text-3xs text-gray">
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 truncate font-mono text-3xs text-gray">
                   {fmt(t.contact.about, { title: need.title })}
-                </p>
+                </DialogDescription>
               </div>
-              <button
-                ref={closeButtonRef}
-                type="button"
+              <Button variant="plain" size="plain"
+                  type="button"
                 onClick={() => setOpen(false)}
                 className={iconBtnLine}
                 aria-label={t.contact.dialogCloseLabel}
               >
                 <X size={16} aria-hidden />
-              </button>
+              </Button>
             </header>
 
             {canExpressInterest && (
@@ -249,19 +231,19 @@ export function ContactPanel({
             )}
 
             {!canExpressInterest && !connected && (
-              <div className={`mt-4 ${panel} p-3`}>
+              <Card className={`mt-4 ${panel} p-3`}>
                 <p className="text-sm">
                   {fmt(t.contact.waitingTitle, { name: author })}
                 </p>
                 <p className="mt-1 text-2xs text-gray">
                   {t.contact.waitingBody}
                 </p>
-              </div>
+              </Card>
             )}
 
             {channels.length > 0 && (
               <>
-                <div
+                <Card
                   className={`${panel} p-3 mt-4`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -286,7 +268,7 @@ export function ContactPanel({
                       onCopy={handleCopy}
                     />
                   </div>
-                </div>
+                </Card>
 
                 {orderedChannels.length > 1 && (
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -306,20 +288,20 @@ export function ContactPanel({
                 )}
 
                 <div className="mt-4">
-                  <label
+                  <Label
                     htmlFor="contact-message"
                     className={sectionLabel}
                   >
                     {t.contact.openerLabel}
-                  </label>
-                  <textarea
+                  </Label>
+                  <Textarea
                     id="contact-message"
                     rows={4}
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
                     className="mt-1 w-full resize-none rounded-sm border border-line bg-panel px-3 py-2 text-sm leading-6 outline-none focus:border-ink"
                   />
-                  <button
+                  <Button variant="plain" size="plain"
                     type="button"
                     onClick={() => handleCopy(message, "message")}
                     className={`${secondaryBtn} mt-2 w-full`}
@@ -332,7 +314,7 @@ export function ContactPanel({
                     {copied === "message"
                       ? t.contact.openerCopied
                       : t.contact.openerCopy}
-                  </button>
+                  </Button>
                   <p
                     className="mt-2 min-h-5 text-center text-2xs text-gray"
                     aria-live="polite"
@@ -342,9 +324,7 @@ export function ContactPanel({
                 </div>
               </>
             )}
-          </section>
-        </div>
-      )}
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

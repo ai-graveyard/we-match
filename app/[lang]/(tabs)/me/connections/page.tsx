@@ -1,3 +1,6 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+import { Card } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import {
@@ -50,15 +53,16 @@ export default async function ConnectionsCenterPage({
     <div>
       <PageHeader title={t.connection.centerTitle} className="mb-4" />
 
-      <nav
+      <Tabs value={view} activationMode="manual">
+      <TabsList
         aria-label={t.connection.centerTitle}
         className="flex items-center gap-1"
       >
         {tabs.map((tab) => {
           const active = tab.id === view;
           return (
+            <TabsTrigger key={tab.id} value={tab.id} asChild>
             <LocaleLink
-              key={tab.id}
               href={`/me/connections?view=${tab.id}`}
               aria-current={active ? "page" : undefined}
               scroll={false}
@@ -70,11 +74,12 @@ export default async function ConnectionsCenterPage({
             >
               {tab.label}
             </LocaleLink>
+            </TabsTrigger>
           );
         })}
-      </nav>
+      </TabsList>
 
-      <div className="mt-4">
+      <TabsContent value={view} className="mt-4">
         {rows.length === 0 ? (
           <EmptyState>
             {isOwner
@@ -82,7 +87,7 @@ export default async function ConnectionsCenterPage({
               : t.connection.initiatedEmpty}
           </EmptyState>
         ) : (
-          <div className={panel}>
+          <Card className={panel}>
             {rows.map((row: ConnectionCenterRow, index) => (
               <ConnectionCard
                 key={row.id}
@@ -103,9 +108,10 @@ export default async function ConnectionsCenterPage({
                 }}
               />
             ))}
-          </div>
+          </Card>
         )}
-      </div>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

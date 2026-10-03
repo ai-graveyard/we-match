@@ -1,16 +1,24 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useDict } from "@/lib/i18n/client";
 
 // http 环境（如局域网 IP 访问）没有 navigator.clipboard，退化到 execCommand
 function legacyCopy(text: string): boolean {
+  const previousFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
   const ta = document.createElement("textarea");
   ta.value = text;
   ta.style.position = "fixed";
   ta.style.opacity = "0";
-  document.body.appendChild(ta);
+  ta.tabIndex = -1;
+  ta.setAttribute("aria-hidden", "true");
+  // 弹窗内复制时，临时输入框也必须留在焦点边界内。
+  (previousFocus?.closest('[role="dialog"]') ?? document.body).appendChild(ta);
   ta.select();
   let ok = false;
   try {
@@ -19,6 +27,7 @@ function legacyCopy(text: string): boolean {
     ok = false;
   }
   ta.remove();
+  previousFocus?.focus({ preventScroll: true });
   return ok;
 }
 
@@ -56,7 +65,7 @@ export function CopyButton({
   );
 
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       className={`flex h-11 shrink-0 items-center gap-1 rounded-sm px-2 text-sm font-semibold tracking-[0.06em] transition-colors duration-100 active:translate-y-px ${
         state === "idle"
@@ -82,6 +91,6 @@ export function CopyButton({
         : state === "copied"
           ? t.common.copied
           : t.common.copyFailed}
-    </button>
+    </Button>
   );
 }

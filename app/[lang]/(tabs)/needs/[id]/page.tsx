@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -207,7 +209,7 @@ export default async function NeedDetailPage({
     <div>
       {isOwner && (query.published === "1" || query.saved === "1") && <PublishedNotice draftKey={needDraftKey(viewer!.id, query.saved === "1" ? need.id : undefined)} token={typeof query.draft === "string" ? query.draft : null} updated={query.saved === "1"} />}
       <PageHeader title={t.need.metaDetail} mobileOnly className="mb-4" />
-      <section className={`${panel} p-4`}>
+      <Card as="section" className={`${panel} p-4`}>
         <div className="flex items-center gap-2">
           <TypeBadge type={need.type} />
           <StatusBadge need={need} />
@@ -250,7 +252,7 @@ export default async function NeedDetailPage({
         <p className="mt-3 border-t border-line pt-3 font-mono text-2xs text-gray">
           {deadlineText(t, need.expiresAt)}
         </p>
-      </section>
+      </Card>
 
       {isOwner && (
         <section className="mt-4">

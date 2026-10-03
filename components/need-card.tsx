@@ -1,3 +1,5 @@
+
+import { Badge } from "@/components/ui/badge";
 import type { Need, User } from "@/lib/db/schema";
 import { isExpired } from "@/lib/needs";
 import { shortDateTime } from "@/lib/format";
@@ -40,9 +42,9 @@ export async function StatusBadge({
     ? t.need.statusExpired
     : statusLabel(t, need.status);
   return (
-    <span className={badge}>
+    <Badge className={badge}>
       {label}
-    </span>
+    </Badge>
   );
 }
 
@@ -74,21 +76,21 @@ export async function NeedCard({
     return (
       <LocaleLink
         href={`/needs/${need.id}`}
-        className={`group block px-4 py-4 transition-colors duration-100 hover:bg-bg-3 ${
+        className={`group block px-4 py-4 transition-colors duration-100 hover:bg-bg-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-ink ${
           first ? "" : "border-t border-line"
         }`}
       >
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className={`inline-flex h-6 shrink-0 items-center rounded-sm px-2 font-mono text-2xs ${
+            className={`inline-flex h-5 shrink-0 items-center rounded-sm px-1.5 font-mono text-3xs ${
               need.type === "need"
-                ? "bg-ink font-semibold text-panel"
+                ? "bg-ink text-panel"
                 : "border border-line text-gray"
             }`}
           >
             {typeLabel(t, need.type)}
           </span>
-          <span className="min-w-0 truncate text-xs font-semibold">
+          <span className="min-w-0 truncate text-xs text-gray">
             {author.nickname}
           </span>
           {author.city && (
@@ -102,24 +104,24 @@ export async function NeedCard({
         </div>
 
         <div className="mt-2 flex items-start gap-2">
-          <h2 className="min-w-0 flex-1 text-base font-semibold leading-snug transition-colors duration-100 group-hover:text-ink">
+          <h2 className="min-w-0 flex-1 break-words text-base font-semibold leading-snug">
             {need.title}
           </h2>
           <StatusBadge need={need} />
         </div>
         {need.description && (
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray">
+          <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-gray">
             {need.description}
           </p>
         )}
 
-        <div className="mt-3 flex min-w-0 items-center gap-2 border-t border-line pt-2">
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           {need.tags.length > 0 && (
             <span className="min-w-0 truncate font-mono text-2xs text-gray">
               {need.tags.join(" · ")}
             </span>
           )}
-          <span className="ml-auto shrink-0 font-mono text-2xs text-gray">
+          <span className="ml-auto font-mono text-3xs text-gray">
             {deadlineText(t, need.expiresAt)}
           </span>
         </div>

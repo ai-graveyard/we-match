@@ -7,7 +7,8 @@ import { Languages } from "lucide-react";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { useDict, useLocale } from "@/lib/i18n/client";
 import { localePath, stripLocale } from "@/lib/i18n/routing";
-import { miniSwitch, miniSwitchItem, settingsRow } from "@/lib/ui";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { settingsRow } from "@/lib/ui";
 
 // 切语言就是换 URL 前缀，停在当前这一页、保留筛选参数。
 // cookie 由 proxy 在下一次请求时对齐，这里不用自己写。
@@ -61,32 +62,13 @@ function LanguageToggleRowInner() {
           {t.language.current}
         </span>
       </span>
-      <span
-        className={miniSwitch}
-        role="group"
-        aria-label={t.language.toggleLabel}
-      >
-        {LOCALES.map((item) =>
-          item === locale ? (
-            <span
-              key={item}
-              aria-current="true"
-              className={`${miniSwitchItem} bg-ink text-panel`}
-            >
-              {LOCALE_LABELS[item]}
-            </span>
-          ) : (
-            <Link
-              key={item}
-              href={hrefFor(item)}
-              prefetch={false}
-              className={`${miniSwitchItem} text-gray transition-colors duration-100 hover:text-ink`}
-            >
-              {LOCALE_LABELS[item]}
-            </Link>
-          ),
-        )}
-      </span>
+      <ToggleGroup type="single" value={locale} aria-label={t.language.toggleLabel}>
+        {LOCALES.map((item) => (
+          <ToggleGroupItem key={item} value={item} asChild>
+            <Link href={hrefFor(item)} prefetch={false} aria-current={item === locale ? "true" : undefined}>{LOCALE_LABELS[item]}</Link>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
   );
 }

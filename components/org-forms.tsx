@@ -1,4 +1,10 @@
 "use client";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState, useState } from "react";
 import {
@@ -18,8 +24,6 @@ import {
   primaryBtn,
   secondaryBtn,
   sectionLabel as labelCls,
-  segmentGroup,
-  segmentItem,
   textarea as textareaCls,
 } from "@/lib/ui";
 
@@ -34,18 +38,10 @@ export function VisibilityPicker({
   const t = useDict();
   return (
     <div>
-      <div className={segmentGroup}>
-        {(["private", "public"] as const).map((opt, i) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(opt)}
-            className={segmentItem(value === opt, i === 0)}
-          >
-            {orgVisibilityLabel(t, opt)}
-          </button>
-        ))}
-      </div>
+      <ToggleGroup type="single" value={value} aria-label={t.org.formType}
+        onValueChange={(v) => { if (v === "public" || v === "private") onChange(v); }}>
+        {(["private", "public"] as const).map((opt) => <ToggleGroupItem key={opt} value={opt}>{orgVisibilityLabel(t, opt)}</ToggleGroupItem>)}
+      </ToggleGroup>
       <p className="mt-1 text-2xs text-gray">
         {value === "public" ? t.org.formPublicHint : t.org.formPrivateHint}
       </p>
@@ -68,9 +64,9 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
 
   return (
     <form action={formAction} className={`${panel} p-4`}>
-      <label htmlFor="invite-code" className={`${labelCls} mb-2 block`}>
+      <Label htmlFor="invite-code" className={`${labelCls} mb-2 block`}>
         {t.org.codeFormLabel}
-      </label>
+      </Label>
       <CodeBoxes
         length={INVITE_CODE_LENGTH}
         format="alphanumeric"
@@ -80,13 +76,13 @@ export function ApplyByCodeForm({ initialCode }: { initialCode: string }) {
         value={code}
         onChange={setCode}
       />
-      <button
+      <Button variant="plain" size="plain"
         type="submit"
         disabled={pending || code.length < INVITE_CODE_LENGTH}
         className={`${primaryBtn} mt-3 w-full`}
       >
         {pending ? t.common.submitting : t.org.codeFormSubmit}
-      </button>
+      </Button>
       {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
     </form>
@@ -103,9 +99,9 @@ export function ApplyPlazaButton({ orgId }: { orgId: number }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="orgId" value={orgId} />
-      <button type="submit" disabled={pending} className={`${primaryBtn} w-full`}>
+      <Button variant="plain" size="plain" type="submit" disabled={pending} className={`${primaryBtn} w-full`}>
         {pending ? t.common.submitting : t.org.applyJoin}
-      </button>
+      </Button>
       {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
       {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
     </form>
@@ -136,10 +132,10 @@ export function OrgSettingsForm({
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="orgId" value={org.id} />
       <div>
-        <label htmlFor="edit-org-name" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="edit-org-name" className={`${labelCls} mb-1 block`}>
           {t.org.formName}
-        </label>
-        <input
+        </Label>
+        <Input
           id="edit-org-name"
           name="name"
           className={inputCls}
@@ -150,10 +146,10 @@ export function OrgSettingsForm({
         />
       </div>
       <div>
-        <label htmlFor="edit-org-desc" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="edit-org-desc" className={`${labelCls} mb-1 block`}>
           {t.org.formDescription}
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="edit-org-desc"
           name="description"
           rows={3}
@@ -169,9 +165,9 @@ export function OrgSettingsForm({
       </div>
       {state.error && <p className={fieldError}>{state.error}</p>}
       {state.ok && <p className="text-xs text-gray">{state.ok}</p>}
-      <button type="submit" disabled={pending} className={secondaryBtn}>
+      <Button variant="plain" size="plain" type="submit" disabled={pending} className={secondaryBtn}>
         {pending ? t.common.saving : t.org.formSaveProfile}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -74,7 +76,7 @@ export function BackButton() {
   const locale = useLocale();
   const t = useDict();
   return (
-    <button
+    <Button variant="plain" size="plain"
       type="button"
       aria-label={t.common.back}
       onClick={() => {
@@ -93,7 +95,7 @@ export function BackButton() {
       className={`${iconBtnBack} md:hidden`}
     >
       <ChevronLeft size={18} aria-hidden />
-    </button>
+    </Button>
   );
 }
 

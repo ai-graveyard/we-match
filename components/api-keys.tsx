@@ -1,4 +1,9 @@
 "use client";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 import { useActionState, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
@@ -48,27 +53,27 @@ export function ApiKeyRow({
             className="ml-auto flex shrink-0 items-center gap-2"
           >
             <input type="hidden" name="id" value={id} />
-            <button type="submit" className={secondaryBtn}>
+            <Button variant="plain" size="plain" type="submit" className={secondaryBtn}>
               <Trash2 size={11} aria-hidden />
               {t.common.confirmDelete}
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="plain"
               type="button"
               className={textBtn}
               onClick={() => setConfirming(false)}
             >
               {t.common.cancel}
-            </button>
+            </Button>
           </form>
         ) : (
-          <button
+          <Button variant="plain" size="plain"
             type="button"
             className={`${textBtn} ml-auto shrink-0`}
             onClick={() => setConfirming(true)}
           >
             <Trash2 size={11} aria-hidden />
             {t.common.delete}
-          </button>
+          </Button>
         )}
       </div>
       <div className="mt-2 flex items-center gap-1">
@@ -102,10 +107,10 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
   }
 
   return (
-    <div>
-      <button
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+      <Button variant="plain" size="plain"
         type="button"
-        onClick={() => setOpen(!open)}
         className="flex h-12 w-full items-center justify-between px-4 text-sm transition-colors duration-100 hover:bg-bg-3"
       >
         {t.agent.keyCreateToggle}
@@ -114,17 +119,18 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
         ) : (
           <ChevronDown size={15} className="text-gray" aria-hidden />
         )}
-      </button>
-      {open && (
+      </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <form
           action={formAction}
           className="flex flex-col gap-3 border-t border-line p-4"
         >
           <div>
-            <label htmlFor="key-name" className={`${labelCls} mb-1 block`}>
+            <Label htmlFor="key-name" className={`${labelCls} mb-1 block`}>
               {fmt(t.agent.keyNameLabel, { max: API_KEY_LIMITS.name })}
-            </label>
-            <input
+            </Label>
+            <Input
               id="key-name"
               name="name"
               className={inputCls}
@@ -152,15 +158,15 @@ export function CreateApiKeyForm({ atLimit }: { atLimit: boolean }) {
               </div>
             </div>
           )}
-          <button type="submit" disabled={pending} className={primaryBtn}>
+          <Button variant="plain" size="plain" type="submit" disabled={pending} className={primaryBtn}>
             {pending
               ? t.agent.keyGenerating
               : state.createdKey
                 ? t.agent.keyGenerateAnother
                 : t.agent.keyGenerate}
-          </button>
+          </Button>
         </form>
-      )}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

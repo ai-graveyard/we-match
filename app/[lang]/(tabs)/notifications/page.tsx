@@ -1,3 +1,6 @@
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -40,9 +43,9 @@ export default async function NotificationsPage() {
         <PageHeader title={t.notifications.metaTitle} />
         {unread > 0 && (
           <form action={markAllNotificationsReadAction}>
-            <button className={`${textBtn} underline`}>
+            <Button variant="plain" size="plain" className={`${textBtn} underline`}>
               {t.notifications.markAllRead}
-            </button>
+            </Button>
           </form>
         )}
       </div>
@@ -50,7 +53,7 @@ export default async function NotificationsPage() {
         <EmptyState>{t.notifications.empty}</EmptyState>
       ) : (
         <>
-        <div className={`mt-4 ${panel}`}>
+        <Card className={`mt-4 overflow-hidden ${panel}`}>
           {list.map((item, index) => {
             const text = notificationText(serverDict, item);
             return (
@@ -61,7 +64,7 @@ export default async function NotificationsPage() {
             >
               <input type="hidden" name="id" value={item.id} />
               <input type="hidden" name="href" value={item.href ?? ""} />
-              <button className="flex w-full items-start gap-3 p-4 text-left hover:bg-bg-3">
+              <Button variant="plain" size="plain" className="flex w-full items-start gap-3 p-4 text-left hover:bg-bg-3">
                 <span
                   className={`${item.readAt ? statusDotOff : statusDot} mt-1.5`}
                 />
@@ -78,11 +81,11 @@ export default async function NotificationsPage() {
                     {relativeTime(t, item.createdAt)}
                   </span>
                 </span>
-              </button>
+              </Button>
             </form>
             );
           })}
-        </div>
+        </Card>
         <ListEnd />
         </>
       )}

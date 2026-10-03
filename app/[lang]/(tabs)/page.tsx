@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import { Plus, X } from "lucide-react";
 import { and, count, eq, gt, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { isNull } from "drizzle-orm";
@@ -16,7 +18,7 @@ import {
   panel,
   primaryBtn,
   secondaryBtn,
-  segmentGroup,
+  segmentFrame,
   segmentItem,
   statusDot,
   tag as tagCls,
@@ -228,7 +230,7 @@ export default async function PlazaPage({
       {/* 「去申请」用墨色次按钮：本屏的焦橙已经给了「+ 发布」，
           邀请横幅再来一个就是同屏两处焦橙（见 DESIGN.md 焦橙纪律） */}
       {invitedOrg && (
-        <div className={`mt-4 flex items-center gap-2 ${panel} p-3`}>
+        <Card className={`mt-4 flex items-center gap-2 ${panel} p-3`}>
           <p className="min-w-0 flex-1 text-sm">
             {fmt(t.plaza.inviteBanner, { name: invitedOrg.name })}
           </p>
@@ -238,7 +240,7 @@ export default async function PlazaPage({
           >
             {t.plaza.inviteApply}
           </LocaleLink>
-        </div>
+        </Card>
       )}
       {inviteCode && !invitedOrg && (
         <p className="mt-4 text-xs text-gray">{t.plaza.inviteInvalid}</p>
@@ -251,7 +253,7 @@ export default async function PlazaPage({
           defaultValue={q}
           placeholder={t.plaza.searchPlaceholder}
           label={t.plaza.searchLabel}
-          className="flex-1"
+          className="md:flex-1"
           hidden={
             <>
               {activeOrg && (
@@ -266,7 +268,7 @@ export default async function PlazaPage({
             </>
           }
         />
-        <div className={`${segmentGroup} grid w-full shrink-0 grid-cols-3 md:flex md:w-auto`}>
+        <div className={`${segmentFrame} grid w-full shrink-0 grid-cols-3 md:w-auto`}>
           {typeTabs.map((tab, i) => {
             const active = type === tab.value || (!type && !tab.value);
             return (
@@ -274,6 +276,8 @@ export default async function PlazaPage({
                 key={tab.label}
                 href={buildQuery({ ...current, type: tab.value })}
                 aria-label={tab.label}
+                aria-current={active ? "true" : undefined}
+                scroll={false}
                 className={segmentItem(active, i === 0)}
               >
                 {tab.label}
@@ -370,7 +374,7 @@ export default async function PlazaPage({
         </EmptyState>
       ) : (
         <>
-          <div className={`mt-3 ${panel}`}>
+          <Card className={`mt-3 overflow-hidden ${panel}`}>
             {list.map(({ need, author }, i) => (
               <NeedCard
                 key={need.id}
@@ -379,7 +383,7 @@ export default async function PlazaPage({
                 first={i === 0}
               />
             ))}
-          </div>
+          </Card>
           {pageCount > 1 && (
             <nav aria-label={t.plaza.paginationLabel} className="mt-4 flex items-center justify-between gap-2">
               {page > 1 ? <LocaleLink href={buildQuery({ ...current, page: page - 1 })} className={secondaryBtn}>{t.plaza.previousPage}</LocaleLink> : <span />}

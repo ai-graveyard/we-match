@@ -1,3 +1,7 @@
+
+import { Badge } from "@/components/ui/badge";
+
+import { Card } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
 import type { Org } from "@/lib/db/schema";
 import { ShareCard } from "@/components/share-card";
@@ -50,7 +54,7 @@ export async function OrgOverviewCard({
   ];
 
   return (
-    <article className={`overflow-hidden ${panel}`}>
+    <Card as="article" className={`overflow-hidden ${panel}`}>
       <div className="p-4">
         <div className="flex items-center gap-2">
           <LocaleLink
@@ -59,9 +63,9 @@ export async function OrgOverviewCard({
           >
             {org.name}
           </LocaleLink>
-          <span className={badge}>
+          <Badge className={badge}>
             {orgVisibilityLabel(t, org.visibility)}
-          </span>
+          </Badge>
           <LocaleLink
             href={
               role === "owner"
@@ -100,24 +104,19 @@ export async function OrgOverviewCard({
 
       <nav
         aria-label={fmt(t.org.overviewQuickActions, { name: org.name })}
-        className="grid border-t border-line"
-        style={{
-          gridTemplateColumns: `repeat(${actions.length + (canShare ? 1 : 0)}, minmax(0, 1fr))`,
-        }}
+        className="flex flex-wrap gap-2 border-t border-line p-3"
       >
-        {actions.map((action, index) => (
+        {actions.map((action) => (
           <LocaleLink
             key={action.label}
             href={action.href}
-            className={`flex h-11 items-center justify-center text-sm font-semibold tracking-[0.06em] transition-colors duration-100 hover:bg-bg-3 ${
-              index > 0 ? "border-l border-line" : ""
-            }`}
+            className="flex min-h-11 grow items-center justify-center whitespace-nowrap rounded-sm border border-line px-3 text-xs font-semibold transition-colors duration-100 hover:bg-bg-3"
           >
             {action.label}
           </LocaleLink>
         ))}
         {canShare && (
-          <div className="border-l border-line [&>button]:h-11 [&>button]:min-h-11 [&>button]:w-full [&>button]:justify-center [&>button]:rounded-none [&>button]:border-0 [&>button]:px-2 [&>button]:text-2xs">
+          <div className="grow [&>button]:w-full [&>button]:justify-center [&>button]:text-xs">
             <ShareCard
               data={{
                 kind: "org",
@@ -132,6 +131,6 @@ export async function OrgOverviewCard({
           </div>
         )}
       </nav>
-    </article>
+    </Card>
   );
 }

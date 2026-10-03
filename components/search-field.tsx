@@ -1,3 +1,6 @@
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 
@@ -28,24 +31,25 @@ export function SearchField({
   return (
     <form
       action={action}
-      className={`relative flex h-10 min-w-0 overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink ${className}`}
+      className={`relative flex h-10 min-h-10 min-w-0 overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink ${className}`}
     >
       {hidden}
-      <input
+      <Input variant="bare"
         type="search"
         name={name}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
+        aria-label={placeholder}
         className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-gray"
       />
-      <button
+      <Button variant="plain" size="plain"
         type="submit"
         aria-label={label}
         title={label}
         className="flex w-10 shrink-0 items-center justify-center border-l border-line text-gray transition-colors duration-100 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
       >
         <Search size={16} aria-hidden />
-      </button>
+      </Button>
     </form>
   );
 }

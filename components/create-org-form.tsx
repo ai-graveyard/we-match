@@ -1,5 +1,10 @@
 "use client";
 
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+
 import { useActionState, useState } from "react";
 import {
   createOrgAction,
@@ -32,10 +37,10 @@ export function CreateOrgForm() {
       className={`flex flex-col gap-4 ${panel} p-4`}
     >
       <div>
-        <label htmlFor="org-name" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="org-name" className={`${labelCls} mb-1 block`}>
           {fmt(t.org.formNameWithLimit, { max: ORG_LIMITS.name })}
-        </label>
-        <input
+        </Label>
+        <Input
           id="org-name"
           name="name"
           className={inputCls}
@@ -46,10 +51,10 @@ export function CreateOrgForm() {
       </div>
 
       <div>
-        <label htmlFor="org-desc" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="org-desc" className={`${labelCls} mb-1 block`}>
           {t.org.formDescription}
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="org-desc"
           name="description"
           rows={4}
@@ -65,9 +70,9 @@ export function CreateOrgForm() {
 
       {state.error && <p className={fieldError}>{state.error}</p>}
 
-      <button type="submit" disabled={pending} className={primaryBtn}>
+      <Button variant="plain" size="plain" type="submit" disabled={pending} className={primaryBtn}>
         {pending ? t.common.saving : t.common.save}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { ReactNode } from "react";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
@@ -48,21 +49,21 @@ export async function MeCategorySwitcher({
   const panels = { user, organization, need, quota, agent, settings };
 
   return (
-    <>
-      <nav
+    <Tabs value={activeCategory} activationMode="manual">
+      <TabsList variant="line"
         aria-label={t.me.catNavLabel}
-        className="flex w-full max-w-96 items-center gap-1"
+        className="flex w-full flex-wrap items-center gap-x-4 gap-y-1"
       >
         {CATEGORIES.map((category) => {
           const isActive = category.id === activeCategory;
 
           return (
+            <TabsTrigger key={category.id} value={category.id} asChild>
             <LocaleLink
-              key={category.id}
               href={CATEGORY_HREFS[category.id]}
               aria-current={isActive ? "page" : undefined}
               scroll={false}
-              className={`flex h-10 min-w-0 flex-1 items-center justify-center whitespace-nowrap bg-transparent transition-[color,font-size] duration-150 ease-out focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+              className={`flex h-10 shrink-0 items-center justify-center whitespace-nowrap bg-transparent transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ink ${
                 isActive
                   ? "text-xl font-semibold text-accent"
                   : "text-sm text-gray hover:text-ink"
@@ -70,11 +71,12 @@ export async function MeCategorySwitcher({
             >
               {category.label(t)}
             </LocaleLink>
+            </TabsTrigger>
           );
         })}
-      </nav>
+      </TabsList>
 
-      <div className="mt-4">{panels[activeCategory]}</div>
-    </>
+      <TabsContent value={activeCategory} className="mt-4">{panels[activeCategory]}</TabsContent>
+    </Tabs>
   );
 }

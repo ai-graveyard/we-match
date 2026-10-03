@@ -1,3 +1,5 @@
+import { buttonVariants } from "@/components/ui/button";
+
 /* 共用样式常量。规范见 docs/DESIGN.md。
  *
  * 之前每个组件各写各的类名字面量：光「表单错误」就有 text-accent / text-ink /
@@ -14,21 +16,17 @@
  * （`hover:` / `md:` 等永远排在无 variant 的后面，可以安全叠加）。 */
 
 /** 主按钮：每屏唯一的焦橙控件。高 44px（DESIGN.md「按钮」） */
-export const primaryBtn =
-  "flex h-11 items-center justify-center gap-1.5 rounded-sm bg-accent px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:opacity-60";
+export const primaryBtn = buttonVariants({ variant: "default" });
 
 /** 次按钮：墨色描边，悬停反色。承载动作的按钮一律 44px，不分主次 */
-export const secondaryBtn =
-  "flex h-11 items-center justify-center gap-1.5 rounded-sm border border-ink bg-panel px-4 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 hover:bg-ink hover:text-panel active:translate-y-px";
+export const secondaryBtn = buttonVariants({ variant: "outline" });
 
 /** 墨底白字：两步确认里的那一下（退出登录、注销账号）。不用焦橙——
  *  焦橙是「这屏要你做的事」，而确认删除恰恰不该被鼓励 */
-export const inkBtn =
-  "flex h-11 items-center justify-center gap-1.5 rounded-sm bg-ink px-4 text-sm font-semibold tracking-[0.06em] text-panel transition-opacity duration-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
+export const inkBtn = buttonVariants({ variant: "destructive" });
 
 /** 次按钮的弱化档：灰边灰字，用于与主动作并列的「取消」 */
-export const quietBtn =
-  "flex h-11 items-center justify-center gap-1.5 rounded-sm border border-line px-4 text-sm font-semibold tracking-[0.06em] text-gray transition-colors duration-100 hover:border-ink hover:text-ink active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
+export const quietBtn = buttonVariants({ variant: "secondary" });
 
 /** 44px 方形图标按钮。只有图标的动作照样是动作，一样按 44px 走 */
 const iconBtnBase =
@@ -47,6 +45,10 @@ export const textBtn =
 /** 输入框：与按钮同高，focus 转墨边（不用橙） */
 export const input =
   "h-11 w-full rounded-sm border border-line bg-panel px-3 text-sm outline-none transition-colors duration-100 placeholder:text-gray focus:border-ink";
+
+/** 多档同级选择：长标签使用下拉框，避免把分段控件挤出屏幕。 */
+export const selectInput =
+  "h-10 min-w-0 rounded-sm border border-line bg-panel px-3 text-xs text-ink outline-none focus:border-ink";
 
 /** 多行输入：撤掉固定高度，其余与 input 一致 */
 export const textarea =
@@ -75,14 +77,15 @@ export const chip =
 export const chipOn = "border-ink bg-ink font-semibold text-panel";
 export const chipOff = "border-line text-gray hover:border-ink hover:text-ink";
 
-/** 分段控件外框（DESIGN.md「分段控件」：1px --line 外框） */
-export const segmentGroup =
-  "inline-flex overflow-hidden rounded-sm border border-line";
+/** 外框不含布局，供等分网格复用，避免 grid 与 inline-flex 相互覆盖。 */
+export const segmentFrame =
+  "h-10 overflow-hidden rounded-sm border border-line";
+export const segmentGroup = `inline-flex ${segmentFrame}`;
 
 /** 分段控件的一段。40px——它是在同级选项间切换，不是承载动作的按钮 */
 export function segmentItem(active: boolean, first: boolean) {
   return [
-    "flex h-10 items-center justify-center px-3 text-center text-2xs transition-colors duration-100",
+    "flex h-full min-w-0 items-center justify-center whitespace-nowrap px-3 text-center text-2xs transition-colors duration-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-ink",
     first ? "" : "border-l border-line",
     active ? "bg-ink font-semibold text-panel" : "text-gray hover:text-ink",
   ]

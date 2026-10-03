@@ -1,3 +1,7 @@
+
+import { Badge } from "@/components/ui/badge";
+
+import { Card } from "@/components/ui/card";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChevronRight, Users, X } from "lucide-react";
@@ -127,7 +131,7 @@ export default async function OrgDetailPage({
     return (
       <div>
         <PageHeader title={t.org.metaDetail} mobileOnly className="mb-4" />
-        <section className={`${panel} p-4`}>
+        <Card as="section" className={`${panel} p-4`}>
           <div className="flex items-center gap-2">
             <h1 className="min-w-0 truncate text-xl font-semibold">
               {org.name}
@@ -141,7 +145,7 @@ export default async function OrgDetailPage({
             <p className="mt-2 whitespace-pre-wrap text-sm">{org.description}</p>
           )}
           <p className="mt-2 text-2xs text-gray">{t.org.detailJoinHint}</p>
-        </section>
+        </Card>
         <div className="mt-4">
           {!viewer ? (
             <LocaleLink
@@ -208,15 +212,15 @@ export default async function OrgDetailPage({
   return (
     <div>
       <PageHeader title={t.org.metaDetail} mobileOnly className="mb-4" />
-      <section className={`${panel} p-4`}>
-        <div className="flex items-center gap-2">
-          <h1 className="min-w-0 truncate text-xl font-semibold">{org.name}</h1>
-          <span className={badge}>
+      <Card as="section" className={`${panel} p-4`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="min-w-0 flex-1 text-xl font-semibold">{org.name}</h1>
+          <Badge className={badge}>
             {orgVisibilityLabel(t, org.visibility)}
-          </span>
+          </Badge>
           <LocaleLink
             href={`/?org=${oid}`}
-            className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-2xs text-gray hover:text-ink"
+            className="inline-flex w-full items-center gap-0.5 text-2xs text-gray hover:text-ink"
           >
             {t.org.detailViewNeeds}
             <ChevronRight size={12} aria-hidden />
@@ -225,7 +229,7 @@ export default async function OrgDetailPage({
         {org.description && (
           <p className="mt-2 whitespace-pre-wrap text-sm">{org.description}</p>
         )}
-      </section>
+      </Card>
 
       <nav
         aria-label={t.org.detailNavLabel}
@@ -304,7 +308,7 @@ export default async function OrgDetailPage({
             </LocaleLink>
           </div>
         )}
-        <div className={`mt-2 ${panel}`}>
+        <Card className={`mt-2 ${panel}`}>
           {members.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-gray">
               {t.org.membersEmpty}
@@ -313,7 +317,7 @@ export default async function OrgDetailPage({
             members.map(({ user: member, role }, i) => (
               <div
                 key={member.id}
-                className={`flex items-center gap-3 px-4 py-3 ${
+                className={`flex flex-wrap items-center gap-3 px-4 py-3 ${
                   i > 0 ? "border-t border-line" : ""
                 }`}
               >
@@ -334,14 +338,14 @@ export default async function OrgDetailPage({
                       {member.nickname}
                     </LocaleLink>
                     {role === "owner" && (
-                      <span className={badge}>
+                      <Badge className={badge}>
                         {t.org.roleOwner}
-                      </span>
+                      </Badge>
                     )}
                     {role === "admin" && (
-                      <span className={badge}>
+                      <Badge className={badge}>
                         {t.org.roleAdmin}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   {member.tags.length > 0 && (
@@ -359,7 +363,7 @@ export default async function OrgDetailPage({
                   )}
                 </div>
                 {member.id !== org.ownerId && (
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
                     {isOrgAdmin && role === "member" && (
                       <PromoteAdminButton
                         orgId={oid}
@@ -380,11 +384,11 @@ export default async function OrgDetailPage({
               </div>
             ))
           )}
-        </div>
+        </Card>
       </section>
 
       {isOrgAdmin && (
-        <section
+        <Card as="section"
           id="requests"
           className={`mt-4 scroll-mt-4 ${panel} p-4`}
         >
@@ -392,19 +396,19 @@ export default async function OrgDetailPage({
             {fmt(t.org.requestsHeading, { n: requests.length })}
           </h2>
           <RequestList requests={requests} />
-        </section>
+        </Card>
       )}
 
       {isOwner && (
         <>
-          <section
+          <Card as="section"
             id="invite"
             className={`mt-4 scroll-mt-4 ${panel} p-4`}
           >
             <h2 className={`${sectionLabel} mb-2`}>{t.org.inviteHeading}</h2>
             <InviteCodePanel orgId={oid} code={org.inviteCode} />
-          </section>
-          <section
+          </Card>
+          <Card as="section"
             id="settings"
             className={`mt-4 scroll-mt-4 ${panel} p-4`}
           >
@@ -419,7 +423,7 @@ export default async function OrgDetailPage({
                 visibility: org.visibility,
               }}
             />
-          </section>
+          </Card>
           <div className="mt-4 flex justify-end">
             <DissolveOrgButton orgId={oid} />
           </div>

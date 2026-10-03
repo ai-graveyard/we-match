@@ -1,3 +1,7 @@
+
+import { Badge } from "@/components/ui/badge";
+
+import { Card } from "@/components/ui/card";
 import { getDict } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt } from "@/lib/i18n/fmt";
@@ -72,7 +76,7 @@ async function HandList({ hands, empty }: { hands: Hand[]; empty: string }) {
     return <p className="mt-2 text-2xs text-gray">{empty}</p>;
   }
   return (
-    <div className={`mt-2 ${panel}`}>
+    <Card className={`mt-2 overflow-hidden ${panel}`}>
       {hands.map((hand, index) => {
         const stale = isStalePending(hand.status, hand.createdAt);
         return (
@@ -92,13 +96,13 @@ async function HandList({ hands, empty }: { hands: Hand[]; empty: string }) {
                 {hand.otherName} · {relativeTime(t, hand.createdAt)}
               </span>
             </span>
-            <span className={`${badge} shrink-0`}>
+            <Badge className={`${badge} shrink-0`}>
               {connectionStatusLabel(t, hand.status, stale)}
-            </span>
+            </Badge>
           </LocaleLink>
         );
       })}
-    </div>
+    </Card>
   );
 }
 
@@ -118,7 +122,7 @@ export async function QuotaPanel({
       <p className="text-2xs leading-5 text-gray">{t.quota.intro}</p>
 
       <h2 className={`mt-4 ${sectionLabel}`}>{t.quota.dailyHeading}</h2>
-      <div className={`mt-2 ${panel}`}>
+      <Card className={`mt-2 overflow-hidden ${panel}`}>
         {summary.daily.map((line, index) => (
           <Row
             key={line.key}
@@ -134,7 +138,7 @@ export async function QuotaPanel({
             }
           />
         ))}
-      </div>
+      </Card>
       <p className="mt-2 text-2xs text-gray">{t.quota.resetHint}</p>
       {!summary.regular && (
         <p className="mt-1 text-2xs leading-5 text-gray">
@@ -149,7 +153,7 @@ export async function QuotaPanel({
       )}
 
       <h2 className={`mt-6 ${sectionLabel}`}>{t.quota.stockHeading}</h2>
-      <div className={`mt-2 ${panel}`}>
+      <Card className={`mt-2 overflow-hidden ${panel}`}>
         {summary.stock.map((line, index) => (
           <Row
             key={line.key}
@@ -158,7 +162,7 @@ export async function QuotaPanel({
             value={fmt(t.quota.used, { used: line.used, max: line.max })}
           />
         ))}
-      </div>
+      </Card>
 
       <h2 className={`mt-6 ${sectionLabel}`}>{t.quota.handsHeading}</h2>
       {summary.staleIncoming > 0 && (

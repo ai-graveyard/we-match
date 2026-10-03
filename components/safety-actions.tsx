@@ -1,5 +1,10 @@
 "use client";
 
+import { FormSelect } from "@/components/ui/form-select";
+
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
 import { useActionState, useState } from "react";
 import {
   blockUserAction,
@@ -35,15 +40,15 @@ export function SafetyActions({
   return (
     <section className="mt-6 border-t border-line pt-4">
       <div className="flex items-center gap-4 text-2xs text-gray">
-        <button type="button" onClick={() => setOpen(!open)} className="underline">
+        <Button variant="plain" size="plain" type="button" onClick={() => setOpen(!open)} className="underline">
           {targetType === "need" ? t.safety.reportNeed : t.safety.reportUser}
-        </button>
+        </Button>
         {canBlock && (
           <form action={blocked ? unblockUserAction : blockUserAction}>
             <input type="hidden" name="targetId" value={targetId} />
-            <button className="underline">
+            <Button variant="plain" size="plain" className="underline">
               {blocked ? t.safety.unblock : t.safety.block}
-            </button>
+            </Button>
           </form>
         )}
       </div>
@@ -51,22 +56,17 @@ export function SafetyActions({
         <form action={action} className={`mt-3 ${panel} p-3`}>
           <input type="hidden" name="targetType" value={targetType} />
           <input type="hidden" name="targetId" value={targetId} />
-          <select
-            name="reason"
-            required
-            defaultValue=""
-            className="h-11 w-full rounded-sm border border-line bg-bg px-3 text-sm outline-none transition-colors duration-100 focus:border-ink"
-          >
-            <option value="" disabled>
-              {t.safety.reasonPlaceholder}
-            </option>
-            <option value="spam">{t.safety.reasonSpam}</option>
-            <option value="fraud">{t.safety.reasonFraud}</option>
-            <option value="harassment">{t.safety.reasonHarassment}</option>
-            <option value="illegal">{t.safety.reasonIllegal}</option>
-            <option value="other">{t.safety.reasonOther}</option>
-          </select>
-          <textarea
+          <FormSelect name="reason" required label={t.safety.reasonPlaceholder}
+            placeholder={t.safety.reasonPlaceholder} className="h-11 w-full bg-bg text-sm"
+            options={[
+              { value: "spam", label: t.safety.reasonSpam },
+              { value: "fraud", label: t.safety.reasonFraud },
+              { value: "harassment", label: t.safety.reasonHarassment },
+              { value: "illegal", label: t.safety.reasonIllegal },
+              { value: "other", label: t.safety.reasonOther },
+            ]}
+          />
+          <Textarea
             name="details"
             maxLength={500}
             rows={3}
@@ -75,13 +75,13 @@ export function SafetyActions({
           />
           {state.error && <p className={`mt-2 ${fieldError}`}>{state.error}</p>}
           {state.ok && <p className="mt-2 text-xs text-gray">{state.ok}</p>}
-          <button
+          <Button variant="plain" size="plain"
             type="submit"
             disabled={pending || !!state.ok}
             className={`${secondaryBtn} mt-2 disabled:opacity-60`}
           >
             {pending ? t.common.submitting : t.safety.submitReport}
-          </button>
+          </Button>
         </form>
       )}
     </section>

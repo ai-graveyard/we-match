@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
@@ -29,7 +31,7 @@ export function MaskedEmail({
       <span className="truncate font-mono text-xs text-gray">
         {revealed ? email : maskEmail(email)}
       </span>
-      <button
+      <Button variant="plain" size="plain"
         type="button"
         className="flex size-11 shrink-0 items-center justify-center rounded-sm text-gray transition-colors duration-100 hover:bg-bg-3 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-ink"
         aria-label={revealed ? hideLabel : showLabel}
@@ -38,7 +40,7 @@ export function MaskedEmail({
         onClick={() => setRevealed((current) => !current)}
       >
         {revealed ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
-      </button>
+      </Button>
     </div>
   );
 }

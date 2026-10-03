@@ -1,8 +1,15 @@
 "use client";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
 import { needDraftKey, parseNeedDraft } from "@/lib/need-draft";
 import { DRAFT_UNAVAILABLE, readDraft, writeDraft, subscribeDraft } from "@/lib/browser-draft";
+import { DateTimePicker } from "@/components/date-time-picker";
 import { PhoneInput } from "@/components/phone-input";
 import {
   createNeedAction,
@@ -35,8 +42,6 @@ import {
   panel,
   primaryBtn,
   sectionLabel,
-  segmentGroup,
-  segmentItem,
   textarea as textareaCls,
   textBtn,
 } from "@/lib/ui";
@@ -160,6 +165,7 @@ export function NeedForm({
 
   return (
     <form
+      onResetCapture={(event) => { event.preventDefault(); event.stopPropagation(); }}
       action={formAction}
       onChangeCapture={markDirty}
       className={`flex flex-col gap-4 ${panel} p-4`}
@@ -169,33 +175,25 @@ export function NeedForm({
       {!dirty && recovered && <div className="border-b border-line pb-4">
         <p className="text-xs text-gray">{t.need.formDraftAvailable}</p>
         <div className="mt-2 flex gap-4">
-          <button type="button" className={textBtn} onClick={restoreDraft}>{t.need.formDraftRestore}</button>
-          <button type="button" className={textBtn} onClick={() => writeDraft(draftKey, null)}>{t.need.formDraftDiscard}</button>
+          <Button variant="plain" size="plain" type="button" className={textBtn} onClick={restoreDraft}>{t.need.formDraftRestore}</Button>
+          <Button variant="plain" size="plain" type="button" className={textBtn} onClick={() => writeDraft(draftKey, null)}>{t.need.formDraftDiscard}</Button>
         </div>
       </div>}
 
       <div>
         <span className={`${labelCls} mb-1 block`}>{t.need.formType}</span>
-        <div className={segmentGroup}>
-          {(["need", "offer"] as const).map((opt, i) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => { markDirty(); setType(opt); }}
-              className={segmentItem(type === opt, i === 0)}
-            >
-              {intentLabel(t, opt)}
-            </button>
-          ))}
-        </div>
+        <ToggleGroup type="single" value={type} aria-label={t.need.formType}
+          onValueChange={(v) => { if (v === "need" || v === "offer") { markDirty(); setType(v); } }}>
+          {(["need", "offer"] as const).map((opt) => <ToggleGroupItem key={opt} value={opt}>{intentLabel(t, opt)}</ToggleGroupItem>)}
+        </ToggleGroup>
         <input type="hidden" name="type" value={type} />
       </div>
 
       <div>
-        <label htmlFor="title" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="title" className={`${labelCls} mb-1 block`}>
           {fmt(t.need.formTitle, { max: NEED_LIMITS.title })}
-        </label>
-        <input
+        </Label>
+        <Input
           id="title"
           name="title"
           className={sharedInput}
@@ -208,10 +206,10 @@ export function NeedForm({
       </div>
 
       <div>
-        <label htmlFor="description" className={`${labelCls} mb-1 block`}>
+        <Label htmlFor="description" className={`${labelCls} mb-1 block`}>
           {t.need.formDescription}
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="description"
           name="description"
           rows={5}
@@ -221,7 +219,7 @@ export function NeedForm({
           onChange={(e) => setDescription(e.target.value)}
         />
         <p className="mt-1 text-2xs leading-relaxed text-gray">{t.need.formDescriptionHint}</p>
-        {!description && <button type="button" className={`${textBtn} mt-2`} onClick={() => { markDirty(); setDescription(type === "need" ? t.need.formTemplateNeed : t.need.formTemplateOffer); }}>{t.need.formUseTemplate}</button>}
+        {!description && <Button variant="plain" size="plain" type="button" className={`${textBtn} mt-2`} onClick={() => { markDirty(); setDescription(type === "need" ? t.need.formTemplateNeed : t.need.formTemplateOffer); }}>{t.need.formUseTemplate}</Button>}
       </div>
 
       <div>
@@ -239,7 +237,7 @@ export function NeedForm({
         <span className={`${labelCls} mb-1 block`}>{t.need.formDeadline}</span>
         <div className="flex flex-wrap gap-1.5">
           {EXPIRY_PRESETS.map((option) => (
-            <button
+            <Button variant="plain" size="plain"
               key={option.value}
               type="button"
               onClick={() => chooseExpiry(option.value)}
@@ -248,22 +246,15 @@ export function NeedForm({
               }`}
             >
               {expiryLabel(t, option.value)}
-            </button>
+            </Button>
           ))}
         </div>
         {expiryPreset === "permanent" ? (
           <p className="mt-2 text-2xs text-gray">{t.need.formPermanentHint}</p>
         ) : (
-          <input
-            type="datetime-local"
-            aria-label={t.need.formDeadlineCustom}
-            className={`${sharedInput} mt-2 font-mono text-xs`}
-            required
-            value={deadline}
-            onChange={(event) => {
-              setDeadline(event.target.value);
-              setExpiryPreset("custom");
-            }}
+          <DateTimePicker
+            label={t.need.formDeadlineCustom} value={deadline}
+            onChange={(value) => { markDirty(); setDeadline(value); setExpiryPreset("custom"); }}
           />
         )}
         <input
@@ -295,14 +286,14 @@ export function NeedForm({
             <div className="flex flex-wrap gap-1.5">
               {[{ id: "plaza", name: t.need.formScopePlaza }, ...orgs.map((o) => ({ id: String(o.id), name: o.name }))].map(
                 (opt) => (
-                  <button
+                  <Button variant="plain" size="plain"
                     key={opt.id}
                     type="button"
                     onClick={() => { markDirty(); setScope(opt.id); }}
                     className={`${chip} ${scope === opt.id ? chipOn : chipOff}`}
                   >
                     {opt.name}
-                  </button>
+                  </Button>
                 ),
               )}
             </div>
@@ -324,7 +315,7 @@ export function NeedForm({
           <>
             <div className="flex flex-wrap gap-1.5">
               {eligibleContacts.map((option) => (
-                <button
+                <Button variant="plain" size="plain"
                   key={option.key}
                   type="button"
                   onClick={() => setPreferredContact(option.key)}
@@ -338,7 +329,7 @@ export function NeedForm({
                       {cardVisibilityLabel(t, "orgs")}
                     </span>
                   )}
-                </button>
+                </Button>
               ))}
             </div>
             <p className="mt-2 text-2xs leading-5 text-gray">
@@ -348,14 +339,14 @@ export function NeedForm({
         ) : inlineContact ? (
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold">{t.need.formInlineContactTitle}</p>
-            <div><label htmlFor="publish-nickname" className={`${labelCls} mb-1 block`}>{t.need.formNickname}</label>
-              <input id="publish-nickname" name="nickname" className={sharedInput} required maxLength={LIMITS.nickname} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+            <div><Label htmlFor="publish-nickname" className={`${labelCls} mb-1 block`}>{t.need.formNickname}</Label>
+              <Input id="publish-nickname" name="nickname" className={sharedInput} required maxLength={LIMITS.nickname} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {emptyContactFields.map((field) => <button key={field} type="button" className={`${chip} ${inlineContactField === field ? chipOn : chipOff}`} onClick={() => { setInlineContactField(field); setInlineContactValue(""); }}>{cardFieldLabel(t, field)}</button>)}
+              {emptyContactFields.map((field) => <Button variant="plain" size="plain" key={field} type="button" className={`${chip} ${inlineContactField === field ? chipOn : chipOff}`} onClick={() => { setInlineContactField(field); setInlineContactValue(""); }}>{cardFieldLabel(t, field)}</Button>)}
             </div>
-            <label htmlFor="publish-contact" className={labelCls}>{cardFieldLabel(t, inlineContactField)}</label>
-            {inlineContactField === "contactPhone" ? <PhoneInput id="publish-contact" name="inlineContactValue" required value={inlineContactValue} onChange={setInlineContactValue} /> : <input id="publish-contact" name="inlineContactValue" type={inlineContactField === "email" ? "email" : "text"} className={sharedInput} required maxLength={LIMITS.value} value={inlineContactValue} onChange={(event) => setInlineContactValue(event.target.value)} />}
+            <Label htmlFor="publish-contact" className={labelCls}>{cardFieldLabel(t, inlineContactField)}</Label>
+            {inlineContactField === "contactPhone" ? <PhoneInput id="publish-contact" name="inlineContactValue" required value={inlineContactValue} onChange={setInlineContactValue} /> : <Input id="publish-contact" name="inlineContactValue" type={inlineContactField === "email" ? "email" : "text"} className={sharedInput} required maxLength={LIMITS.value} value={inlineContactValue} onChange={(event) => setInlineContactValue(event.target.value)} />}
             <input type="hidden" name="inlineContactField" value={inlineContactField} />
             <p className="text-2xs leading-relaxed text-gray">{t.need.formInlineContactHint}</p>
           </div>
@@ -376,7 +367,7 @@ export function NeedForm({
 
       {state.error && <p className={fieldError}>{state.error}</p>}
       {rawDraft === DRAFT_UNAVAILABLE ? <p role="status" className="text-2xs text-gray">{t.need.formDraftUnavailable}</p> : dirty && rawDraft && <p role="status" className="text-2xs text-gray">{t.need.formDraftSaved}</p>}
-      <button
+      <Button variant="plain" size="plain"
         type="submit"
         disabled={pending}
         className={primaryBtn}
@@ -386,7 +377,7 @@ export function NeedForm({
           : editing
             ? t.need.formSubmitEdit
             : t.need.formSubmitCreate}
-      </button>
+      </Button>
       {!editing && publishHint && (
         <p className="-mt-2 text-center font-mono text-3xs text-gray">
           {fmt(t.quota.remaining, {

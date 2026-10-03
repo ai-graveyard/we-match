@@ -13,7 +13,10 @@ import { getDict, getLocale } from "@/lib/i18n/server";
 import { pageTitle } from "@/lib/i18n/metadata";
 import { localePath } from "@/lib/i18n/routing";
 
-export const generateMetadata = pageTitle((t) => t.need.metaNew);
+export async function generateMetadata(props: PageProps<"/[lang]/needs/new">) {
+  const { id } = await props.searchParams;
+  return pageTitle((t) => id ? t.need.metaEdit : t.need.metaNew)(props);
+}
 
 export default async function NeedNewPage({
   searchParams,

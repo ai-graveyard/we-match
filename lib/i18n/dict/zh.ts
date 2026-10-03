@@ -166,6 +166,8 @@ export const zh = {
     formDescription: "详细描述",
     formTags: "标签",
     formDeadline: "截止时间",
+    formHour: "小时",
+    formMinute: "分钟",
     formDeadlineCustom: "自定义截止时间",
     formPermanentHint: "长期有效，直到你手动关闭或标记完成",
     formScope: "可见范围",
@@ -298,6 +300,7 @@ export const zh = {
     hideEmail: "隐藏邮箱",
 
     visPublic: "公开",
+    visibilityLabel: "可见范围",
     visConnected: "连接后可见",
     visAuthenticated: "登录可见",
     visOrgs: "共同组织可见",

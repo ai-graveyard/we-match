@@ -1,6 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useRef, useState } from "react";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Download, Link as LinkIcon, Share2, X } from "lucide-react";
 import { toPng } from "html-to-image";
 import { QRCodeSVG } from "qrcode.react";
@@ -250,7 +253,6 @@ function Poster({ t, data }: { t: UiDict; data: ShareCardData }) {
 export function ShareCard({ data }: { data: ShareCardData }) {
   const t = useDict();
   const posterRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<"share" | "save" | null>(null);
   const [notice, setNotice] = useState("");
@@ -263,20 +265,6 @@ export function ShareCard({ data }: { data: ShareCardData }) {
     [],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
 
   function showNotice(message: string) {
     setNotice(message);
@@ -352,46 +340,37 @@ export function ShareCard({ data }: { data: ShareCardData }) {
   }
 
   return (
-    <>
-      <button
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+      <Button variant="plain" size="plain"
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm border border-line bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3"
+        className="flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm border border-line bg-panel px-3 text-sm font-semibold tracking-[0.06em] text-ink transition-colors duration-100 active:translate-y-px active:bg-bg-3"
         aria-label={shareLabel(t, data.kind)}
       >
         <Share2 size={14} aria-hidden />
         {t.share.open}
-      </button>
+      </Button>
+      </DialogTrigger>
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="share-dialog-title"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
-        >
-          <div className="my-auto w-full max-w-[332px] rounded-md border border-line bg-bg p-3 text-ink md:p-4">
+      <DialogContent showCloseButton={false} className="max-w-[332px] bg-bg p-3 md:p-4">
           <div className="mb-3 flex h-11 items-center justify-between">
             <div>
-              <h2 id="share-dialog-title" className="text-sm font-semibold">
+              <DialogTitle className="text-sm font-semibold">
                 {shareLabel(t, data.kind)}
-              </h2>
-              <p className="mt-0.5 font-mono text-2xs text-gray">
+              </DialogTitle>
+              <DialogDescription className="mt-0.5 font-mono text-2xs text-gray">
                 {t.share.dialogHint}
-              </p>
+              </DialogDescription>
             </div>
-            <button
-              ref={closeButtonRef}
+            <Button variant="plain" size="plain"
               type="button"
               onClick={() => setOpen(false)}
               className={iconBtnLine}
               aria-label={t.share.dialogCloseLabel}
             >
               <X size={16} aria-hidden />
-            </button>
+            </Button>
           </div>
 
           {/* 屏幕上的预览。窄屏放不下 POSTER_WIDTH 时它会收窄，导出的那份不会。 */}
@@ -410,7 +389,7 @@ export function ShareCard({ data }: { data: ShareCardData }) {
           </div>
 
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_44px_44px] gap-2">
-            <button
+            <Button variant="plain" size="plain"
               type="button"
               onClick={handleShare}
               disabled={busy !== null}
@@ -418,8 +397,8 @@ export function ShareCard({ data }: { data: ShareCardData }) {
             >
               <Share2 size={14} aria-hidden />
               {busy === "share" ? t.share.preparing : t.share.shareNow}
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="plain"
               type="button"
               onClick={handleSave}
               disabled={busy !== null}
@@ -428,8 +407,8 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               title={t.share.saveTitle}
             >
               <Download size={15} aria-hidden />
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="plain"
               type="button"
               onClick={handleCopy}
               disabled={busy !== null}
@@ -438,14 +417,12 @@ export function ShareCard({ data }: { data: ShareCardData }) {
               title={t.share.copyLinkTitle}
             >
               <LinkIcon size={15} aria-hidden />
-            </button>
+            </Button>
           </div>
           <p className="mt-2 min-h-5 text-center text-3xs text-gray" aria-live="polite">
             {notice}
           </p>
-        </div>
-        </div>
-      )}
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useDict } from "@/lib/i18n/client";
@@ -44,20 +48,20 @@ export function TagInput({
               className={`${tagCls()} inline-flex items-center gap-1`}
             >
               {tag}
-              <button
+              <Button variant="plain" size="plain"
                 type="button"
                 aria-label={fmt(t.card.tagRemoveLabel, { tag })}
                 className="flex items-center justify-center text-gray hover:text-ink"
                 onClick={() => onChange(value.filter((t) => t !== tag))}
               >
                 <X size={10} strokeWidth={2} aria-hidden />
-              </button>
+              </Button>
             </span>
           ))}
         </div>
       )}
       <div className="relative">
-        <input
+        <Input variant="bare"
           className={inputCls}
           value={draft}
           placeholder={
@@ -79,9 +83,9 @@ export function TagInput({
           }}
         />
         {focused && matched.length > 0 && (
-          <div className={`absolute inset-x-0 top-full z-20 mt-1 ${panel}`}>
+          <Card className={`absolute inset-x-0 top-full z-20 mt-1 ${panel}`}>
             {matched.map((s) => (
-              <button
+              <Button variant="plain" size="plain"
                 key={s}
                 type="button"
                 className="block w-full px-3 py-2 text-left font-mono text-xs transition-colors duration-100 hover:bg-bg-3"
@@ -91,9 +95,9 @@ export function TagInput({
                 }}
               >
                 {s}
-              </button>
+              </Button>
             ))}
-          </div>
+          </Card>
         )}
       </div>
       <input type="hidden" name="tags" value={JSON.stringify(value)} />

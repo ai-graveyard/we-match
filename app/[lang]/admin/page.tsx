@@ -1,3 +1,10 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+
+import { FormSelect } from "@/components/ui/form-select";
+
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { notFound, redirect } from "next/navigation";
 import {
   and,
@@ -205,20 +212,20 @@ function DesktopTable({
   children: React.ReactNode;
 }) {
   return (
-    <div className="hidden overflow-x-auto rounded-md border border-line bg-panel md:block">
-      <table className="w-full border-collapse">
-        <thead className="border-b border-line bg-bg-2">
-          <tr>
+    <Card className="hidden overflow-x-auto rounded-md border border-line bg-panel md:block">
+      <Table className="w-full border-collapse">
+        <TableHeader className="border-b border-line bg-bg-2">
+          <TableRow>
             {headers.map((header) => (
-              <th key={header} className={thCls}>
+              <TableHead key={header} className={thCls}>
                 {header}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+          </TableRow>
+        </TableHeader>
+        <TableBody>{children}</TableBody>
+      </Table>
+    </Card>
   );
 }
 
@@ -253,7 +260,7 @@ function TableControls({
         <input type="hidden" name="view" value={view} />
         <input type="hidden" name="sort" value={sort} />
         <input type="hidden" name="dir" value={direction} />
-        <input
+        <Input
           type="search"
           name="q"
           defaultValue={query}
@@ -261,9 +268,9 @@ function TableControls({
           aria-label={t.searchLabel}
           className={`${controlCls} min-w-0 flex-1 md:max-w-80`}
         />
-        <button type="submit" className={buttonCls}>
+        <Button variant="plain" size="plain" type="submit" className={buttonCls}>
           {t.searchTable}
-        </button>
+        </Button>
         {query && (
           <LocaleLink
             href={adminHref(view, { sort, direction })}
@@ -280,30 +287,16 @@ function TableControls({
       >
         <input type="hidden" name="view" value={view} />
         {query && <input type="hidden" name="q" value={query} />}
-        <select
-          name="sort"
-          defaultValue={sort}
-          aria-label={t.sortFieldLabel}
-          className={controlCls}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          name="dir"
-          defaultValue={direction}
-          aria-label={t.sortDirectionLabel}
-          className={controlCls}
-        >
-          <option value="desc">{t.sortDescending}</option>
-          <option value="asc">{t.sortAscending}</option>
-        </select>
-        <button type="submit" className={buttonCls}>
+        <FormSelect name="sort" defaultValue={sort} label={t.sortFieldLabel}
+          options={options} size="sm" className="w-auto" />
+        <FormSelect name="dir" defaultValue={direction} label={t.sortDirectionLabel}
+          size="sm" className="w-auto" options={[
+            { value: "desc", label: t.sortDescending },
+            { value: "asc", label: t.sortAscending },
+          ]} />
+        <Button variant="plain" size="plain" type="submit" className={buttonCls}>
           {t.sortTable}
-        </button>
+        </Button>
         {hasCustomSort && (
           <LocaleLink
             href={adminHref(view, { query })}
@@ -385,9 +378,9 @@ function Pagination({
 
 function EmptyList({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-line bg-panel px-4 py-8 text-center text-sm text-gray">
+    <Card className="rounded-md border border-line bg-panel px-4 py-8 text-center text-sm text-gray">
       {children}
-    </div>
+    </Card>
   );
 }
 
@@ -1082,7 +1075,7 @@ export default async function AdminPage({
         aria-label={t.moduleNav}
         className="sticky top-0 z-10 -mx-4 border-b border-line bg-bg px-4 py-2 md:-mx-8 md:px-8"
       >
-        <div className="grid grid-cols-4 gap-2 md:flex md:w-max">
+        <div className="flex flex-wrap gap-2">
           {ADMIN_VIEWS.map((view) => {
             const active = view === activeView;
             return (
@@ -1091,7 +1084,7 @@ export default async function AdminPage({
                 href={adminHref(view)}
                 aria-current={active ? "page" : undefined}
                 scroll={false}
-                className={`flex h-9 min-w-0 items-center justify-center gap-1 rounded-sm border px-2 text-xs transition-colors duration-100 md:px-3 ${
+                className={`flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-sm border px-2 text-xs transition-colors duration-100 md:px-3 ${
                   active
                     ? "border-ink bg-ink font-semibold text-panel"
                     : "border-line bg-panel text-gray hover:border-ink hover:text-ink"
@@ -1114,7 +1107,7 @@ export default async function AdminPage({
           <Section title={t.overviewStatsTitle} description={t.overviewStatsDesc}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {stats.map((stat) => (
-                <div
+                <Card
                   key={stat.label}
                   className="rounded-md border border-line bg-panel px-4 py-3"
                 >
@@ -1122,7 +1115,7 @@ export default async function AdminPage({
                   <div className="mt-1 font-mono text-xl font-semibold">
                     {stat.value}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </Section>
@@ -1130,12 +1123,12 @@ export default async function AdminPage({
           <Section title={t.overviewFunnelTitle} description={t.overviewFunnelDesc}>
             <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-line gap-px sm:grid-cols-4">
               {funnel.map((item) => (
-                <div key={item.label} className="bg-panel p-4">
+                <Card key={item.label} className="bg-panel p-4">
                   <div className="text-2xs text-gray">{item.label}</div>
                   <div className="mt-1 font-mono text-xl font-semibold">
                     {item.value}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </Section>
@@ -1147,11 +1140,11 @@ export default async function AdminPage({
                 { label: t.funnelRequested, value: cohort.raised, rate: true },
                 { label: t.funnelAccepted, value: cohort.accepted, rate: true },
                 { label: t.funnelCompleted, value: cohort.completed, rate: true },
-              ].map((item) => <div key={item.label} className="rounded-md border border-line bg-panel p-4">
+              ].map((item) => <Card key={item.label} className="rounded-md border border-line bg-panel p-4">
                 <p className="text-2xs text-gray">{item.label}</p>
                 <p className="mt-1 font-mono text-xl font-semibold">{item.value}</p>
                 {item.rate && <p className="mt-1 font-mono text-2xs text-gray">{cohort.published ? `${Math.round(item.value / cohort.published * 100)}%` : "—"}</p>}
-              </div>)}
+              </Card>)}
             </div>
             <p className="mt-3 text-xs text-gray">{t.cohortFirstRaise}: <span className="font-mono">{cohort.firstRaiseMedianHours == null ? "—" : `${cohort.firstRaiseMedianHours.toFixed(1)} ${t.cohortHours}`}</span></p>
           </Section>}
@@ -1220,15 +1213,15 @@ export default async function AdminPage({
                       ? `/needs/${report.targetId}`
                       : `/u/${report.targetId}`;
                   return (
-                    <tr
+                    <TableRow
                       key={report.id}
                       className="border-b border-line last:border-b-0"
                     >
-                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                         {rowNumber(index)}
-                      </td>
-                      <td className={`${tdCls} font-mono`}>{report.id}</td>
-                      <td className={tdCls}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} font-mono`}>{report.id}</TableCell>
+                      <TableCell className={tdCls}>
                         <LocaleLink
                           href={targetHref}
                           className="whitespace-nowrap font-semibold hover:underline"
@@ -1236,25 +1229,25 @@ export default async function AdminPage({
                           {report.targetType === "need" ? t.targetNeed : t.targetUser} #
                           {report.targetId}
                         </LocaleLink>
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap`}>
                         {reportReasonLabel(t, report.reason)}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap`}>
                         {reporter?.nickname ?? t.reportAnonymous}
-                      </td>
-                      <td className={`${tdCls} max-w-48`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} max-w-48`}>
                         <span className="line-clamp-2">
                           {report.details ?? "—"}
                         </span>
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {reportStatusLabel(t, report.status)}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(report.createdAt)}
-                      </td>
-                      <td className={tdCls}>
+                      </TableCell>
+                      <TableCell className={tdCls}>
                         {report.status === "pending" ? (
                           <form
                             action={handleReportAction}
@@ -1265,28 +1258,28 @@ export default async function AdminPage({
                               name="reportId"
                               value={report.id}
                             />
-                            <button
+                            <Button variant="plain" size="plain"
                               type="submit"
                               name="decision"
                               value="dismissed"
                               className={tableActionButtonCls}
                             >
                               {t.reportDismiss}
-                            </button>
-                            <button
+                            </Button>
+                            <Button variant="plain" size="plain"
                               type="submit"
                               name="decision"
                               value="resolved"
                               className={tableActionButtonCls}
                             >
                               {t.reportResolve}
-                            </button>
+                            </Button>
                           </form>
                         ) : (
                           <span className="text-gray">—</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </DesktopTable>
@@ -1301,7 +1294,7 @@ export default async function AdminPage({
                       ? `/needs/${report.targetId}`
                       : `/u/${report.targetId}`;
                   return (
-                    <article
+                    <Card as="article"
                       key={report.id}
                       className="overflow-hidden rounded-md border border-line bg-panel"
                     >
@@ -1342,25 +1335,25 @@ export default async function AdminPage({
                         className="grid grid-cols-2 gap-2 border-t border-line p-3"
                       >
                         <input type="hidden" name="reportId" value={report.id} />
-                        <button
+                        <Button variant="plain" size="plain"
                           type="submit"
                           name="decision"
                           value="dismissed"
                           className={actionButtonCls}
                         >
                           {t.reportDismiss}
-                        </button>
-                        <button
+                        </Button>
+                        <Button variant="plain" size="plain"
                           type="submit"
                           name="decision"
                           value="resolved"
                           className={actionButtonCls}
                         >
                           {t.reportResolveLong}
-                        </button>
+                        </Button>
                       </form>
                     )}
-                    </article>
+                    </Card>
                   );
                 })}
               </ItemGrid>
@@ -1413,40 +1406,40 @@ export default async function AdminPage({
                 ]}
               >
                 {visibleUsers.map((user, index) => (
-                  <tr
+                  <TableRow
                     key={user.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                    <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                       {rowNumber(index)}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>{user.id}</td>
-                    <td className={tdCls}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>{user.id}</TableCell>
+                    <TableCell className={tdCls}>
                       <LocaleLink
                         href={`/u/${user.id}`}
                         className="whitespace-nowrap font-semibold hover:underline"
                       >
                         {user.nickname}
                       </LocaleLink>
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono`}>
                       {user.loginEmail}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {user.city ?? "—"}
-                    </td>
-                    <td className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
                       <span className="line-clamp-2">
                         {user.tags.join(" · ") || "—"}
                       </span>
-                    </td>
-                    <td className={`${tdCls} font-mono`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>
                       {needCountByUser.get(user.id) ?? 0}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>
                       {orgCountByUser.get(user.id) ?? 0}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {user.id === viewer.id
                         ? t.userStatusAdmin
                         : user.status === "active"
@@ -1454,11 +1447,11 @@ export default async function AdminPage({
                           : user.status === "deleted"
                             ? t.userStatusDeleted
                             : t.userStatusSuspended}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(user.createdAt)}
-                    </td>
-                    <td className={tdCls}>
+                    </TableCell>
+                    <TableCell className={tdCls}>
                       {user.id !== viewer.id && user.status !== "deleted" ? (
                         <form action={moderateContentAction}>
                           <input
@@ -1471,7 +1464,7 @@ export default async function AdminPage({
                             name="targetId"
                             value={user.id}
                           />
-                          <button
+                          <Button variant="plain" size="plain"
                             type="submit"
                             name="moderationAction"
                             value={
@@ -1480,19 +1473,19 @@ export default async function AdminPage({
                             className={tableActionButtonCls}
                           >
                             {user.status === "active" ? t.userSuspend : t.userRestore}
-                          </button>
+                          </Button>
                         </form>
                       ) : (
                         <span className="text-gray">—</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </DesktopTable>
 
               <ItemGrid>
                 {visibleUsers.map((user, index) => (
-                  <article
+                  <Card as="article"
                     key={user.id}
                     className="overflow-hidden rounded-md border border-line bg-panel"
                   >
@@ -1543,17 +1536,17 @@ export default async function AdminPage({
                     >
                       <input type="hidden" name="targetType" value="user" />
                       <input type="hidden" name="targetId" value={user.id} />
-                      <button
+                      <Button variant="plain" size="plain"
                         type="submit"
                         name="moderationAction"
                         value={user.status === "active" ? "suspend" : "restore"}
                         className={actionButtonCls}
                       >
                         {user.status === "active" ? t.userSuspendLong : t.userRestoreLong}
-                      </button>
+                      </Button>
                     </form>
                   )}
-                  </article>
+                  </Card>
                 ))}
               </ItemGrid>
               <Pagination
@@ -1604,47 +1597,47 @@ export default async function AdminPage({
                 ]}
               >
                 {visibleNeeds.map(({ need, author, org }, index) => (
-                  <tr
+                  <TableRow
                     key={need.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                    <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                       {rowNumber(index)}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>{need.id}</td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>{need.id}</TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
                       {typeLabel(ui, need.type)}
-                    </td>
-                    <td className={`${tdCls} max-w-64`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} max-w-64`}>
                       <LocaleLink
                         href={`/needs/${need.id}`}
                         className="line-clamp-2 font-semibold hover:underline"
                       >
                         {need.title}
                       </LocaleLink>
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {author.nickname}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {org?.name ?? t.needScopePlaza}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {need.moderationStatus === "hidden"
                         ? t.needHidden
                         : isExpired(need)
                           ? t.needExpired
                           : statusLabel(ui, need.status)}
-                    </td>
-                    <td className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} max-w-48 font-mono text-3xs text-gray`}>
                       <span className="line-clamp-2">
                         {need.tags.join(" · ") || "—"}
                       </span>
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(need.updatedAt)}
-                    </td>
-                    <td className={tdCls}>
+                    </TableCell>
+                    <TableCell className={tdCls}>
                       <form action={moderateContentAction}>
                         <input type="hidden" name="targetType" value="need" />
                         <input
@@ -1652,7 +1645,7 @@ export default async function AdminPage({
                           name="targetId"
                           value={need.id}
                         />
-                        <button
+                        <Button variant="plain" size="plain"
                           type="submit"
                           name="moderationAction"
                           value={
@@ -1665,16 +1658,16 @@ export default async function AdminPage({
                           {need.moderationStatus === "visible"
                             ? t.needHide
                             : t.needRestore}
-                        </button>
+                        </Button>
                       </form>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </DesktopTable>
 
               <ItemGrid>
                 {visibleNeeds.map(({ need, author, org }, index) => (
-                  <article
+                  <Card as="article"
                     key={need.id}
                     className="overflow-hidden rounded-md border border-line bg-panel"
                   >
@@ -1721,7 +1714,7 @@ export default async function AdminPage({
                   >
                     <input type="hidden" name="targetType" value="need" />
                     <input type="hidden" name="targetId" value={need.id} />
-                    <button
+                    <Button variant="plain" size="plain"
                       type="submit"
                       name="moderationAction"
                       value={
@@ -1732,9 +1725,9 @@ export default async function AdminPage({
                       {need.moderationStatus === "visible"
                         ? t.needHideLong
                         : t.needRestoreLong}
-                    </button>
+                    </Button>
                   </form>
-                  </article>
+                  </Card>
                 ))}
               </ItemGrid>
               <Pagination
@@ -1783,44 +1776,44 @@ export default async function AdminPage({
                 ]}
               >
                 {visibleOrgs.map(({ org, owner }, index) => (
-                  <tr
+                  <TableRow
                     key={org.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                    <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                       {rowNumber(index)}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>{org.id}</td>
-                    <td className={tdCls}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>{org.id}</TableCell>
+                    <TableCell className={tdCls}>
                       <LocaleLink
                         href={`/orgs/${org.id}`}
                         className="whitespace-nowrap font-semibold hover:underline"
                       >
                         {org.name}
                       </LocaleLink>
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs`}>
                       {orgVisibilityLabel(ui, org.visibility)}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {owner.nickname}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>
                       {memberCountByOrg.get(org.id) ?? 0}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono`}>
                       {org.inviteCode}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(org.createdAt)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </DesktopTable>
 
               <ItemGrid>
                 {visibleOrgs.map(({ org, owner }, index) => (
-                  <article
+                  <Card as="article"
                     key={org.id}
                     className="rounded-md border border-line bg-panel p-4"
                   >
@@ -1850,7 +1843,7 @@ export default async function AdminPage({
                       {shortDateTime(org.createdAt)}
                     </Field>
                   </dl>
-                  </article>
+                  </Card>
                 ))}
               </ItemGrid>
               <Pagination
@@ -1901,44 +1894,44 @@ export default async function AdminPage({
                 ]}
               >
                 {visibleRequests.map(({ req, applicant, org }, index) => (
-                  <tr
+                  <TableRow
                     key={req.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                    <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                       {rowNumber(index)}
-                    </td>
-                    <td className={`${tdCls} font-mono`}>{req.id}</td>
-                    <td className={tdCls}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} font-mono`}>{req.id}</TableCell>
+                    <TableCell className={tdCls}>
                       <LocaleLink
                         href={`/orgs/${org.id}`}
                         className="whitespace-nowrap font-semibold hover:underline"
                       >
                         {org.name}
                       </LocaleLink>
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {applicant.nickname}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap`}>
                       {requestViaLabel(ui, req.via)}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {requestStatusLabel(t, req.status)}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {shortDateTime(req.createdAt)}
-                    </td>
-                    <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                    </TableCell>
+                    <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                       {req.handledAt ? shortDateTime(req.handledAt) : "—"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </DesktopTable>
 
               <ItemGrid>
                 {visibleRequests.map(({ req, applicant, org }, index) => (
-                  <article
+                  <Card as="article"
                     key={req.id}
                     className="rounded-md border border-line bg-panel p-4"
                   >
@@ -1966,7 +1959,7 @@ export default async function AdminPage({
                       {req.handledAt ? shortDateTime(req.handledAt) : "—"}
                     </Field>
                   </dl>
-                  </article>
+                  </Card>
                 ))}
               </ItemGrid>
               <Pagination
@@ -2027,17 +2020,17 @@ export default async function AdminPage({
                   const state = codeState(record);
                   const owner = userByEmail.get(record.email);
                   return (
-                    <tr
+                    <TableRow
                       key={record.id}
                       className="border-b border-line last:border-b-0"
                     >
-                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                         {rowNumber(index)}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono`}>
                         {record.email}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap`}>
                         {owner ? (
                           <LocaleLink
                             href={`/u/${owner.id}`}
@@ -2048,8 +2041,8 @@ export default async function AdminPage({
                         ) : (
                           <span className="text-gray">{t.codeUnregistered}</span>
                         )}
-                      </td>
-                      <td className={tdCls}>
+                      </TableCell>
+                      <TableCell className={tdCls}>
                         <span
                           className={`font-mono text-sm font-semibold tracking-[0.12em] ${
                             state === "active" ? "" : "text-gray line-through"
@@ -2057,23 +2050,23 @@ export default async function AdminPage({
                         >
                           {record.code}
                         </span>
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {codeStateLabel(t, state)}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(record.expiresAt)}
-                      </td>
-                      <td className={`${tdCls} font-mono`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} font-mono`}>
                         {record.failCount}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {record.ip}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {relativeTime(ui, record.createdAt)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </DesktopTable>
@@ -2083,7 +2076,7 @@ export default async function AdminPage({
                   const state = codeState(record);
                   const owner = userByEmail.get(record.email);
                   return (
-                    <article
+                    <Card as="article"
                       key={record.id}
                       className="rounded-md border border-line bg-panel p-4"
                     >
@@ -2120,7 +2113,7 @@ export default async function AdminPage({
                           {record.ip}
                         </Field>
                       </dl>
-                    </article>
+                    </Card>
                   );
                 })}
               </ItemGrid>
@@ -2171,40 +2164,40 @@ export default async function AdminPage({
                 {visibleAudit.map((log, index) => {
                   const actor = log.actorId ? userById.get(log.actorId) : null;
                   return (
-                    <tr
+                    <TableRow
                       key={log.id}
                       className="border-b border-line last:border-b-0"
                     >
-                      <td className={`${tdCls} font-mono text-3xs text-gray`}>
+                      <TableCell className={`${tdCls} font-mono text-3xs text-gray`}>
                         {rowNumber(index)}
-                      </td>
-                      <td className={`${tdCls} font-mono`}>{log.id}</td>
-                      <td className={`${tdCls} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} font-mono`}>{log.id}</TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap`}>
                         {actor?.nickname ?? t.auditSystem}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs font-semibold`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs font-semibold`}>
                         {log.action}
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap`}>
                         {log.targetType}
                         {log.targetId ? ` #${log.targetId}` : ""}
-                      </td>
-                      <td className={`${tdCls} max-w-64 font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} max-w-64 font-mono text-3xs text-gray`}>
                         <span className="line-clamp-2 break-all">
                           {log.metadata
                             ? JSON.stringify(log.metadata)
                             : "—"}
                         </span>
-                      </td>
-                      <td className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
+                      </TableCell>
+                      <TableCell className={`${tdCls} whitespace-nowrap font-mono text-3xs text-gray`}>
                         {shortDateTime(log.createdAt)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </DesktopTable>
 
-              <div className="overflow-hidden rounded-md border border-line bg-panel md:hidden">
+              <Card className="overflow-hidden rounded-md border border-line bg-panel md:hidden">
                 {visibleAudit.map((log, index) => {
                   const actor = log.actorId ? userById.get(log.actorId) : null;
                   return (
@@ -2242,7 +2235,7 @@ export default async function AdminPage({
                     </article>
                   );
                 })}
-              </div>
+              </Card>
               <Pagination
                 t={t}
                 view="audit"

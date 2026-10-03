@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -12,6 +13,27 @@
   --color-gray: #808080;
   --color-line: #c9c9c9;
   --color-accent: #e8500a;
+  /* shadcn semantic tokens reuse the product palette in both themes. */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-panel);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-panel);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-ink);
+  --color-primary-foreground: var(--color-panel);
+  --color-secondary: var(--color-bg-2);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: var(--color-bg-3);
+  --color-muted-foreground: var(--color-gray);
+  --color-accent-foreground: var(--color-ink);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-ink);
+  --color-destructive: var(--color-accent);
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -95,6 +117,8 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
+  /* 用户填写的长链接、昵称和留言也必须留在当前列内。 */
+  overflow-wrap: anywhere;
   -webkit-font-smoothing: antialiased;
   /* viewport-fit=cover 后横屏刘海会压住内容，左右也一并让开。
      注意这只管得住文档流里的东西：fixed 定位相对视口，吃不到 body 内边距，
@@ -110,4 +134,8 @@ body {
     animation: none !important;
     transition: none !important;
   }
+}
+
+@layer base {
+  * { border-color: var(--color-line); }
 }

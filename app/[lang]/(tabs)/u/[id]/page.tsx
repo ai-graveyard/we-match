@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { and, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
@@ -25,17 +27,16 @@ import {
   panel,
   primaryBtn,
   sectionLabel,
-  segmentGroup,
-  segmentItem,
   tag as tagCls,
 } from "@/lib/ui";
-import { getDict } from "@/lib/i18n/server";
+import { CardPreviewSelect } from "@/components/card-preview-select";
+import { localePath } from "@/lib/i18n/routing";
+import { getDict, getLocale } from "@/lib/i18n/server";
 import { LocaleLink } from "@/lib/i18n/link";
 import { fmt, plural } from "@/lib/i18n/fmt";
 import { cardFieldLabel, cardVisibilityLabel } from "@/lib/i18n/labels";
 import { uiDict } from "@/lib/i18n/dict";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
-import { BRAND_NAME } from "@/lib/brand";
 import type { UiDict } from "@/lib/i18n/dict/types";
 
 type PreviewView = "guest" | "user" | "org";
@@ -71,10 +72,10 @@ export async function generateMetadata({
   const description =
     card.bio || fmt(t.share.copyUserText, { name: card.nickname });
   return {
-    title,
+    title: { absolute: title },
     description,
     openGraph: {
-      title: `${title} · ${BRAND_NAME}`,
+      title,
       description,
       type: "profile",
     },
@@ -86,6 +87,7 @@ export default async function UserCardPage({
   searchParams,
 }: PageProps<"/[lang]/u/[id]">) {
   const t = await getDict();
+  const locale = await getLocale();
   const { id } = await params;
   const uid = Number(id);
   if (!Number.isInteger(uid) || uid <= 0) notFound();
@@ -185,22 +187,16 @@ export default async function UserCardPage({
     <div>
       <PageHeader title={t.card.metaDetail} mobileOnly className="mb-4" />
       {isSelf && (
-        <section className={`mb-4 ${panel} p-3`}>
-          <div className={`${segmentGroup} w-full`}>
-            {PREVIEW_VIEWS.map((option, index) => (
-              <LocaleLink
-                key={option.value}
-                href={`/u/${owner.id}?view=${option.value}`}
-                replace
-                className={`${segmentItem(
-                  previewView === option.value,
-                  index === 0,
-                )} min-w-0 flex-1`}
-              >
-                {option.label(t)}
-              </LocaleLink>
-            ))}
-          </div>
+        <Card as="section" className={`mb-4 ${panel} p-3`}>
+          <CardPreviewSelect
+            label={t.card.previewHint}
+            value={previewView}
+            options={PREVIEW_VIEWS.map((option) => ({
+              value: option.value,
+              label: option.label(t),
+              href: localePath(locale, `/u/${owner.id}?view=${option.value}`),
+            }))}
+          />
           <div className="mt-2 flex items-center justify-between gap-3 text-2xs text-gray">
             <span>{t.card.previewHint}</span>
             <LocaleLink href="/me/card" className="shrink-0 text-ink underline">
@@ -212,13 +208,13 @@ export default async function UserCardPage({
               {plural(t.card.previewConnected, connectedCount)}
             </p>
           )}
-        </section>
+        </Card>
       )}
-      <section className={`${panel} p-4`}>
+      <Card as="section" className={`${panel} p-4`}>
         <div className="flex items-center gap-3">
           <DefaultUserAvatar className="size-12" iconSize={22} />
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold">{card.nickname}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words text-xl font-semibold">{card.nickname}</h1>
             {visibleEmail && (
               <>
                 <MaskedEmail
@@ -237,7 +233,7 @@ export default async function UserCardPage({
             )}
             {card.city && <p className="text-xs text-gray">{card.city}</p>}
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto shrink-0">
             <ShareCard
               data={{
                 kind: "user",
@@ -263,10 +259,10 @@ export default async function UserCardPage({
             ))}
           </div>
         )}
-      </section>
+      </Card>
 
       {showLoginGate && (
-        <section className={`mt-4 ${panel}`}>
+        <Card as="section" className={`mt-4 ${panel}`}>
           <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
             {t.card.loginGateTitle}
           </h2>
@@ -283,11 +279,11 @@ export default async function UserCardPage({
               {t.card.loginGateAction}
             </LocaleLink>
           </div>
-        </section>
+        </Card>
       )}
 
       {showConnectionGate && (
-        <section className={`mt-4 ${panel}`}>
+        <Card as="section" className={`mt-4 ${panel}`}>
           <h2 className={`${sectionLabel} border-b border-line px-4 py-2`}>
             {t.card.connectionGateTitle}
           </h2>
@@ -297,11 +293,11 @@ export default async function UserCardPage({
               {t.card.connectionGateNeeds}
             </a>
           </div>
-        </section>
+        </Card>
       )}
 
       {groups.map((group) => (
-        <section
+        <Card as="section"
           key={group.title}
           className={`mt-4 ${panel}`}
         >
@@ -343,7 +339,7 @@ export default async function UserCardPage({
               />
             </div>
           ))}
-        </section>
+        </Card>
       ))}
 
       <PlazaNeeds t={t} userId={owner.id} isSelf={isSelf} />
@@ -393,11 +389,11 @@ async function PlazaNeeds({
       {list.length === 0 ? (
         <p className="mt-3 text-xs text-gray">{t.card.plazaNeedsEmpty}</p>
       ) : (
-        <div className={`mt-2 ${panel}`}>
+        <Card className={`mt-2 overflow-hidden ${panel}`}>
           {list.map((need, i) => (
             <NeedCard key={need.id} need={need} first={i === 0} />
           ))}
-        </div>
+        </Card>
       )}
     </section>
   );

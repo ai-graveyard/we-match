@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { ThemeApplier } from "@/components/theme-toggle";
 import { NavTracker } from "@/components/page-header";
@@ -55,7 +56,9 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
     >
       <head>
         {/* 绘制前应用已保存的主题（无记录则跟随系统），避免暗色用户看到浅色闪烁 */}
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
           }}

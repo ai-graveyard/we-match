@@ -1,5 +1,8 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
 import { useDict } from "@/lib/i18n/client";
 
 export const PHONE_LENGTH = 11;
@@ -34,11 +37,11 @@ export function PhoneInput({
 }) {
   const t = useDict();
   return (
-    <div className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
+    <Card className="flex h-11 w-full items-center overflow-hidden rounded-sm border border-line bg-panel transition-colors duration-100 focus-within:border-ink">
       <span className="flex h-full shrink-0 select-none items-center border-r border-line bg-bg-3 px-2.5 font-mono text-sm text-gray">
         +86
       </span>
-      <input
+      <Input variant="bare"
         id={id}
         className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none placeholder:font-sans placeholder:text-gray"
         type="tel"
@@ -51,6 +54,6 @@ export function PhoneInput({
         value={value}
         onChange={(e) => onChange(normalizePhoneInput(e.target.value))}
       />
-    </div>
+    </Card>
   );
 }

@@ -1,3 +1,5 @@
+
+import { Card } from "@/components/ui/card";
 import type { User } from "@/lib/db/schema";
 import {
   CONTACT_FIELDS,
@@ -58,7 +60,7 @@ export async function MeCardOverview({
 
   return (
     <>
-      <section className={`${panel} p-4`}>
+      <Card as="section" className={`${panel} p-4`}>
         <div className="flex items-start gap-3">
           <DefaultUserAvatar className="size-12" iconSize={22} />
           <div className="min-w-0 flex-1">
@@ -123,10 +125,10 @@ export async function MeCardOverview({
             {t.me.editCard}
           </LocaleLink>
         </div>
-      </section>
+      </Card>
 
       {groups.map((group) => (
-        <section
+        <Card as="section"
           key={group.title}
           className={`mt-4 ${panel}`}
         >
@@ -154,7 +156,7 @@ export async function MeCardOverview({
               <CopyButton text={item.value!} />
             </div>
           ))}
-        </section>
+        </Card>
       ))}
 
       <p className="mt-3 text-2xs text-gray">{t.me.cardOverviewHint}</p>

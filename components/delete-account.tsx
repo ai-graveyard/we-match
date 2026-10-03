@@ -1,6 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+
+import { useActionState, useState } from "react";
 import { UserRoundX } from "lucide-react";
 import {
   deleteAccountAction,
@@ -28,15 +31,10 @@ export function DeleteAccountRow({
     DeleteAccountState,
     FormData
   >(deleteAccountAction, {});
-  const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (confirming) cancelRef.current?.focus();
-  }, [confirming]);
-
-  if (!confirming) {
-    return (
-      <button
+  return (
+    <AlertDialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open); }}>
+      <AlertDialogTrigger asChild>
+      <Button variant="plain" size="plain"
         type="button"
         onClick={() => setConfirming(true)}
         className={settingsRowInteractive}
@@ -50,20 +48,11 @@ export function DeleteAccountRow({
           </span>
         </span>
         <UserRoundX size={15} className="shrink-0 text-gray" aria-hidden />
-      </button>
-    );
-  }
-
-  return (
-    <div
-      role="group"
-      aria-label={t.account.deleteConfirmLabel}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && !pending) setConfirming(false);
-      }}
-      className="p-4"
-    >
-      <p className="text-sm font-semibold">{t.account.deleteConfirmTitle}</p>
+      </Button>
+      </AlertDialogTrigger>
+    <AlertDialogContent>
+      <AlertDialogTitle>{t.account.deleteConfirmTitle}</AlertDialogTitle>
+      <AlertDialogDescription>{t.account.deleteHint}</AlertDialogDescription>
       <ul className="mt-2 space-y-1 text-xs text-gray">
         <li>{t.account.deleteBullet1}</li>
         <li>{t.account.deleteBullet2}</li>
@@ -81,24 +70,17 @@ export function DeleteAccountRow({
         </p>
       )}
       <form action={formAction} className="mt-3 grid grid-cols-2 gap-2">
-        <button
-          ref={cancelRef}
-          type="button"
-          disabled={pending}
-          onClick={() => setConfirming(false)}
-          className={quietBtn}
-        >
-          {t.common.cancel}
-        </button>
-        <button
+        <AlertDialogCancel disabled={pending} className={quietBtn}>{t.common.cancel}</AlertDialogCancel>
+        <Button variant="plain" size="plain"
           type="submit"
           disabled={pending || ownedOrgNames.length > 0}
           className={inkBtn}
         >
           <UserRoundX size={13} aria-hidden />
           {pending ? t.account.deleting : t.account.deleteConfirm}
-        </button>
+        </Button>
       </form>
-    </div>
+    </AlertDialogContent>
+    </AlertDialog>
   );
 }
